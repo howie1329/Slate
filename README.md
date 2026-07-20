@@ -8,6 +8,7 @@ Slate is a local-first macOS task planner built around a daily commitment budget
 - React 19 and TypeScript
 - Vite
 - TanStack Router with file-based routes
+- Tailwind CSS 4 via the Vite plugin
 
 ## Development
 
