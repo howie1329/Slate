@@ -1,0 +1,11 @@
+{
+  "installMode": "skill",
+  "agentkitVersion": "0.9.0",
+  "templateSet": "standard",
+  "aiTools": [
+    "codex",
+    "cursor",
+    "claude"
+  ],
+  "designSystem": "apple"
+}

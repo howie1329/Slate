@@ -1,0 +1,4 @@
+interface:
+  display_name: "AgentKit"
+  short_description: "Create, maintain, and learn repo guidance"
+  default_prompt: "Use $agentkit to initialize, sync, audit, repair, or learn repository guidance and changes."
