@@ -13,7 +13,8 @@
     "@tanstack/react-router": "^1.170.18",
     "@tauri-apps/api": "^2",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "thomas-agentkit": "^0.9.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
