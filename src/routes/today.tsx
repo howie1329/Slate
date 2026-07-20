@@ -6,31 +6,39 @@ export const Route = createFileRoute("/today")({
 
 function TodayPage() {
   return (
-    <section className="view" aria-labelledby="today-heading">
-      <div className="view-heading">
-        <p className="eyebrow">Today</p>
-        <h1 id="today-heading">Make room for what matters.</h1>
-        <p className="view-copy">
+    <section className="pt-10" aria-labelledby="today-heading">
+      <div className="max-w-lg">
+        <p className="m-0 text-xs font-semibold leading-tight text-stone-500 uppercase">Today</p>
+        <h1
+          id="today-heading"
+          className="mt-2 mb-3 font-serif text-4xl leading-none font-medium text-balance sm:text-5xl"
+        >
+          Make room for what matters.
+        </h1>
+        <p className="m-0 text-base leading-6 text-pretty text-stone-600">
           Your daily capacity and committed tasks will appear here.
         </p>
       </div>
 
-      <div className="capacity-card">
-        <div className="capacity-copy">
+      <div className="mt-8 rounded-2xl border border-stone-200 bg-white px-5 py-5">
+        <div className="flex items-baseline justify-between gap-4 text-sm text-stone-600">
           <span>Committed</span>
-          <strong className="capacity-value">0 / 0 min</strong>
+          <strong className="text-sm text-stone-800 tabular-nums">0 / 0 min</strong>
         </div>
-        <div className="capacity-track" aria-hidden="true">
-          <span className="capacity-fill" />
+        <div className="mt-3.5 h-1.5 overflow-hidden rounded-full bg-stone-200" aria-hidden="true">
+          <span className="block h-full w-0 rounded-full bg-emerald-700" />
         </div>
       </div>
 
-      <div className="empty-state">
-        <p className="empty-kicker">A clear day</p>
-        <p>
+      <div className="mt-7 border-t border-stone-200 pt-6">
+        <p className="m-0 text-xs font-semibold leading-tight text-stone-500 uppercase">A clear day</p>
+        <p className="mt-2 max-w-sm text-base leading-6 text-pretty text-stone-600">
           Start from the Inbox, then commit only the work that fits your day.
         </p>
-        <Link className="text-action" to="/inbox">
+        <Link
+          className="mt-4 inline-block text-sm font-semibold text-emerald-800 underline decoration-1 underline-offset-4 outline-none hover:text-emerald-950 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500"
+          to="/inbox"
+        >
           Open Inbox
         </Link>
       </div>
