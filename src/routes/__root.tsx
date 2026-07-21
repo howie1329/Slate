@@ -1,4 +1,5 @@
 import { Link, Outlet, createRootRoute } from "@tanstack/react-router";
+import { TaskComposerFooter } from "@/components/task-composer-footer";
 import { configuredMockSettings } from "@/mock-data/settings";
 
 const navLinkClass =
@@ -52,10 +53,7 @@ function SlateShell() {
         <Outlet />
       </div>
 
-      <footer
-        aria-label="Persistent footer"
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-16 border-t border-border bg-background/95"
-      />
+      <TaskComposerFooter aiIsConfigured={aiIsConfigured} />
     </main>
   );
 }
