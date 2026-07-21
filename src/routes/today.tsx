@@ -39,11 +39,7 @@ function TodayPage() {
   );
   const capacityMinutes = settings.dailyCapacityMinutes;
   const capacity = calculateCapacityState(activeTasks, capacityMinutes);
-  const { committedMinutes, remainingMinutes, overageMinutes, isOverCapacity, overflowTaskId } = capacity;
-  const capacityPercentage = Math.min((committedMinutes / capacityMinutes) * 100, 100);
-  const capacityStatus = isOverCapacity
-    ? `${overageMinutes} min over capacity`
-    : `${remainingMinutes} min remaining`;
+  const { overflowTaskId } = capacity;
 
   function toggleTask(taskId: string) {
     const task = scheduledToday.find((candidate) => candidate.id === taskId);
@@ -57,23 +53,6 @@ function TodayPage() {
   return (
     <section className={`flex h-full min-h-0 flex-col overflow-y-auto px-4 pt-5 sm:px-6 sm:pt-6 ${selectedTaskId ? "pb-48" : "pb-24"}`} aria-label="Today tasks">
       <div className="mx-auto w-full max-w-xl">
-        <div
-          aria-label={`${committedMinutes} of ${capacityMinutes} minutes committed`}
-          aria-valuemax={100}
-          aria-valuemin={0}
-          aria-valuenow={capacityPercentage}
-          aria-valuetext={capacityStatus}
-          className="mt-1 h-1 overflow-hidden rounded-full bg-muted"
-          role="progressbar"
-        >
-          <span
-            className={`block h-full rounded-full transition-[width,background-color] duration-200 motion-reduce:transition-none ${
-              isOverCapacity ? "bg-destructive" : "bg-primary"
-            }`}
-            style={{ width: `${capacityPercentage}%` }}
-          />
-        </div>
-
         {activeTasks.length === 0 && completedTasks.length === 0 ? (
           <PlannerEmptyState
             actionLabel={hasBacklogTasks ? "Browse backlog" : "Add a task"}

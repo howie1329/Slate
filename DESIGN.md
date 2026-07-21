@@ -217,7 +217,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 
 ### Capacity Summary
 
-- **Structure:** The header shows the Today remaining-minute value or Backlog active-task count; Today retains a thin `4px` progress rail in the workspace.
+- **Structure:** The persistent header shows the Today remaining-minute value and thin `4px` progress rail, or the Backlog active-task count. The rail stays with the capacity value while task content scrolls.
 - **Progress:** `primary` represents committed minutes; `destructive` represents over-capacity. The remaining-minute text shifts from `primary`, to `foreground`, to `capacity-caution` as capacity is used, then to `destructive` when over capacity.
 - **Behavior:** The rail is a signal, not a chart or performance score.
 

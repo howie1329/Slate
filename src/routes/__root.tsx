@@ -7,7 +7,7 @@ import { TaskSelectionProvider, useTaskSelection } from "@/components/task-selec
 import { Button } from "@/components/ui/button";
 import { retryPersistence, type PlannerSnapshot } from "@/lib/planner";
 import { calculateCapacityState, scopeForTask } from "@/lib/task-groups";
-import { hidePopover, openFullApp, useWindowMode } from "@/lib/window-mode";
+import { hidePopover, openFullApp, useWindowMode, type WindowMode } from "@/lib/window-mode";
 import { usePlannerState } from "@/lib/planner-query";
 
 const navLinkClass =
@@ -90,7 +90,7 @@ function SlateShell() {
         <Outlet />
       ) : (
         <>
-          <header className={`shrink-0 px-4 pt-3 sm:px-6 ${windowMode === "full" ? "px-8" : ""}`}>
+          <header className={`shrink-0 bg-background px-4 pt-3 sm:px-6 ${pathname === "/today" ? "pb-3" : ""} ${windowMode === "full" ? "px-8" : ""}`}>
             <div className={`mx-auto grid h-10 w-full max-w-xl grid-cols-[4rem_auto_4rem] items-center ${windowMode === "full" ? "max-w-3xl" : ""}`}>
               <HeaderSummary pathname={pathname} planner={planner.data} />
               <nav
@@ -128,6 +128,7 @@ function SlateShell() {
                 <span aria-hidden="true" className="justify-self-end" />
               )}
             </div>
+            {pathname === "/today" ? <TodayCapacityProgress planner={planner.data} windowMode={windowMode} /> : null}
           </header>
 
           <div className="slate-workspace min-h-0 flex-1">
@@ -156,9 +157,7 @@ function HeaderSummary({ pathname, planner }: HeaderSummaryProps) {
   }
 
   if (pathname === "/today") {
-    const todayScope = `today:${planner.today}`;
-    const activeTasks = planner.tasks.filter((task) => scopeForTask(task, planner.today) === todayScope);
-    const capacity = calculateCapacityState(activeTasks, planner.settings.dailyCapacityMinutes);
+    const capacity = getTodayCapacity(planner);
     const capacityRatio = planner.settings.dailyCapacityMinutes > 0
       ? capacity.remainingMinutes / planner.settings.dailyCapacityMinutes
       : 0;
@@ -199,6 +198,46 @@ function HeaderSummary({ pathname, planner }: HeaderSummaryProps) {
   }
 
   return <span aria-hidden="true" />;
+}
+
+function TodayCapacityProgress({ planner, windowMode }: { planner: PlannerSnapshot | undefined; windowMode: WindowMode }) {
+  if (!planner) {
+    return null;
+  }
+
+  const capacity = getTodayCapacity(planner);
+  const capacityPercentage = planner.settings.dailyCapacityMinutes > 0
+    ? Math.min((capacity.committedMinutes / planner.settings.dailyCapacityMinutes) * 100, 100)
+    : 0;
+  const status = capacity.isOverCapacity
+    ? `${capacity.overageMinutes} min over capacity`
+    : `${capacity.remainingMinutes} min remaining`;
+
+  return (
+    <div
+      aria-label={`${capacity.committedMinutes} of ${planner.settings.dailyCapacityMinutes} minutes committed`}
+      aria-valuemax={100}
+      aria-valuemin={0}
+      aria-valuenow={capacityPercentage}
+      aria-valuetext={status}
+      className={`mx-auto mt-2 h-1 w-full max-w-xl overflow-hidden rounded-full bg-muted ${windowMode === "full" ? "max-w-3xl" : ""}`}
+      role="progressbar"
+    >
+      <span
+        className={`block h-full rounded-full transition-[width,background-color] duration-200 motion-reduce:transition-none ${
+          capacity.isOverCapacity ? "bg-destructive" : "bg-primary"
+        }`}
+        style={{ width: `${capacityPercentage}%` }}
+      />
+    </div>
+  );
+}
+
+function getTodayCapacity(planner: PlannerSnapshot) {
+  const todayScope = `today:${planner.today}`;
+  const activeTasks = planner.tasks.filter((task) => scopeForTask(task, planner.today) === todayScope);
+
+  return calculateCapacityState(activeTasks, planner.settings.dailyCapacityMinutes);
 }
 
 type PersistenceRecoveryProps = {
