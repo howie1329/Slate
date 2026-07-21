@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { Link, Outlet, createRootRoute, useRouterState } from "@tanstack/react-router";
 import { TaskComposerFooter } from "@/components/task-composer-footer";
+import { TaskSelectionProvider, useTaskSelection } from "@/components/task-selection";
 import { retryPersistence } from "@/lib/planner";
 import { hidePopover, openFullApp, useWindowMode } from "@/lib/window-mode";
 import { usePlannerState } from "@/lib/planner-query";
@@ -11,7 +13,11 @@ const activeNavLinkClass =
   "inline-flex h-8 items-center justify-center rounded-full bg-foreground px-3.5 text-menu font-semibold text-background no-underline outline-none transition-colors duration-150 hover:bg-foreground/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none";
 
 export const Route = createRootRoute({
-  component: SlateShell,
+  component: () => (
+    <TaskSelectionProvider>
+      <SlateShell />
+    </TaskSelectionProvider>
+  ),
 });
 
 function SlateShell() {
@@ -21,6 +27,12 @@ function SlateShell() {
   const isSettingsPage = useRouterState({
     select: (state) => state.location.pathname === "/settings",
   });
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const { clearSelection, selectedTaskId } = useTaskSelection();
+
+  useEffect(() => {
+    clearSelection();
+  }, [clearSelection, pathname]);
 
   function handleOpenFullApp() {
     void openFullApp();
@@ -57,8 +69,20 @@ function SlateShell() {
         windowMode === "popover" ? "rounded-2xl ring-1 ring-border/70" : ""
       }`}
       data-window-mode={windowMode}
+      onPointerDownCapture={(event) => {
+        if (
+          selectedTaskId &&
+          event.target instanceof HTMLElement &&
+          !event.target.closest("[data-task-detail], [data-task-row]")
+        ) {
+          clearSelection();
+        }
+      }}
       onKeyDown={(event) => {
-        if (windowMode === "popover" && event.key === "Escape" && !event.defaultPrevented) {
+        if (event.key === "Escape" && selectedTaskId && !event.defaultPrevented) {
+          event.preventDefault();
+          clearSelection();
+        } else if (windowMode === "popover" && event.key === "Escape" && !event.defaultPrevented) {
           void hidePopover();
         }
       }}

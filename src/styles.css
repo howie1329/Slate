@@ -88,6 +88,11 @@
   --sidebar-accent-foreground: oklch(0.28 0.016 68);
   --sidebar-border: oklch(0.87 0.008 85);
   --sidebar-ring: oklch(0.62 0.12 160);
+  --task-detail: color-mix(in oklch, var(--secondary) 82%, var(--foreground));
+  --task-detail-foreground: var(--foreground);
+  --task-detail-border: var(--border);
+  --task-detail-field: color-mix(in oklch, var(--foreground) 4%, transparent);
+  --task-detail-muted: var(--muted-foreground);
 }
 
 .dark {
@@ -122,6 +127,11 @@
   --sidebar-accent-foreground: oklch(0.96 0.006 85);
   --sidebar-border: oklch(0.96 0.006 85 / 12%);
   --sidebar-ring: oklch(0.68 0.12 160);
+  --task-detail: var(--secondary);
+  --task-detail-foreground: var(--secondary-foreground);
+  --task-detail-border: color-mix(in oklch, var(--secondary-foreground) 18%, transparent);
+  --task-detail-field: color-mix(in oklch, var(--secondary-foreground) 10%, transparent);
+  --task-detail-muted: color-mix(in oklch, var(--secondary-foreground) 68%, transparent);
 }
 
 @layer base {
