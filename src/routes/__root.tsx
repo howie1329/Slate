@@ -1,7 +1,8 @@
 import { Link, Outlet, createRootRoute, useRouterState } from "@tanstack/react-router";
 import { TaskComposerFooter } from "@/components/task-composer-footer";
+import { retryPersistence } from "@/lib/planner";
 import { hidePopover, openFullApp, useWindowMode } from "@/lib/window-mode";
-import { configuredMockSettings } from "@/mock-data/settings";
+import { usePlannerState } from "@/lib/planner-query";
 
 const navLinkClass =
   "inline-flex h-8 items-center justify-center rounded-full px-3.5 text-menu font-medium text-muted-foreground no-underline outline-none transition-colors duration-150 hover:bg-background hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none";
@@ -14,7 +15,8 @@ export const Route = createRootRoute({
 });
 
 function SlateShell() {
-  const aiIsConfigured = configuredMockSettings.aiAvailability === "configured";
+  const planner = usePlannerState();
+  const aiIsConfigured = planner.data?.aiAvailability === "configured";
   const windowMode = useWindowMode();
   const isSettingsPage = useRouterState({
     select: (state) => state.location.pathname === "/settings",
@@ -22,6 +24,31 @@ function SlateShell() {
 
   function handleOpenFullApp() {
     void openFullApp();
+  }
+
+  async function handleRetryPersistence() {
+    await retryPersistence();
+    await planner.refetch();
+  }
+
+  if (planner.isError) {
+    return (
+      <main className="flex h-dvh items-center justify-center bg-background p-6 text-foreground">
+        <section className="max-w-sm rounded-lg border border-border bg-muted/30 p-4">
+          <h1 className="m-0 text-menu font-semibold">Slate could not load local data</h1>
+          <p className="mb-0 mt-2 text-sm leading-5 text-muted-foreground">
+            {planner.error instanceof Error ? planner.error.message : "Please try again."}
+          </p>
+          <button
+            className="mt-4 rounded-md bg-foreground px-3 py-1.5 text-sm font-semibold text-background"
+            onClick={() => void handleRetryPersistence()}
+            type="button"
+          >
+            Retry
+          </button>
+        </section>
+      </main>
+    );
   }
 
   return (

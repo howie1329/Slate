@@ -1,12 +1,8 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { usePlannerState, useUpdateSettings } from "@/lib/planner-query";
+import type { Theme } from "@/lib/planner";
 
-type Theme = "dark" | "light";
-
-type ThemeProviderProps = {
-  children: ReactNode;
-  defaultTheme?: Theme;
-  storageKey?: string;
-};
+type ThemeProviderProps = { children: ReactNode };
 
 type ThemeProviderState = {
   theme: Theme;
@@ -15,26 +11,25 @@ type ThemeProviderState = {
 
 const ThemeProviderContext = createContext<ThemeProviderState | undefined>(undefined);
 
-function getStoredTheme(storageKey: string, defaultTheme: Theme): Theme {
-  const storedTheme = window.localStorage.getItem(storageKey);
-
-  return storedTheme === "dark" || storedTheme === "light" ? storedTheme : defaultTheme;
-}
-
-export function ThemeProvider({
-  children,
-  defaultTheme = "light",
-  storageKey = "slate-theme",
-}: ThemeProviderProps) {
-  const [theme, setThemeState] = useState(() => getStoredTheme(storageKey, defaultTheme));
+export function ThemeProvider({ children }: ThemeProviderProps) {
+  const planner = usePlannerState();
+  const updateSettings = useUpdateSettings();
+  const theme = planner.data?.settings.theme ?? "light";
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
-    window.localStorage.setItem(storageKey, theme);
-  }, [storageKey, theme]);
+  }, [theme]);
+
+  function setTheme(nextTheme: Theme) {
+    if (!planner.data) {
+      return;
+    }
+
+    updateSettings.mutate({ ...planner.data.settings, theme: nextTheme });
+  }
 
   return (
-    <ThemeProviderContext.Provider value={{ theme, setTheme: setThemeState }}>
+    <ThemeProviderContext.Provider value={{ theme, setTheme }}>
       {children}
     </ThemeProviderContext.Provider>
   );

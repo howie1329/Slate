@@ -1,65 +1,38 @@
-import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
-import { mockTasks, mockToday } from "@/mock-data/tasks";
-import type { LocalDate } from "@/mock-data/types";
-
-const backlogTasks = mockTasks.filter(
-  (task) => task.scheduledDate === null || task.scheduledDate > mockToday,
-);
-
-const unscheduledTasks = backlogTasks
-  .filter((task) => task.scheduledDate === null)
-  .sort((first, second) => first.sortOrder - second.sortOrder);
-
-const futureDates = [...new Set(
-  backlogTasks.flatMap((task) => (task.scheduledDate === null ? [] : [task.scheduledDate])),
-)] as LocalDate[];
-
-const futureTaskGroups = futureDates
-  .sort()
-  .map((scheduledDate) => ({
-    scheduledDate,
-    tasks: backlogTasks
-      .filter((task) => task.scheduledDate === scheduledDate)
-      .sort((first, second) => first.sortOrder - second.sortOrder),
-  }));
-
-const initiallyCompletedTaskIds = new Set(
-  backlogTasks.filter((task) => task.completedAt !== null).map((task) => task.id),
-);
-
-function formatMinutes(minutes: number | null) {
-  return minutes === null ? "—" : `${minutes} min`;
-}
-
-function formatDateLabel(date: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    day: "numeric",
-    month: "long",
-    weekday: "long",
-  }).format(new Date(`${date}T00:00:00`));
-}
+import { usePlannerState, useSetTaskCompleted } from "@/lib/planner-query";
+import { formatMinutes, orderTasks, scopeForTask } from "@/lib/task-groups";
+import type { Task } from "@/lib/planner";
 
 export const Route = createFileRoute("/inbox")({
   component: InboxPage,
 });
 
 function InboxPage() {
-  const [completedTaskIds, setCompletedTaskIds] = useState(initiallyCompletedTaskIds);
+  const planner = usePlannerState();
+  const setTaskCompleted = useSetTaskCompleted();
+
+  if (!planner.data) {
+    return null;
+  }
+
+  const { tasks, today, orderByScope } = planner.data;
+  const groups = [
+    ["Needs estimate", "log:needs-estimate"],
+    ["Unscheduled", "log:unscheduled"],
+    ["Overdue / needs reschedule", "log:overdue"],
+    ["Upcoming", "log:upcoming"],
+  ] as const;
+  const completedTasks = tasks.filter((task) => task.completedAt !== null);
 
   function toggleTask(taskId: string) {
-    setCompletedTaskIds((currentTaskIds) => {
-      const nextTaskIds = new Set(currentTaskIds);
-
-      if (nextTaskIds.has(taskId)) {
-        nextTaskIds.delete(taskId);
-      } else {
-        nextTaskIds.add(taskId);
-      }
-
-      return nextTaskIds;
-    });
+    const task = tasks.find((candidate) => candidate.id === taskId);
+    if (!task) return;
+    setTaskCompleted.mutate(
+      { id: taskId, completed: task.completedAt === null },
+      { onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update task.") },
+    );
   }
 
   return (
@@ -72,38 +45,41 @@ function InboxPage() {
           Backlog
         </h1>
         <p className="m-0 text-sm font-semibold leading-5 tabular-nums text-foreground">
-          {backlogTasks.length} tasks
+          {tasks.filter((task) => task.completedAt === null).length} tasks
         </p>
 
-        <TaskGroup
-          completedTaskIds={completedTaskIds}
-          label="Unscheduled"
-          onToggleTask={toggleTask}
-          tasks={unscheduledTasks}
-        />
-
-        {futureTaskGroups.map((group) => (
+        {groups.map(([label, scope]) => (
           <TaskGroup
-            key={group.scheduledDate}
-            completedTaskIds={completedTaskIds}
-            label={formatDateLabel(group.scheduledDate)}
+            key={scope}
+            label={label}
             onToggleTask={toggleTask}
-            tasks={group.tasks}
+            pending={setTaskCompleted.isPending}
+            tasks={orderTasks(
+              tasks.filter((task) => scopeForTask(task, today) === scope),
+              orderByScope,
+              scope,
+            )}
           />
         ))}
+        <TaskGroup
+          label="Completed"
+          onToggleTask={toggleTask}
+          pending={setTaskCompleted.isPending}
+          tasks={completedTasks}
+        />
       </div>
     </section>
   );
 }
 
 type TaskGroupProps = {
-  completedTaskIds: Set<string>;
   label: string;
   onToggleTask: (taskId: string) => void;
-  tasks: typeof mockTasks;
+  pending: boolean;
+  tasks: Task[];
 };
 
-function TaskGroup({ completedTaskIds, label, onToggleTask, tasks }: TaskGroupProps) {
+function TaskGroup({ label, onToggleTask, pending, tasks }: TaskGroupProps) {
   if (tasks.length === 0) {
     return null;
   }
@@ -115,7 +91,7 @@ function TaskGroup({ completedTaskIds, label, onToggleTask, tasks }: TaskGroupPr
       </h2>
       <ul className="m-0 list-none divide-y divide-border p-0">
         {tasks.map((task) => {
-          const isCompleted = completedTaskIds.has(task.id);
+          const isCompleted = task.completedAt !== null;
 
           return (
             <li key={task.id} className="flex min-h-14 items-center gap-3 py-1">
@@ -123,7 +99,8 @@ function TaskGroup({ completedTaskIds, label, onToggleTask, tasks }: TaskGroupPr
                 aria-label={`Mark ${task.title} as ${isCompleted ? "incomplete" : "complete"}`}
                 checked={isCompleted}
                 className="size-5 rounded-full after:-inset-3"
-                onCheckedChange={() => onToggleTask(task.id)}
+              disabled={pending}
+              onCheckedChange={() => onToggleTask(task.id)}
               />
               <p
                 className={`m-0 min-w-0 flex-1 truncate text-menu ${

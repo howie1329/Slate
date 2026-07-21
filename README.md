@@ -2,7 +2,7 @@
 
 Slate is a local-first macOS planner for deciding what work realistically fits into today. Tasks have an estimated duration, the user sets a daily capacity limit, and Slate makes the tradeoffs visible without turning planning into calendar time-blocking.
 
-The current repository contains the visual workspace prototype and native macOS menu-bar shell. The task workflow is still backed by mock data; SQLite persistence, Keychain storage, and AI actions are planned MVP work.
+The current repository contains the visual workspace, native macOS menu-bar shell, and a local persistence foundation. Tasks and non-sensitive preferences are stored in SQLite, provider-specific API keys are stored in macOS Keychain, and the popover and full window refresh from the same local source of truth.
 
 The target product is designed around a compact menu-bar popover that can do the same work as the full app:
 
@@ -20,8 +20,8 @@ The target MVP is intentionally small: local SQLite persistence, secure macOS Ke
 - Vite
 - TanStack Router with file-based routes
 - Tailwind CSS 4 via the Vite plugin
-- SQLite through a Tauri-compatible SQL integration (planned)
-- macOS Keychain access through the Tauri layer (planned)
+- SQLite through a native Rust `rusqlite` repository with bundled SQLite
+- macOS Keychain access through the Tauri layer
 - Vercel AI SDK v7 with Vercel Gateway and OpenRouter (planned)
 
 ## Development
@@ -55,7 +55,7 @@ docs/
   plans/               Implementation plans
 ```
 
-The current prototype contains mock-backed `/today` and `/inbox` routes. The `/inbox` route currently presents the backlog-style task view; the target MVP replaces it with Log, adds Settings and a functional persistent command footer, and keeps the same GUI available in both the menu-bar popover and the full app.
+The current `/today`, `/inbox`, and `/settings` routes read from the native SQLite repository. The `/inbox` route remains the backlog-style task view while the product continues toward the full Log workflow. The same persisted state is available in both the menu-bar popover and full app.
 
 ## Current status
 
@@ -64,14 +64,14 @@ Implemented:
 - Compact/full workspace shell with light and dark themes.
 - macOS menu-bar tray icon and compact popover.
 - Popover dismissal on focus loss and Open Full App behavior.
-- Mock Today and backlog task views with local, in-memory completion toggles.
+- SQLite-backed tasks, scoped ordering, and non-sensitive preferences.
+- Provider-specific API key storage in macOS Keychain.
+- TanStack Query cache invalidation across the popover and full app after native mutations.
+- Persistent capture, completion toggles, settings, and theme selection.
 
 Planned MVP work:
 
-- Real task capture, editing, scheduling, deletion, and persistence.
-- SQLite-backed tasks, ordering, and preferences.
-- Settings and macOS Keychain credential storage.
-- Drag-and-drop ordering and complete capacity/over-capacity behavior.
+- Task editing, scheduling, deletion, drag-and-drop ordering, and complete capacity/over-capacity behavior.
 - AI Assist, Plan My Day, and reviewable AI result states.
 
 ## Product principles

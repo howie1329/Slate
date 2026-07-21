@@ -1,45 +1,44 @@
-import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
-import { configuredMockSettings } from "@/mock-data/settings";
-import { mockTasks, mockToday } from "@/mock-data/tasks";
-
-const todayTasks = mockTasks
-  .filter((task) => task.scheduledDate === mockToday)
-  .sort((first, second) => first.sortOrder - second.sortOrder);
-
-const initiallyCompletedTaskIds = new Set(
-  todayTasks.filter((task) => task.completedAt !== null).map((task) => task.id),
-);
-
-function formatMinutes(minutes: number | null) {
-  return minutes === null ? "—" : `${minutes} min`;
-}
+import { usePlannerState, useSetTaskCompleted } from "@/lib/planner-query";
+import { formatMinutes, orderTasks } from "@/lib/task-groups";
 
 export const Route = createFileRoute("/today")({
   component: TodayPage,
 });
 
 function TodayPage() {
-  const [completedTaskIds, setCompletedTaskIds] = useState(initiallyCompletedTaskIds);
-  const capacityMinutes = configuredMockSettings.settings.dailyCapacityMinutes;
-  const committedMinutes = todayTasks.reduce(
+  const planner = usePlannerState();
+  const setTaskCompleted = useSetTaskCompleted();
+
+  if (!planner.data) {
+    return null;
+  }
+
+  const { settings, tasks, today, orderByScope } = planner.data;
+  const scheduledToday = tasks.filter((task) => task.scheduledDate === today);
+  const activeTasks = orderTasks(
+    scheduledToday.filter((task) => task.completedAt === null),
+    orderByScope,
+    `today:${today}`,
+  );
+  const completedTasks = scheduledToday
+    .filter((task) => task.completedAt !== null)
+    .sort((first, second) => (first.completedAt ?? "").localeCompare(second.completedAt ?? ""));
+  const capacityMinutes = settings.dailyCapacityMinutes;
+  const committedMinutes = activeTasks.reduce(
     (total, task) => total + (task.estimateMinutes ?? 0), 0,
   );
   const capacityPercentage = Math.min((committedMinutes / capacityMinutes) * 100, 100);
 
   function toggleTask(taskId: string) {
-    setCompletedTaskIds((currentTaskIds) => {
-      const nextTaskIds = new Set(currentTaskIds);
-
-      if (nextTaskIds.has(taskId)) {
-        nextTaskIds.delete(taskId);
-      } else {
-        nextTaskIds.add(taskId);
-      }
-
-      return nextTaskIds;
-    });
+    const task = scheduledToday.find((candidate) => candidate.id === taskId);
+    if (!task) return;
+    setTaskCompleted.mutate(
+      { id: taskId, completed: task.completedAt === null },
+      { onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update task.") },
+    );
   }
 
   return (
@@ -67,9 +66,12 @@ function TodayPage() {
           />
         </div>
 
+        {activeTasks.length === 0 && completedTasks.length === 0 ? (
+          <p className="mb-0 mt-6 text-sm text-muted-foreground">Nothing is planned for today.</p>
+        ) : null}
         <ul className="m-0 mt-6 list-none divide-y divide-border p-0">
-          {todayTasks.map((task) => {
-            const isCompleted = completedTaskIds.has(task.id);
+          {[...activeTasks, ...completedTasks].map((task) => {
+            const isCompleted = task.completedAt !== null;
 
             return (
               <li key={task.id} className="flex min-h-14 items-center gap-3 py-1">
@@ -77,6 +79,7 @@ function TodayPage() {
                   aria-label={`Mark ${task.title} as ${isCompleted ? "incomplete" : "complete"}`}
                   checked={isCompleted}
                   className="size-5 rounded-full after:-inset-3"
+                  disabled={setTaskCompleted.isPending}
                   onCheckedChange={() => toggleTask(task.id)}
                 />
                 <p
