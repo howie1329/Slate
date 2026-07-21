@@ -73,7 +73,7 @@ function SlateShell() {
         if (
           selectedTaskId &&
           event.target instanceof HTMLElement &&
-          !event.target.closest("[data-task-detail], [data-task-row]")
+          !event.target.closest("[data-task-detail], [data-task-row], [data-task-calendar], [data-task-detail-dialog]")
         ) {
           clearSelection();
         }
@@ -137,7 +137,11 @@ function SlateShell() {
             <Outlet />
           </div>
 
-          <TaskComposerFooter aiIsConfigured={aiIsConfigured} windowMode={windowMode} />
+          <TaskComposerFooter
+            aiIsConfigured={aiIsConfigured}
+            scheduledDate={pathname === "/today" ? planner.data?.today ?? null : null}
+            windowMode={windowMode}
+          />
         </>
       )}
     </main>

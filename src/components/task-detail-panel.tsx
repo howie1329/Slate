@@ -190,7 +190,7 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
             >
             <HugeiconsIcon icon={Delete02Icon} strokeWidth={1.7} />
             </DialogTrigger>
-            <DialogContent showCloseButton={false}>
+            <DialogContent data-task-detail-dialog showCloseButton={false}>
               <DialogHeader>
                 <DialogTitle>Delete task?</DialogTitle>
                 <DialogDescription>
@@ -274,7 +274,7 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
               <HugeiconsIcon data-icon="inline-start" icon={Calendar01Icon} strokeWidth={1.7} />
               <span className="truncate text-menu">{formatDueDate(scheduledDate)}</span>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-auto p-0" side="top" sideOffset={8}>
+            <PopoverContent align="end" className="w-auto p-0" data-task-calendar side="top" sideOffset={8}>
               <Calendar
                 mode="single"
                 onSelect={(date) => {

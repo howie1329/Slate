@@ -12,16 +12,16 @@ export function scopeForTask(task: Task, today: LocalDate): ActiveTaskScope | nu
     return null;
   }
 
+  if (task.scheduledDate === today) {
+    return `today:${today}`;
+  }
+
   if (task.estimateMinutes === null) {
     return "log:needs-estimate";
   }
 
   if (task.scheduledDate === null) {
     return "log:unscheduled";
-  }
-
-  if (task.scheduledDate === today) {
-    return `today:${today}`;
   }
 
   return task.scheduledDate < today ? "log:overdue" : "log:upcoming";

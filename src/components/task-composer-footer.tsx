@@ -7,15 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TaskDetailPanel } from "@/components/task-detail-panel";
 import { useTaskSelection } from "@/components/task-selection";
+import type { LocalDate } from "@/lib/planner";
 import type { WindowMode } from "@/lib/window-mode";
 import { useCreateTask } from "@/lib/planner-query";
 
 type TaskComposerFooterProps = {
   aiIsConfigured: boolean;
+  scheduledDate: LocalDate | null;
   windowMode: WindowMode;
 };
 
-export function TaskComposerFooter({ aiIsConfigured, windowMode }: TaskComposerFooterProps) {
+export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }: TaskComposerFooterProps) {
   const navigate = useNavigate();
   const createTask = useCreateTask();
   const { selectedTaskId } = useTaskSelection();
@@ -30,7 +32,7 @@ export function TaskComposerFooter({ aiIsConfigured, windowMode }: TaskComposerF
     }
 
     createTask.mutate(
-      { title: trimmedTitle, estimateMinutes: null, scheduledDate: null },
+      { title: trimmedTitle, estimateMinutes: null, scheduledDate },
       {
         onSuccess: () => setTitle(""),
         onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save task."),
