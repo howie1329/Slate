@@ -46,10 +46,10 @@ function TodayPage() {
     <section className="flex h-full min-h-0 flex-col overflow-y-auto px-4 pb-24 pt-5 sm:px-6 sm:pt-6" aria-label="Today tasks">
       <div className="mx-auto w-full max-w-xl">
         <div className="flex items-baseline justify-between gap-4">
-          <p className="m-0 text-base font-semibold leading-6 tabular-nums text-foreground">
+          <p className="m-0 text-sm font-semibold leading-5 tabular-nums text-foreground">
             {committedMinutes} / {capacityMinutes} min
           </p>
-          <p className="m-0 text-xs font-semibold leading-tight text-muted-foreground">
+          <p className="m-0 text-menu-label font-semibold text-muted-foreground">
             committed
           </p>
         </div>
@@ -80,14 +80,14 @@ function TodayPage() {
                   onCheckedChange={() => toggleTask(task.id)}
                 />
                 <p
-                  className={`m-0 min-w-0 flex-1 truncate text-sm leading-5 ${
+                  className={`m-0 min-w-0 flex-1 truncate text-menu ${
                     isCompleted ? "text-muted-foreground line-through" : "text-foreground"
                   }`}
                 >
                   {task.title}
                 </p>
                 <span
-                  className={`shrink-0 text-sm leading-none tabular-nums ${
+                  className={`shrink-0 text-xs leading-none tabular-nums ${
                     isCompleted ? "text-primary" : "text-muted-foreground"
                   }`}
                 >

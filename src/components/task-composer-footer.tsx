@@ -13,16 +13,16 @@ export function TaskComposerFooter({ aiIsConfigured }: TaskComposerFooterProps) 
       aria-label="Task composer"
       className="absolute inset-x-0 bottom-0 z-10 h-16 border-t border-border bg-background/95 px-4 py-3 sm:px-6"
     >
-      <form className="mx-auto flex h-10 w-full max-w-xl items-center gap-2" onSubmit={(event) => event.preventDefault()}>
+      <form className="mx-auto flex h-10 w-full max-w-xl items-center gap-1.5" onSubmit={(event) => event.preventDefault()}>
         <Input
           aria-label="New task"
-          className="h-10 text-sm disabled:bg-background disabled:opacity-100"
+          className="h-10 text-menu disabled:bg-background disabled:opacity-100"
           disabled
           placeholder="Add a task"
         />
         <Button
           aria-label="Create task"
-          className="size-10 rounded-lg disabled:opacity-100"
+          className="size-8 rounded-md disabled:opacity-100"
           disabled
           size="icon"
           title="Task capture will be available here"
@@ -33,7 +33,7 @@ export function TaskComposerFooter({ aiIsConfigured }: TaskComposerFooterProps) 
         </Button>
         <Button
           aria-label="Plan my day with AI"
-          className="size-10 rounded-lg disabled:opacity-100"
+          className="size-8 rounded-md disabled:opacity-100"
           disabled
           size="icon"
           title={aiIsConfigured ? "AI planning will be available here" : "Set up AI to plan your day"}
@@ -44,7 +44,7 @@ export function TaskComposerFooter({ aiIsConfigured }: TaskComposerFooterProps) 
         </Button>
         <Button
           aria-label="Open settings"
-          className="size-10 rounded-lg disabled:opacity-100"
+          className="size-8 rounded-md disabled:opacity-100"
           disabled
           size="icon"
           title="Settings will be available here"

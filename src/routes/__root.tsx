@@ -3,10 +3,10 @@ import { TaskComposerFooter } from "@/components/task-composer-footer";
 import { configuredMockSettings } from "@/mock-data/settings";
 
 const navLinkClass =
-  "inline-flex h-8 items-center justify-center rounded-full px-3.5 text-sm font-medium text-muted-foreground no-underline outline-none transition-colors duration-150 hover:bg-background hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none";
+  "inline-flex h-8 items-center justify-center rounded-full px-3.5 text-menu font-medium text-muted-foreground no-underline outline-none transition-colors duration-150 hover:bg-background hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none";
 
 const activeNavLinkClass =
-  "inline-flex h-8 items-center justify-center rounded-full bg-foreground px-3.5 text-sm font-semibold text-background no-underline outline-none transition-colors duration-150 hover:bg-foreground/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none";
+  "inline-flex h-8 items-center justify-center rounded-full bg-foreground px-3.5 text-menu font-semibold text-background no-underline outline-none transition-colors duration-150 hover:bg-foreground/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none";
 
 export const Route = createRootRoute({
   component: SlateShell,
