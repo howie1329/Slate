@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useTaskSelection } from "@/components/task-selection";
 import { usePlannerState, useSetTaskCompleted } from "@/lib/planner-query";
-import { formatMinutes, orderTasks } from "@/lib/task-groups";
+import { calculateCapacityState, formatMinutes, orderTasks, scopeForTask } from "@/lib/task-groups";
 
 export const Route = createFileRoute("/today")({
   component: TodayPage,
@@ -20,19 +20,22 @@ function TodayPage() {
 
   const { settings, tasks, today, orderByScope } = planner.data;
   const scheduledToday = tasks.filter((task) => task.scheduledDate === today);
+  const todayScope = `today:${today}`;
   const activeTasks = orderTasks(
-    scheduledToday.filter((task) => task.completedAt === null),
+    tasks.filter((task) => scopeForTask(task, today) === todayScope),
     orderByScope,
-    `today:${today}`,
+    todayScope,
   );
   const completedTasks = scheduledToday
     .filter((task) => task.completedAt !== null)
     .sort((first, second) => (first.completedAt ?? "").localeCompare(second.completedAt ?? ""));
   const capacityMinutes = settings.dailyCapacityMinutes;
-  const committedMinutes = activeTasks.reduce(
-    (total, task) => total + (task.estimateMinutes ?? 0), 0,
-  );
+  const capacity = calculateCapacityState(activeTasks, capacityMinutes);
+  const { committedMinutes, remainingMinutes, overageMinutes, isOverCapacity, overflowTaskId } = capacity;
   const capacityPercentage = Math.min((committedMinutes / capacityMinutes) * 100, 100);
+  const capacityStatus = isOverCapacity
+    ? `${overageMinutes} min over capacity`
+    : `${remainingMinutes} min remaining`;
 
   function toggleTask(taskId: string) {
     const task = scheduledToday.find((candidate) => candidate.id === taskId);
@@ -48,7 +51,7 @@ function TodayPage() {
       <div className="mx-auto w-full max-w-xl">
         <div className="flex items-baseline justify-between gap-4">
           <p className="m-0 text-sm font-semibold leading-5 tabular-nums text-foreground">
-            {committedMinutes} / {capacityMinutes} min
+            {capacityStatus}
           </p>
           <p className="m-0 text-menu-label font-semibold text-muted-foreground">
             committed
@@ -56,14 +59,17 @@ function TodayPage() {
         </div>
         <div
           aria-label={`${committedMinutes} of ${capacityMinutes} minutes committed`}
-          aria-valuemax={capacityMinutes}
+          aria-valuemax={100}
           aria-valuemin={0}
-          aria-valuenow={committedMinutes}
+          aria-valuenow={capacityPercentage}
+          aria-valuetext={capacityStatus}
           className="mt-2 h-1 overflow-hidden rounded-full bg-muted"
           role="progressbar"
         >
           <span
-            className="block h-full rounded-full bg-primary transition-[width] duration-200 motion-reduce:transition-none"
+            className={`block h-full rounded-full transition-[width,background-color] duration-200 motion-reduce:transition-none ${
+              isOverCapacity ? "bg-destructive" : "bg-primary"
+            }`}
             style={{ width: `${capacityPercentage}%` }}
           />
         </div>
@@ -74,6 +80,7 @@ function TodayPage() {
         <ul className="m-0 mt-6 list-none divide-y divide-border p-0">
           {[...activeTasks, ...completedTasks].map((task) => {
             const isCompleted = task.completedAt !== null;
+            const isOverflowTask = !isCompleted && task.id === overflowTaskId;
 
             return (
               <li key={task.id} className="flex min-h-14 items-center gap-3 py-1" data-task-row>
@@ -86,8 +93,10 @@ function TodayPage() {
                 />
                 <button
                   aria-expanded={selectedTaskId === task.id}
-                  aria-label={`Edit ${task.title}`}
-                  className={`flex min-w-0 flex-1 items-center gap-3 rounded-md px-1.5 py-2 text-left outline-none transition-colors duration-150 hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none ${
+                  aria-label={`Edit ${task.title}${isOverflowTask ? ", pushes today over capacity" : ""}`}
+                  className={`flex min-w-0 flex-1 items-center gap-3 rounded-md py-2 text-left outline-none transition-colors duration-150 hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none ${
+                    isOverflowTask ? "border border-destructive px-[5px]" : "px-1.5"
+                  } ${
                     selectedTaskId === task.id ? "bg-muted" : ""
                   }`}
                   onClick={() => selectTask(task.id)}
