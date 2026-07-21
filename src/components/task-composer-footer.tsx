@@ -23,6 +23,7 @@ export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }
   const createTask = useCreateTask();
   const { selectedTaskId } = useTaskSelection();
   const [title, setTitle] = useState("");
+  const hasTitle = title.trim().length > 0;
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -44,7 +45,7 @@ export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }
   return (
     <footer
       aria-label="Task composer"
-      className={`absolute inset-x-0 bottom-0 z-10 h-16 bg-background/95 px-4 py-3 sm:px-6 ${selectedTaskId ? "" : "border-t border-border"} ${windowMode === "full" ? "px-8" : ""}`}
+      className={`absolute inset-x-0 bottom-0 z-10 h-16 bg-background px-4 py-3 sm:px-6 ${selectedTaskId ? "" : "border-t border-border"} ${windowMode === "full" ? "px-8" : ""}`}
     >
       <TaskDetailPanel windowMode={windowMode} />
       <form className={`mx-auto flex h-10 w-full max-w-xl items-center gap-1.5 ${windowMode === "full" ? "max-w-3xl" : ""}`} onSubmit={handleSubmit}>
@@ -60,17 +61,17 @@ export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }
         <Button
           aria-label="Create task"
           className="size-8 rounded-md"
-          disabled={!title.trim() || createTask.isPending}
+          disabled={!hasTitle || createTask.isPending}
           size="icon"
           title="Save task"
           type="submit"
-          variant="outline"
+          variant={hasTitle ? "default" : "outline"}
         >
           <HugeiconsIcon icon={SentIcon} strokeWidth={1.8} />
         </Button>
         <Button
           aria-label="Plan my day with AI"
-          className="size-8 rounded-md disabled:opacity-100"
+          className="size-8 rounded-md"
           disabled
           size="icon"
           title={aiIsConfigured ? "AI planning will be available here" : "Set up AI to plan your day"}

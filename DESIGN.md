@@ -221,6 +221,12 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 - **Progress:** `primary` represents committed minutes; `destructive` represents over-capacity. The remaining-minute text shifts from `primary`, to `foreground`, to `capacity-caution` as capacity is used, then to `destructive` when over capacity.
 - **Behavior:** The rail is a signal, not a chart or performance score.
 
+### Persistent Composer
+
+- **Structure:** A quiet, bounded footer holds the capture field, manual save, unavailable AI placeholder, and settings utility without adding a floating card treatment.
+- **Hierarchy:** Manual save becomes `primary` only when the capture has a valid title; utilities stay `outline`, and unavailable controls use the standard disabled treatment.
+- **Behavior:** The footer remains available as task content scrolls and connects directly to the task-detail panel when one is open.
+
 ### Task Detail Panel
 
 - **Placement:** A footer-adjacent transient panel using `14px` top corners and a bounded compact height.
