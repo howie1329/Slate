@@ -1,17 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useTaskSelection } from "@/components/task-selection";
 import { usePlannerState, useSetTaskCompleted } from "@/lib/planner-query";
 import { formatMinutes, orderTasks, scopeForTask } from "@/lib/task-groups";
 import type { Task } from "@/lib/planner";
 
-export const Route = createFileRoute("/inbox")({
-  component: InboxPage,
+export const Route = createFileRoute("/backlog")({
+  component: BacklogPage,
 });
 
-function InboxPage() {
+function BacklogPage() {
   const planner = usePlannerState();
   const setTaskCompleted = useSetTaskCompleted();
+  const { selectedTaskId, selectTask } = useTaskSelection();
 
   if (!planner.data) {
     return null;
@@ -38,7 +40,7 @@ function InboxPage() {
   return (
     <section
       aria-labelledby="backlog-heading"
-      className="flex h-full min-h-0 flex-col overflow-y-auto px-4 pb-24 pt-5 sm:px-6 sm:pt-6"
+      className={`flex h-full min-h-0 flex-col overflow-y-auto px-4 pt-5 sm:px-6 sm:pt-6 ${selectedTaskId ? "pb-48" : "pb-24"}`}
     >
       <div className="mx-auto w-full max-w-xl">
         <h1 id="backlog-heading" className="sr-only">
@@ -54,6 +56,8 @@ function InboxPage() {
             label={label}
             onToggleTask={toggleTask}
             pending={setTaskCompleted.isPending}
+            selectedTaskId={selectedTaskId}
+            onSelectTask={selectTask}
             tasks={orderTasks(
               tasks.filter((task) => scopeForTask(task, today) === scope),
               orderByScope,
@@ -65,6 +69,8 @@ function InboxPage() {
           label="Completed"
           onToggleTask={toggleTask}
           pending={setTaskCompleted.isPending}
+          selectedTaskId={selectedTaskId}
+          onSelectTask={selectTask}
           tasks={completedTasks}
         />
       </div>
@@ -75,11 +81,13 @@ function InboxPage() {
 type TaskGroupProps = {
   label: string;
   onToggleTask: (taskId: string) => void;
+  onSelectTask: (taskId: string) => void;
   pending: boolean;
+  selectedTaskId: string | null;
   tasks: Task[];
 };
 
-function TaskGroup({ label, onToggleTask, pending, tasks }: TaskGroupProps) {
+function TaskGroup({ label, onSelectTask, onToggleTask, pending, selectedTaskId, tasks }: TaskGroupProps) {
   if (tasks.length === 0) {
     return null;
   }
@@ -94,7 +102,7 @@ function TaskGroup({ label, onToggleTask, pending, tasks }: TaskGroupProps) {
           const isCompleted = task.completedAt !== null;
 
           return (
-            <li key={task.id} className="flex min-h-14 items-center gap-3 py-1">
+            <li key={task.id} className="flex min-h-14 items-center gap-3 py-1" data-task-row>
               <Checkbox
                 aria-label={`Mark ${task.title} as ${isCompleted ? "incomplete" : "complete"}`}
                 checked={isCompleted}
@@ -102,29 +110,28 @@ function TaskGroup({ label, onToggleTask, pending, tasks }: TaskGroupProps) {
               disabled={pending}
               onCheckedChange={() => onToggleTask(task.id)}
               />
-              <p
-                className={`m-0 min-w-0 flex-1 truncate text-menu ${
-                  isCompleted ? "text-muted-foreground line-through" : "text-foreground"
-                }`}
-              >
-                {task.title}
-              </p>
-              <span
-                className={`shrink-0 text-xs leading-none tabular-nums ${
-                  isCompleted ? "text-primary" : "text-muted-foreground"
-                }`}
-              >
-                {formatMinutes(task.estimateMinutes)}
-              </span>
               <button
-                aria-label={`Task options for ${task.title}`}
-                className="grid size-10 shrink-0 place-items-center rounded-md text-xl leading-none text-muted-foreground outline-none transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-100 motion-reduce:transition-none"
-                disabled
-                title="Task actions are not available yet"
+                aria-expanded={selectedTaskId === task.id}
+                aria-label={`Edit ${task.title}`}
+                className={`flex min-w-0 flex-1 items-center gap-3 rounded-md px-1.5 py-2 text-left outline-none transition-colors duration-150 hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none ${
+                  selectedTaskId === task.id ? "bg-muted" : ""
+                }`}
+                onClick={() => onSelectTask(task.id)}
                 type="button"
               >
-                <span aria-hidden="true" className="block -translate-y-px">
-                  ⋯
+                <span
+                  className={`min-w-0 flex-1 truncate text-menu ${
+                    isCompleted ? "text-muted-foreground line-through" : "text-foreground"
+                  }`}
+                >
+                  {task.title}
+                </span>
+                <span
+                  className={`shrink-0 text-xs leading-none tabular-nums ${
+                    isCompleted ? "text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  {formatMinutes(task.estimateMinutes)}
                 </span>
               </button>
             </li>

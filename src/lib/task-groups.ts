@@ -7,6 +7,14 @@ export type ActiveTaskScope =
   | "log:overdue"
   | `today:${LocalDate}`;
 
+export type CapacityState = {
+  committedMinutes: number;
+  remainingMinutes: number;
+  overageMinutes: number;
+  isOverCapacity: boolean;
+  overflowTaskId: string | null;
+};
+
 export function scopeForTask(task: Task, today: LocalDate): ActiveTaskScope | null {
   if (task.completedAt !== null) {
     return null;
@@ -16,12 +24,12 @@ export function scopeForTask(task: Task, today: LocalDate): ActiveTaskScope | nu
     return "log:needs-estimate";
   }
 
-  if (task.scheduledDate === null) {
-    return "log:unscheduled";
-  }
-
   if (task.scheduledDate === today) {
     return `today:${today}`;
+  }
+
+  if (task.scheduledDate === null) {
+    return "log:unscheduled";
   }
 
   return task.scheduledDate < today ? "log:overdue" : "log:upcoming";
@@ -44,4 +52,31 @@ export function orderTasks(tasks: Task[], orderByScope: Record<string, string[]>
 
 export function formatMinutes(minutes: number | null) {
   return minutes === null ? "—" : `${minutes} min`;
+}
+
+export function calculateCapacityState(tasks: Task[], capacityMinutes: number): CapacityState {
+  let committedMinutes = 0;
+  let overflowTaskId: string | null = null;
+
+  for (const task of tasks) {
+    if (task.completedAt !== null || task.estimateMinutes === null || task.estimateMinutes <= 0) {
+      continue;
+    }
+
+    committedMinutes += task.estimateMinutes;
+
+    if (overflowTaskId === null && committedMinutes > capacityMinutes) {
+      overflowTaskId = task.id;
+    }
+  }
+
+  const overageMinutes = Math.max(committedMinutes - capacityMinutes, 0);
+
+  return {
+    committedMinutes,
+    remainingMinutes: Math.max(capacityMinutes - committedMinutes, 0),
+    overageMinutes,
+    isOverCapacity: overageMinutes > 0,
+    overflowTaskId,
+  };
 }

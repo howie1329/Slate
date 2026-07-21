@@ -1,5 +1,8 @@
+import { useEffect, useState } from "react";
 import { Link, Outlet, createRootRoute, useRouterState } from "@tanstack/react-router";
 import { TaskComposerFooter } from "@/components/task-composer-footer";
+import { TaskSelectionProvider, useTaskSelection } from "@/components/task-selection";
+import { Button } from "@/components/ui/button";
 import { retryPersistence } from "@/lib/planner";
 import { hidePopover, openFullApp, useWindowMode } from "@/lib/window-mode";
 import { usePlannerState } from "@/lib/planner-query";
@@ -11,44 +14,50 @@ const activeNavLinkClass =
   "inline-flex h-8 items-center justify-center rounded-full bg-foreground px-3.5 text-menu font-semibold text-background no-underline outline-none transition-colors duration-150 hover:bg-foreground/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none";
 
 export const Route = createRootRoute({
-  component: SlateShell,
+  component: () => (
+    <TaskSelectionProvider>
+      <SlateShell />
+    </TaskSelectionProvider>
+  ),
 });
 
 function SlateShell() {
   const planner = usePlannerState();
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [reconnectFailed, setReconnectFailed] = useState(false);
   const aiIsConfigured = planner.data?.aiAvailability === "configured";
   const windowMode = useWindowMode();
   const isSettingsPage = useRouterState({
     select: (state) => state.location.pathname === "/settings",
   });
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const { clearSelection, selectedTaskId } = useTaskSelection();
+
+  useEffect(() => {
+    clearSelection();
+  }, [clearSelection, pathname]);
 
   function handleOpenFullApp() {
     void openFullApp();
   }
 
   async function handleRetryPersistence() {
-    await retryPersistence();
-    await planner.refetch();
+    setIsReconnecting(true);
+    setReconnectFailed(false);
+
+    try {
+      await retryPersistence();
+      const result = await planner.refetch();
+      setReconnectFailed(result.isError);
+    } catch {
+      setReconnectFailed(true);
+    } finally {
+      setIsReconnecting(false);
+    }
   }
 
   if (planner.isError) {
-    return (
-      <main className="flex h-dvh items-center justify-center bg-background p-6 text-foreground">
-        <section className="max-w-sm rounded-lg border border-border bg-muted/30 p-4">
-          <h1 className="m-0 text-menu font-semibold">Slate could not load local data</h1>
-          <p className="mb-0 mt-2 text-sm leading-5 text-muted-foreground">
-            {planner.error instanceof Error ? planner.error.message : "Please try again."}
-          </p>
-          <button
-            className="mt-4 rounded-md bg-foreground px-3 py-1.5 text-sm font-semibold text-background"
-            onClick={() => void handleRetryPersistence()}
-            type="button"
-          >
-            Retry
-          </button>
-        </section>
-      </main>
-    );
+    return <PersistenceRecovery isReconnecting={isReconnecting} onReconnect={handleRetryPersistence} retryFailed={reconnectFailed} />;
   }
 
   return (
@@ -57,8 +66,20 @@ function SlateShell() {
         windowMode === "popover" ? "rounded-2xl ring-1 ring-border/70" : ""
       }`}
       data-window-mode={windowMode}
+      onPointerDownCapture={(event) => {
+        if (
+          selectedTaskId &&
+          event.target instanceof HTMLElement &&
+          !event.target.closest("[data-task-detail], [data-task-row], [data-task-calendar], [data-task-detail-dialog]")
+        ) {
+          clearSelection();
+        }
+      }}
       onKeyDown={(event) => {
-        if (windowMode === "popover" && event.key === "Escape" && !event.defaultPrevented) {
+        if (event.key === "Escape" && selectedTaskId && !event.defaultPrevented) {
+          event.preventDefault();
+          clearSelection();
+        } else if (windowMode === "popover" && event.key === "Escape" && !event.defaultPrevented) {
           void hidePopover();
         }
       }}
@@ -92,7 +113,7 @@ function SlateShell() {
                   Today
                 </Link>
                 <Link
-                  to="/inbox"
+                  to="/backlog"
                   className={navLinkClass}
                   activeProps={{ className: activeNavLinkClass }}
                 >
@@ -113,9 +134,43 @@ function SlateShell() {
             <Outlet />
           </div>
 
-          <TaskComposerFooter aiIsConfigured={aiIsConfigured} windowMode={windowMode} />
+          <TaskComposerFooter
+            aiIsConfigured={aiIsConfigured}
+            scheduledDate={pathname === "/today" ? planner.data?.today ?? null : null}
+            windowMode={windowMode}
+          />
         </>
       )}
+    </main>
+  );
+}
+
+type PersistenceRecoveryProps = {
+  isReconnecting: boolean;
+  onReconnect: () => Promise<void>;
+  retryFailed: boolean;
+};
+
+function PersistenceRecovery({ isReconnecting, onReconnect, retryFailed }: PersistenceRecoveryProps) {
+  return (
+    <main className="flex h-dvh items-center justify-center bg-background px-6 text-foreground">
+      <section aria-labelledby="persistence-recovery-heading" className="w-full max-w-sm rounded-lg border border-border bg-card p-5">
+        <p className="m-0 text-menu-label font-semibold text-muted-foreground">Local data</p>
+        <h1 className="mb-0 mt-2 font-heading text-2xl font-semibold leading-tight tracking-tight" id="persistence-recovery-heading">
+          Slate needs to reconnect
+        </h1>
+        <p className="mb-0 mt-3 max-w-[34ch] text-sm leading-5 text-muted-foreground">
+          Your Mac may still be waking up. Refresh to reconnect to your local database without reopening Slate.
+        </p>
+        {retryFailed ? (
+          <p aria-live="polite" className="mb-0 mt-3 text-sm leading-5 text-muted-foreground" role="status">
+            Slate is still waiting for the database. Try again in a moment.
+          </p>
+        ) : null}
+        <Button className="mt-5" disabled={isReconnecting} onClick={() => void onReconnect()} type="button">
+          {isReconnecting ? "Reconnecting…" : "Refresh connection"}
+        </Button>
+      </section>
     </main>
   );
 }
