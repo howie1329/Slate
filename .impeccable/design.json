@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-20T00:00:00-04:00",
+  "title": "Design System: Slate",
+  "extensions": {
+    "colorMeta": {
+      "background": {
+        "role": "neutral",
+        "displayName": "Background",
+        "canonical": "oklch(0.985 0.003 85)",
+        "tonalRamp": ["oklch(0.18 0.003 85)", "oklch(0.30 0.003 85)", "oklch(0.42 0.003 85)", "oklch(0.54 0.003 85)", "oklch(0.66 0.003 85)", "oklch(0.78 0.003 85)", "oklch(0.90 0.003 85)", "oklch(0.985 0.003 85)"]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Foreground",
+        "canonical": "oklch(0.28 0.016 68)",
+        "tonalRamp": ["oklch(0.18 0.016 68)", "oklch(0.28 0.016 68)", "oklch(0.40 0.016 68)", "oklch(0.52 0.016 68)", "oklch(0.64 0.016 68)", "oklch(0.76 0.016 68)", "oklch(0.88 0.016 68)", "oklch(0.96 0.016 68)"]
+      },
+      "primary": {
+        "role": "primary",
+        "displayName": "Primary",
+        "canonical": "oklch(0.43 0.09 160)",
+        "tonalRamp": ["oklch(0.20 0.09 160)", "oklch(0.30 0.09 160)", "oklch(0.43 0.09 160)", "oklch(0.54 0.09 160)", "oklch(0.64 0.09 160)", "oklch(0.74 0.09 160)", "oklch(0.84 0.09 160)", "oklch(0.94 0.09 160)"]
+      },
+      "destructive": {
+        "role": "tertiary",
+        "displayName": "Destructive",
+        "canonical": "oklch(0.577 0.245 27.325)",
+        "tonalRamp": ["oklch(0.22 0.18 27.325)", "oklch(0.32 0.20 27.325)", "oklch(0.42 0.22 27.325)", "oklch(0.577 0.245 27.325)", "oklch(0.68 0.20 27.325)", "oklch(0.78 0.16 27.325)", "oklch(0.88 0.10 27.325)", "oklch(0.96 0.04 27.325)"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Planning Display",
+        "purpose": "The page-level planning prompt and reflective orientation."
+      },
+      "title": {
+        "displayName": "Product Title",
+        "purpose": "The Slate wordmark and concise section titles."
+      },
+      "body": {
+        "displayName": "Utility Body",
+        "purpose": "Task details, controls, and supporting copy."
+      },
+      "label": {
+        "displayName": "Compact Label",
+        "purpose": "View labels, metadata, and short utility text."
+      }
+    },
+    "shadows": [
+      {
+        "name": "overlay",
+        "value": "0 4px 8px rgb(0 0 0 / 0.12)",
+        "purpose": "Floating popovers, select menus, and dialogs only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control-state",
+        "value": "100ms ease-out",
+        "purpose": "Compact feedback for controls and transient overlays."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-window",
+        "value": "360px"
+      },
+      {
+        "name": "expanded-layout",
+        "value": "640px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one in-flow action that changes the task plan.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Save task</button>",
+      "css": ".ds-btn-primary { min-height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: var(--radius-md); background: var(--primary); color: var(--primary-foreground); font: 500 14px/1.2 var(--font-sans); transition: background-color 100ms ease-out, transform 100ms ease-out; } .ds-btn-primary:hover { background: color-mix(in oklch, var(--primary), transparent 20%); } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:focus-visible { outline: 3px solid color-mix(in oklch, var(--ring), transparent 50%); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "A low-emphasis icon or utility action such as theme switching.",
+      "html": "<button class=\"ds-btn-ghost\" type=\"button\" aria-label=\"Switch theme\">◐</button>",
+      "css": ".ds-btn-ghost { width: 28px; height: 28px; border: 1px solid transparent; border-radius: var(--radius-md); background: transparent; color: var(--foreground); font: 500 14px/1 var(--font-sans); transition: background-color 100ms ease-out; } .ds-btn-ghost:hover { background: var(--muted); } .ds-btn-ghost:focus-visible { outline: 3px solid color-mix(in oklch, var(--ring), transparent 50%); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Compact capture and settings field with clear focus treatment.",
+      "html": "<input class=\"ds-input\" placeholder=\"Add a task\" />",
+      "css": ".ds-input { box-sizing: border-box; width: 100%; height: 32px; padding: 0 10px; border: 1px solid var(--input); border-radius: var(--radius-md); background: transparent; color: var(--foreground); font: 400 14px/1.2 var(--font-sans); } .ds-input::placeholder { color: var(--muted-foreground); opacity: 1; } .ds-input:focus-visible { border-color: var(--ring); outline: 3px solid color-mix(in oklch, var(--ring), transparent 50%); outline-offset: 0; } .ds-input:disabled { cursor: not-allowed; background: color-mix(in oklch, var(--input), transparent 50%); opacity: .5; }"
+    },
+    {
+      "name": "Workspace Navigation",
+      "kind": "nav",
+      "refersTo": "workspace-navigation",
+      "description": "The compact Today and Inbox view switcher.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-link ds-nav-link--active\" href=\"#today\">Today</a><a class=\"ds-nav-link\" href=\"#log\">Log</a></nav>",
+      "css": ".ds-nav { display: flex; gap: 20px; border-bottom: 1px solid var(--border); } .ds-nav-link { display: inline-flex; padding: 0 0 12px; border-bottom: 2px solid transparent; color: var(--muted-foreground); font: 600 14px/1 var(--font-sans); text-decoration: none; } .ds-nav-link:hover { color: var(--foreground); } .ds-nav-link:focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; } .ds-nav-link--active { border-bottom-color: var(--foreground); color: var(--foreground); }"
+    },
+    {
+      "name": "Daily Commitment Summary",
+      "kind": "card",
+      "refersTo": "task-summary",
+      "description": "A contained capacity summary for the current day.",
+      "html": "<section class=\"ds-summary\"><div class=\"ds-summary-row\"><span>Committed</span><strong>120 / 240 min</strong></div><div class=\"ds-progress\"><span></span></div></section>",
+      "css": ".ds-summary { padding: 20px; border: 1px solid var(--border); border-radius: 16px; background: var(--card); color: var(--foreground); font: 400 14px/1.2 var(--font-sans); } .ds-summary-row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; color: var(--muted-foreground); } .ds-summary-row strong { color: var(--foreground); font-variant-numeric: tabular-nums; } .ds-progress { height: 6px; margin-top: 14px; overflow: hidden; border-radius: 999px; background: var(--muted); } .ds-progress span { display: block; width: 50%; height: 100%; border-radius: inherit; background: var(--primary); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Quiet desktop utility",
+    "overview": "Slate is a calm, compact planning surface for a single decision: what fits today. It uses a familiar product-UI vocabulary—short labels, clear hierarchy, standard controls, and calm boundaries—so the planning workflow stays more visible than the interface itself.\n\nThe system is intentionally restrained. Its light and dark themes use the same semantic roles; the primary color is reserved for committed actions, progress, selected state, and meaningful status. It rejects the dense visual language of project-management suites, calendar/time-blocking metaphors, and AI interfaces that imply control without user confirmation.",
+    "keyCharacteristics": [
+      "Compact-first geometry that remains usable in the 360 × 520 minimum window.",
+      "Tonal surfaces and hairline boundaries instead of decorative shadows.",
+      "Serif headings for a single reflective moment; sans-serif text for every active workflow.",
+      "A single primary accent used as a signal, never as ornament."
+    ],
+    "rules": [
+      {
+        "name": "The One Signal Rule",
+        "body": "`primary` appears only when it communicates action, progress, selection, or state. A screen does not receive primary color merely to look more lively.",
+        "section": "colors"
+      },
+      {
+        "name": "The Token Rule",
+        "body": "Use the semantic CSS variables from `src/styles.css`. New components may not introduce near-matching neutral or accent values.",
+        "section": "colors"
+      },
+      {
+        "name": "The Reflection Rule",
+        "body": "Serif type belongs to the daily decision and high-level orientation. Controls, task metadata, and operational content stay in the sans-serif family.",
+        "section": "typography"
+      },
+      {
+        "name": "The Quiet Surface Rule",
+        "body": "Do not combine a visible border with a broad soft shadow on ordinary cards or controls. Choose tonal layering and a border for static content; reserve elevation for floating interaction layers.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use `background`, `foreground`, `card`, `border`, and `muted` as semantic roles rather than introducing local neutral values.",
+      "Do reserve `primary` for an explicit task decision, status, focus, or progress signal.",
+      "Do keep the primary workflow understandable at 360 × 520, then let the full app provide more room for the same actions.",
+      "Do use standard, keyboard-operable controls with visible focus and short 100–200 ms state transitions.",
+      "Do keep AI results reviewable and visually secondary until the user explicitly accepts them."
+    ],
+    "donts": [
+      "Don't make Slate resemble a busy project-management suite through dense dashboards, decorative metrics, or competing accent colors.",
+      "Don't introduce calendar grids, time-blocking visual metaphors, or time-of-day scheduling controls into the core daily planning surface.",
+      "Don't make AI actions look autonomous: every suggestion must remain distinguishable and require user confirmation.",
+      "Don't use gradient text, colored side stripes, decorative glass cards, or broad soft shadows on bordered panels.",
+      "Don't use the primary color as page decoration, or use a serif face in controls, task data, and operational labels."
+    ]
+  }
+}
