@@ -116,7 +116,7 @@ function SlateShell() {
                   Today
                 </Link>
                 <Link
-                  to="/inbox"
+                  to="/backlog"
                   className={navLinkClass}
                   activeProps={{ className: activeNavLinkClass }}
                 >

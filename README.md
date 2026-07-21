@@ -55,7 +55,7 @@ docs/
   plans/               Implementation plans
 ```
 
-The current `/today`, `/inbox`, and `/settings` routes read from the native SQLite repository. The `/inbox` route remains the backlog-style task view while the product continues toward the full Log workflow. The same persisted state is available in both the menu-bar popover and full app.
+The current `/today`, `/backlog`, and `/settings` routes read from the native SQLite repository. The `/backlog` route remains the backlog-style task view while the product continues toward the full Log workflow. The same persisted state is available in both the menu-bar popover and full app.
 
 ## Current status
 

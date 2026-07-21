@@ -6,11 +6,11 @@ import { usePlannerState, useSetTaskCompleted } from "@/lib/planner-query";
 import { formatMinutes, orderTasks, scopeForTask } from "@/lib/task-groups";
 import type { Task } from "@/lib/planner";
 
-export const Route = createFileRoute("/inbox")({
-  component: InboxPage,
+export const Route = createFileRoute("/backlog")({
+  component: BacklogPage,
 });
 
-function InboxPage() {
+function BacklogPage() {
   const planner = usePlannerState();
   const setTaskCompleted = useSetTaskCompleted();
   const { selectedTaskId, selectTask } = useTaskSelection();
