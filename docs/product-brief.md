@@ -15,7 +15,7 @@ An individual knowledge worker who captures more work than they can reliably fin
 - **Today** is the default workspace. It shows today’s dated tasks, active committed minutes, remaining capacity, over-capacity state, and completed work at the bottom.
 - **Log** is the task record. It groups tasks into Needs estimate, Unscheduled, Upcoming, Overdue / needs reschedule, and Completed.
 - **Settings** contains daily capacity, AI provider/model/key, and the persistent planning instruction.
-- **Persistent footer** is always available in the workspace. It contains quick capture, Save, AI Assist, Plan My Day, Replan My Day, and the AI availability indicator.
+- **Persistent footer** is always available in the workspace. It contains quick capture, Save, AI Assist, Plan My Day, and the AI availability indicator.
 - **Menu-bar popover** toggles from the macOS menu bar, dismisses when clicking outside, and exposes the same GUI and actions as the full app. An Open Full App action opens the larger version of the same shell.
 
 ## MVP
@@ -27,20 +27,24 @@ The MVP is a five-hour-hackathon-sized, local-first daily planning loop:
 3. Review, edit, delete, complete, or return tasks to Log.
 4. Set a daily capacity in Settings; the default is 240 minutes / 4 hours.
 5. Plan only tasks with valid positive duration estimates onto Today.
-6. Use Plan My Day to generate a reviewable plan from Log tasks and the persistent planning instruction.
-7. Use Replan My Day to produce a revised plan when capacity or circumstances change.
-8. Persist tasks and preferences in local SQLite across restarts.
-9. Use the same GUI in the menu-bar popover and full app.
+6. Use Plan My Day to generate a reviewable additive plan from Log tasks and the persistent planning instruction.
+7. Use Plan My Day again to fill newly available capacity when capacity or circumstances change.
+8. Drag and drop active tasks in Today and Log to organize their order; ordering persists per day or Log section.
+9. Persist tasks, ordering, and preferences in local SQLite across restarts.
+10. Use the same GUI in the menu-bar popover and full app.
 
 ### MVP behavior rules
 
 - A task requires a title, but duration may be empty at quick capture. Such tasks show Needs estimate and cannot enter Today or an AI plan until sized.
 - Duration is measured in whole minutes. The MVP has no energy field, priority field, time-of-day, start/end-of-day, or calendar time-block model.
 - A task’s scheduled date is a calendar date only (`YYYY-MM-DD`). No date means it remains unscheduled in Log; today’s date puts it on Today; a future date appears under Upcoming.
-- Plan My Day and Replan My Day only consider tasks with valid durations. They use capacity, dates, task text, and the persistent planning instruction; they do not silently change data.
+- Plan My Day only considers tasks with valid durations and fills remaining capacity. It preserves all existing uncompleted Today tasks, uses dates, task text, and the persistent planning instruction, and does not silently change data. Running it again fills any newly available capacity; it does not remove or reorder existing commitments.
+- Active tasks can be reordered with drag and drop in Today and Log. Ordering is persisted per day for Today and per Log section for unscheduled/upcoming work. Completed tasks remain grouped as history and do not need manual ordering.
+- Dragging changes organization only; it does not change duration, capacity, date, or status.
+- Log order is a soft planning signal for Plan My Day. Earlier active tasks are generally preferred when capacity is limited, but explicit dates, overdue state, the planning instruction, duration fit, and the AI’s judgment can outweigh the order. The result remains reviewable rather than guaranteed.
 - AI results appear in a reusable result tray directly above the persistent footer. The user must accept or dismiss task suggestions and plans before any changes are written.
 - AI is optional. Without a configured key or network access, manual capture and task management remain fully usable. AI controls may be disabled or show an availability state.
-- The app allows a task to push Today over capacity. The meter and offending task show the overage, and the primary recovery action is Return to Log, which removes the date. The user may also run Replan My Day or keep the task on Today.
+- The app allows a task to push Today over capacity. The meter and offending task show the overage, and the primary recovery action is Return to Log, which removes the date. The user may also run Plan My Day again after making changes or keep the task on Today.
 - Completed tasks remain visible at the bottom of Today in a muted completed state, do not count toward active remaining capacity, and also appear in Log → Completed.
 - Unfinished tasks keep their original date after it passes and appear in Log → Overdue / needs reschedule. Slate never silently rolls them into tomorrow.
 - The AI provider selector supports Vercel Gateway and OpenRouter, with a curated list of two or three supported models. The selected provider and model persist in Settings.
@@ -60,6 +64,7 @@ The MVP is a five-hour-hackathon-sized, local-first daily planning loop:
 - Accounts, Clerk, Convex, cloud sync, collaboration, and sharing.
 - Calendar integrations, time-of-day scheduling, and automatic recurring plans.
 - Recurring tasks, projects, tags, subtasks, explicit priorities, energy modeling, and complex filters.
+- Rich task notes and long-form task context.
 - AI chat history, background agents, autonomous commits, model discovery, pricing UI, or provider-specific controls.
 - Notifications, focus timers, productivity scores, and analytics.
 
@@ -71,7 +76,7 @@ The final product remains a focused personal planning system, expanded around th
 
 - A fast menu-bar and global-shortcut capture surface that feeds the Log.
 - A multi-day planner that proposes realistic plans from capacity, dates, deadlines, and user direction while keeping the user in control.
-- Stronger AI assistance for clarification, estimation, triage, replanning, and end-of-day review. Suggestions still require review before changing commitments.
+- Stronger AI assistance for clarification, estimation, triage, corrective replanning, and end-of-day review. Suggestions still require review before changing commitments.
 - Projects and areas for organization without turning the product into a task database.
 - Recurring tasks, defer/reschedule flows, reminders, and lightweight calendar context.
 - Optional encrypted sync across the user’s Apple devices, with local data remaining usable offline.

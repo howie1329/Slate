@@ -16,7 +16,7 @@ Turn the current placeholder shell into a reliable menu-bar-first workflow for c
 - Daily capacity setting with a 240-minute default.
 - Date-only task planning and Log grouping.
 - Visible over-capacity state with Return to Log recovery.
-- Three optional AI actions: AI Assist, Plan My Day, and Replan My Day.
+- Two optional AI actions: AI Assist and Plan My Day.
 - Reusable AI result tray with review, loading, unavailable, and error states.
 - Empty, validation, persistence-error, and keyboard accessibility states.
 
@@ -33,9 +33,9 @@ Task
   id: string
   title: string
   estimateMinutes?: number
-  notes?: string
   status: "unscheduled" | "planned" | "completed"
   scheduledDate?: YYYY-MM-DD
+  sortOrder: number
   createdAt: ISO timestamp
   completedAt?: ISO timestamp
 
@@ -46,7 +46,7 @@ Settings
   aiModel: string // one of the curated supported models
 ```
 
-`estimateMinutes` is nullable at capture time. A missing value derives the Needs estimate state and excludes the task from Today and AI plans. `scheduledDate` is date-only; there is no time-of-day field. Completed tasks retain their date and remain visible on Today until the day changes.
+`estimateMinutes` is nullable at capture time. A missing value derives the Needs estimate state and excludes the task from Today and AI plans. `scheduledDate` is date-only; there is no time-of-day field. `sortOrder` is interpreted within the task’s current scope: a Today date for planned work or a Log section for unscheduled/upcoming work. Completed tasks retain their date and remain visible on Today until the day changes, but their order is not user-managed.
 
 The storage boundary should expose task operations and settings operations to the UI without coupling route components to the storage implementation. Use SQLite through the simplest dependable Tauri-compatible SQL integration available, with migrations. Keep the repository replaceable so a future Convex adapter can be added without changing route components. Store the API key in macOS Keychain rather than SQLite.
 
@@ -63,7 +63,7 @@ The storage boundary should expose task operations and settings operations to th
 ### 2. Workspace shell and capture footer
 
 - Replace the placeholder Inbox concept with Today, Log, and Settings views.
-- Add the persistent footer with text input, Save, AI Assist, Plan My Day, Replan My Day, and AI availability.
+- Add the persistent footer with text input, Save, AI Assist, Plan My Day, and AI availability.
 - Allow manual capture with title-only tasks; show Needs estimate until the user adds a duration.
 - Keep the footer and workspace usable in both popover and full-app modes.
 - Add keyboard-friendly focus order and submit behavior.
@@ -72,6 +72,7 @@ The storage boundary should expose task operations and settings operations to th
 
 - Build Log sections for Needs estimate, Unscheduled, Upcoming, Overdue / needs reschedule, and Completed.
 - Build Today with date, capacity meter, planned tasks, completion, edit/delete, and Return to Log.
+- Add drag-and-drop reordering for active Today tasks and active Log tasks; persist order by day or Log section.
 - Allow tasks to exceed capacity; show the numerical overage and mark contributing tasks.
 - Keep completed tasks at the bottom of Today in a muted state and exclude them from active remaining capacity.
 - Preserve past dates for unfinished work and surface it as Overdue in Log.
@@ -80,8 +81,7 @@ The storage boundary should expose task operations and settings operations to th
 
 - Add provider/model selection for Vercel Gateway and OpenRouter using Vercel AI SDK v7.
 - Add AI Assist to suggest title, duration, and optional date from the capture text.
-- Add Plan My Day to propose a dated, ordered plan using only valid-duration tasks, capacity, and the saved planning instruction.
-- Add Replan My Day using the same structured proposal flow.
+- Add Plan My Day to propose an additive dated, ordered plan using only valid-duration tasks and the remaining capacity; existing uncompleted Today tasks are preserved. The planner receives Log order as a soft user-priority signal, while dates, overdue state, the saved instruction, and duration fit may outweigh it. Running it again fills newly available capacity without removing or reordering existing commitments.
 - Render all AI work in one tray above the footer: loading, review, accept/edit/dismiss, unavailable, and retryable error states.
 - Require confirmation before any AI result changes tasks or dates.
 
