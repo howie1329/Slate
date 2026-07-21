@@ -5,41 +5,53 @@ colors:
   background: "oklch(0.985 0.003 85)"
   foreground: "oklch(0.28 0.016 68)"
   card: "oklch(0.998 0.002 85)"
+  card-foreground: "oklch(0.28 0.016 68)"
+  popover: "oklch(0.998 0.002 85)"
+  popover-foreground: "oklch(0.28 0.016 68)"
   primary: "oklch(0.43 0.09 160)"
   primary-foreground: "oklch(0.985 0.003 85)"
+  secondary: "oklch(0.94 0.008 85)"
+  secondary-foreground: "oklch(0.28 0.016 68)"
   muted: "oklch(0.95 0.006 85)"
   muted-foreground: "oklch(0.55 0.014 68)"
-  border: "oklch(0.87 0.008 85)"
-  ring: "oklch(0.62 0.12 160)"
+  accent: "oklch(0.94 0.008 85)"
+  accent-foreground: "oklch(0.28 0.016 68)"
   destructive: "oklch(0.577 0.245 27.325)"
+  border: "oklch(0.87 0.008 85)"
+  input: "oklch(0.87 0.008 85)"
+  ring: "oklch(0.62 0.12 160)"
   dark-background: "oklch(0.22 0.012 68)"
   dark-foreground: "oklch(0.96 0.006 85)"
   dark-card: "oklch(0.27 0.014 68)"
   dark-primary: "oklch(0.72 0.12 160)"
 typography:
-  display:
-    fontFamily: "Iowan Old Style, Palatino Linotype, Palatino, serif"
-    fontSize: "3rem"
-    fontWeight: 500
-    lineHeight: 1
   title:
     fontFamily: "Iowan Old Style, Palatino Linotype, Palatino, serif"
-    fontSize: "1.875rem"
+    fontSize: "1.5rem"
     fontWeight: 600
-    lineHeight: 1
+    lineHeight: 1.25
   body:
     fontFamily: "Avenir Next, Helvetica Neue, sans-serif"
     fontSize: "1rem"
+    fontWeight: 400
     lineHeight: 1.5
+  menu:
+    fontFamily: "Avenir Next, Helvetica Neue, sans-serif"
+    fontSize: "0.8125rem"
+    fontWeight: 400
+    lineHeight: 1.125rem
   label:
     fontFamily: "Avenir Next, Helvetica Neue, sans-serif"
-    fontSize: "0.75rem"
+    fontSize: "0.6875rem"
     fontWeight: 600
-    lineHeight: 1.25
+    lineHeight: 0.875rem
 rounded:
+  checkbox: "4px"
   control: "8px"
-  panel: "10px"
-  card: "16px"
+  field: "10px"
+  panel: "14px"
+  shell: "18px"
+  pill: "999px"
 spacing:
   compact: "8px"
   control: "10px"
@@ -49,27 +61,35 @@ components:
   button-primary:
     backgroundColor: "{colors.primary}"
     textColor: "{colors.primary-foreground}"
-    typography: "{typography.body}"
-    rounded: "{rounded.control}"
+    typography: "{typography.menu}"
+    rounded: "{rounded.field}"
     padding: "0 10px"
     height: "32px"
-  button-ghost:
+  button-outline:
+    backgroundColor: "{colors.background}"
     textColor: "{colors.foreground}"
-    typography: "{typography.body}"
-    rounded: "{rounded.control}"
+    typography: "{typography.menu}"
+    rounded: "{rounded.field}"
     padding: "0 10px"
     height: "32px"
   input:
     backgroundColor: "transparent"
     textColor: "{colors.foreground}"
-    typography: "{typography.body}"
-    rounded: "{rounded.control}"
+    typography: "{typography.menu}"
+    rounded: "{rounded.field}"
     padding: "0 10px"
     height: "32px"
+  navigation-pill:
+    backgroundColor: "{colors.muted}"
+    textColor: "{colors.foreground}"
+    typography: "{typography.menu}"
+    rounded: "{rounded.pill}"
+    padding: "4px 6px"
+    height: "40px"
   task-summary:
     backgroundColor: "{colors.card}"
     textColor: "{colors.foreground}"
-    rounded: "{rounded.card}"
+    rounded: "{rounded.panel}"
     padding: "20px"
 ---
 
@@ -79,117 +99,150 @@ components:
 
 **Creative North Star: "Quiet desktop utility"**
 
-Slate is a calm, compact planning surface for a single decision: what fits today. It uses a familiar product-UI vocabulary—short labels, clear hierarchy, standard controls, and calm boundaries—so the planning workflow stays more visible than the interface itself.
+Slate is a calm, compact planning surface for one decision: what fits today. The interface uses familiar product-UI vocabulary—short labels, clear hierarchy, standard controls, and quiet boundaries—so the planning workflow stays more visible than the interface itself.
 
-The system is intentionally restrained. Its light and dark themes use the same semantic roles; the primary color is reserved for committed actions, progress, selected state, and meaningful status. It rejects the dense visual language of project-management suites, calendar/time-blocking metaphors, and AI interfaces that imply control without user confirmation.
+The visual system is restrained rather than decorative. Near-neutral surfaces establish a soft desktop canvas, a single muted teal accent marks commitment and state, and serif type creates a brief reflective pause only where the product asks the user to orient. The system explicitly rejects project-management density, calendar/time-blocking metaphors, and AI surfaces that imply control without confirmation.
 
 **Key Characteristics:**
 
 - Compact-first geometry that remains usable in the 360 × 520 minimum window.
-- Tonal surfaces and hairline boundaries instead of decorative shadows.
-- Serif headings for a single reflective moment; sans-serif text for every active workflow.
-- A single primary accent used as a signal, never as ornament.
+- Tonal surfaces and hairline boundaries instead of decorative card shadows.
+- Serif type for orientation and reflection; sans-serif type for every active workflow.
+- One restrained accent used for commitment, selection, focus, and meaningful status.
+- State changes communicated through text, shape, and hierarchy as well as color.
 
 ## Colors
 
-The CSS custom properties in `src/styles.css` are canonical. Use semantic token names in components, not literal color values or ad-hoc replacements.
+The palette is a warm-neutral desktop canvas with a muted teal commitment signal and a red destructive state. The same semantic roles drive light and dark themes; components should use CSS variables rather than literal values.
 
 ### Primary
 
-- **Primary / primary-foreground:** The only active accent pair. Use for the main in-flow action, committed capacity progress, current selection, and checked state.
-- **Ring:** The focus-visible signal. Keep it distinct and always visible against the surrounding surface.
-- **Destructive:** Reserved for invalid or destructive task actions; it is never a secondary accent.
+- **Muted teal commitment signal** (`oklch(0.43 0.09 160)`): Use for committed capacity progress, selected or checked state, confirmed configuration, and the primary in-flow action. Keep it scarce so it retains meaning.
+- **Teal focus ring** (`oklch(0.62 0.12 160)`): Use for keyboard focus and active control emphasis. It must remain distinct from the primary fill.
 
 ### Neutral
 
-- **Background / foreground:** The base canvas and strongest readable text pair.
-- **Card:** The small lift for contained summaries such as the daily commitment meter.
-- **Muted / muted-foreground:** Supporting regions and secondary copy. Muted foreground is still body-text contrast, not a decorative gray.
-- **Border:** Quiet structure between adjacent tasks, navigation states, and contained content.
-- **Dark theme roles:** Preserve the matching `dark-*` values defined in the frontmatter through the existing `.dark` token overrides.
+- **Canvas** (`oklch(0.985 0.003 85)`): The main light-theme background.
+- **Surface** (`oklch(0.998 0.002 85)`): Cards, popovers, and contained summaries.
+- **Ink** (`oklch(0.28 0.016 68)`): Primary readable text and active navigation.
+- **Muted surface** (`oklch(0.95 0.006 85)`): Navigation tray, hover state, capacity rail, and secondary regions.
+- **Muted text** (`oklch(0.55 0.014 68)`): Supporting labels and metadata. It remains body-text contrast, not decoration.
+- **Boundary** (`oklch(0.87 0.008 85)`): Hairline structure between tasks, fields, and sections.
+- **Destructive red** (`oklch(0.577 0.245 27.325)`): Invalid, delete, and over-capacity states only.
+- **Dark canvas** (`oklch(0.22 0.012 68)`): The dark-theme background.
+- **Dark surface** (`oklch(0.27 0.014 68)`): Dark cards and popovers.
 
 ### Named Rules
 
-**The One Signal Rule.** `primary` appears only when it communicates action, progress, selection, or state. A screen does not receive primary color merely to look more lively.
+**The One Signal Rule.** Use the primary teal only when it communicates action, progress, selection, focus, or meaningful state. Do not use it as page decoration.
 
-**The Token Rule.** Use the semantic CSS variables from `src/styles.css`. New components may not introduce near-matching neutral or accent values.
+**The Token Rule.** Use the semantic CSS variables from `src/styles.css`. Do not introduce near-matching neutral or accent values in component classes.
 
 ## Typography
 
-**Display Font:** Iowan Old Style with Palatino fallbacks.
+**Display / Orientation Font:** Iowan Old Style with Palatino Linotype, Palatino fallbacks.
 
-**Body Font:** Avenir Next with Helvetica Neue fallback.
+**Body / UI Font:** Avenir Next with Helvetica Neue fallbacks.
 
-**Character:** Serif headings create a brief, reflective pause around the day’s decision. Avenir Next carries labels, controls, data, and body copy with compact, familiar utility.
+**Character:** The serif face creates a measured pause around orientation and the daily decision. The sans-serif face carries labels, controls, task data, and settings so active work stays familiar and compact.
 
 ### Hierarchy
 
-- **Display:** Used for the page-level planning prompt only. Keep it to a short, balanced thought.
-- **Title:** Used for the Slate wordmark and concise section titles; it is not a substitute for a control label.
-- **Body:** Used for instructions and supporting copy. Keep explanatory text concise and under roughly 65 characters per line where practical.
-- **Label:** Used for view names, compact metadata, and utility labels. Uppercase is allowed only for brief, meaningful labels, not as a repeated section scaffold.
-- **Numeric data:** Use tabular numerals for durations, capacity, and over-capacity values.
+- **Title** (600, `1.5rem`, `1.25`): Concise page or recovery headings where the user needs orientation.
+- **Body** (400, `1rem`, `1.5`): Explanatory copy and comfortable supporting text.
+- **Menu** (400–600, `0.8125rem`, `1.125rem`): Task titles, controls, navigation, and compact data.
+- **Label** (600, `0.6875rem`, `0.875rem`): Section labels, capacity metadata, and small status text. Use uppercase only when it improves recognition, never as repeated scaffolding.
+- **Numeric data** (tabular numerals): Durations, capacity, overages, and counts should align clearly.
 
 ### Named Rules
 
-**The Reflection Rule.** Serif type belongs to the daily decision and high-level orientation. Controls, task metadata, and operational content stay in the sans-serif family.
+**The Reflection Rule.** Serif type belongs to high-level orientation and a short reflective moment. Controls, task metadata, and operational labels stay in the sans-serif family.
 
 ## Elevation
 
-Slate is flat by default. Depth comes from the separation of background, card, and popover roles plus one-pixel borders; shadows are reserved for transient layers such as popovers, dialogs, and select menus. Overlays may use a light backdrop treatment to clarify a temporary mode, never to create decorative glass.
+Slate is flat by default. Static surfaces use tonal separation and one-pixel boundaries. Shadows are reserved for transient layers such as popovers, select menus, and dialogs; they clarify a floating interaction rather than decorate an ordinary card. The menu-bar shell uses a rounded ring instead of a broad shadow.
+
+### Shadow Vocabulary
+
+- **Transient menu layer** (`shadow-md` plus a subtle foreground ring): Select and popover content that must separate from the workspace.
+- **Dialog layer** (foreground ring with a restrained backdrop): Modal confirmation or calendar interaction when an inline treatment cannot contain the task.
+- **Static content** (none): Today rows, Backlog groups, settings groups, and capacity summaries remain flat.
 
 ### Named Rules
 
-**The Quiet Surface Rule.** Do not combine a visible border with a broad soft shadow on ordinary cards or controls. Choose tonal layering and a border for static content; reserve elevation for floating interaction layers.
+**The Quiet Surface Rule.** Do not combine a visible border with a broad soft shadow on ordinary cards or controls. Use tonal layering and a border for static content; reserve elevation for transient interaction layers.
 
 ## Components
 
 ### Buttons
 
-**Character:** Quiet, precise controls.
+**Character:** Quiet, precise controls that feel native to a compact desktop utility.
 
-- **Shape:** Gently rounded controls using the `control` radius.
-- **Primary:** Uses the primary token pair for a single in-flow action. The default height is compact and the label uses body-scale medium weight.
-- **Ghost:** Used for icon-only and low-emphasis actions, including theme switching. It gains a muted surface only on interaction.
-- **Focus / disabled:** Focus always uses the ring token and a visible ring. Disabled buttons lose interaction and reduce opacity; they do not imitate an active state.
+- **Shape:** `10px` base radius from `rounded-lg`; icon-only composer controls may use the `8px` control radius.
+- **Primary:** `primary` fill with `primary-foreground` text; default height `32px`, horizontal padding `10px`.
+- **Outline:** Background fill with `border` and `foreground` text; hover moves to `muted`.
+- **Ghost:** Transparent at rest; hover and expanded states use `muted`.
+- **Destructive:** A restrained destructive tint for delete or invalid actions, never a competing accent.
+- **Hover / Focus:** 150–200ms color transition; visible `ring` focus treatment; reduced motion removes transition choreography.
 
 ### Cards / Containers
 
-- **Corner Style:** Daily summaries use the `card` radius; ordinary panels should not exceed it.
-- **Background:** Use `card` against `background` for contained information. Do not nest cards merely to separate paragraphs.
-- **Border:** One quiet border establishes structure. Static cards do not receive decorative shadows.
-- **Internal Padding:** Use the `panel` spacing token for daily summaries and compact, consistent spacing for controls.
+- **Corner Style:** `10px` for ordinary groups and controls; `14px` for transient panels; `18px` for the popover shell.
+- **Background:** Use `card` against `background` for contained summaries; use `muted` for navigation and secondary regions.
+- **Border:** One quiet `border` establishes structure. Do not add decorative shadows to static panels.
+- **Internal Padding:** Use `8px` compact spacing, `10px` control spacing, and `20px` panel spacing.
+- **Settings groups:** A muted-tinted surface with a quiet border, compact heading, short description, and one consistent control vocabulary.
 
 ### Inputs / Fields
 
-- **Style:** Inputs are transparent on the current surface with an input border and a compact fixed height.
-- **Focus:** The border moves to `ring` and gains the standard ring treatment. Keyboard focus is not suppressed.
-- **Error / disabled:** Invalid fields use the destructive token; disabled fields use the input treatment and reduced opacity.
+- **Style:** Transparent fields with `input` border, `10px` radius, `10px` horizontal padding, and `32px` height for compact controls.
+- **Focus:** Shift the border to `ring` and add the standard visible focus ring.
+- **Error:** Use `destructive` border and ring treatment; keep the message adjacent and actionable.
+- **Disabled:** Reduce opacity and interaction without making the field appear like a separate inactive product state.
 
 ### Navigation
 
-- **Style:** Workspace views use a bottom rule as the selection affordance. The active item has foreground text and a foreground bottom border; inactive items remain muted until hover or focus.
-- **Density:** Keep the top-level navigation short. New categories belong in the task workflow only when they make the daily decision easier.
+- **Style:** The top-level Today/Backlog switcher is a compact `pill` container with `muted` fill and `4px` internal padding.
+- **Default:** Sans-serif menu text in `muted-foreground`.
+- **Active:** `foreground` fill with `background` text and semibold weight, making the current planning context immediately legible.
+- **Density:** Keep navigation short. New categories belong in the task workflow only when they make the daily decision easier.
 
-### Daily Commitment Summary
+### Task Rows
 
-- **Style:** A contained task-state summary with a short label, tabular total, and thin progress rail.
-- **Progress:** The primary fill represents committed capacity only; it is not a decorative chart treatment.
+- **Structure:** A quiet divided list with a circular completion affordance, a flexible truncated title, and tabular duration metadata.
+- **State:** Selected rows use `muted`; completed rows use `muted-foreground` and a line-through; over-capacity rows use a restrained `destructive` boundary.
+- **Interaction:** The entire row remains keyboard-operable with a visible focus ring. Completion and edit affordances must not rely on color alone.
+
+### Capacity Summary
+
+- **Structure:** A short tabular status line followed by a thin `4px` progress rail.
+- **Progress:** `primary` represents committed minutes; `destructive` represents over-capacity. The text always states remaining minutes or overage.
+- **Behavior:** The rail is a signal, not a chart or performance score.
+
+### Task Detail Panel
+
+- **Placement:** A footer-adjacent transient panel using `14px` top corners and a bounded compact height.
+- **Surface:** A tinted task-detail surface with quiet boundary and no decorative shadow.
+- **Interaction:** Editing stays close to the task list, dismisses with Escape or outside click, and respects reduced motion.
 
 ## Do's and Don'ts
 
 ### Do:
 
-- **Do** use `background`, `foreground`, `card`, `border`, and `muted` as semantic roles rather than introducing local neutral values.
-- **Do** reserve `primary` for an explicit task decision, status, focus, or progress signal.
-- **Do** keep the primary workflow understandable at 360 × 520, then let the full app provide more room for the same actions.
-- **Do** use standard, keyboard-operable controls with visible focus and short 100–200 ms state transitions.
-- **Do** keep AI results reviewable and visually secondary until the user explicitly accepts them.
+- **Do** use `background`, `foreground`, `card`, `border`, `muted`, `primary`, and `ring` as semantic roles from `src/styles.css`.
+- **Do** reserve the teal accent for an explicit task decision, progress, selection, focus, or meaningful state.
+- **Do** keep the core workflow understandable at 360 × 520 before optimizing the full window.
+- **Do** use standard keyboard-operable controls with visible focus and 150–250ms state transitions.
+- **Do** provide empty, completed, over-capacity, persistence-error, loading, and disabled states with concise explanatory copy.
+- **Do** keep AI results visually secondary and reviewable until the user explicitly accepts them.
+- **Do** use semantic labels and text alongside color for completion, over-capacity, configured, and error states.
 
 ### Don't:
 
 - **Don't** make Slate resemble a busy project-management suite through dense dashboards, decorative metrics, or competing accent colors.
 - **Don't** introduce calendar grids, time-blocking visual metaphors, or time-of-day scheduling controls into the core daily planning surface.
-- **Don't** make AI actions look autonomous: every suggestion must remain distinguishable and require user confirmation.
+- **Don't** make AI actions look autonomous; every suggestion must remain distinguishable and require user confirmation.
 - **Don't** use gradient text, colored side stripes, decorative glass cards, or broad soft shadows on bordered panels.
-- **Don't** use the primary color as page decoration, or use a serif face in controls, task data, and operational labels.
+- **Don't** use the primary color as page decoration or use a serif face in controls, task data, and operational labels.
+- **Don't** use nested cards merely to separate paragraphs or create hierarchy.
+- **Don't** rely on tiny low-contrast gray text for essential capacity, error, or persistence information.
