@@ -20,6 +20,7 @@ colors:
   border: "oklch(0.87 0.008 85)"
   input: "oklch(0.87 0.008 85)"
   ring: "oklch(0.62 0.12 160)"
+  capacity-caution: "oklch(0.56 0.11 80)"
   dark-background: "oklch(0.22 0.012 68)"
   dark-foreground: "oklch(0.96 0.006 85)"
   dark-card: "oklch(0.27 0.014 68)"
@@ -129,6 +130,7 @@ The palette is a warm-neutral desktop canvas with a muted teal commitment signal
 - **Muted text** (`oklch(0.55 0.014 68)`): Supporting labels and metadata. It remains body-text contrast, not decoration.
 - **Boundary** (`oklch(0.87 0.008 85)`): Hairline structure between tasks, fields, and sections.
 - **Destructive red** (`oklch(0.577 0.245 27.325)`): Invalid, delete, and over-capacity states only.
+- **Capacity caution** (`oklch(0.56 0.11 80)`): Use for the remaining-capacity value as the day approaches its limit. It is distinct from the destructive over-capacity state.
 - **Dark canvas** (`oklch(0.22 0.012 68)`): The dark-theme background.
 - **Dark surface** (`oklch(0.27 0.014 68)`): Dark cards and popovers.
 
@@ -192,6 +194,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 - **Border:** One quiet `border` establishes structure. Do not add decorative shadows to static panels.
 - **Internal Padding:** Use `8px` compact spacing, `10px` control spacing, and `20px` panel spacing.
 - **Settings groups:** A muted-tinted surface with a quiet border, compact heading, short description, and one consistent control vocabulary.
+- **Settings footer:** Keep local-storage context, app version, and the global save action together in one quiet persistent boundary.
 
 ### Inputs / Fields
 
@@ -215,9 +218,15 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 
 ### Capacity Summary
 
-- **Structure:** A short tabular status line followed by a thin `4px` progress rail.
-- **Progress:** `primary` represents committed minutes; `destructive` represents over-capacity. The text always states remaining minutes or overage.
+- **Structure:** The persistent header shows the Today remaining-minute value and thin `4px` progress rail, or the Backlog active-task count. The rail stays with the capacity value while task content scrolls.
+- **Progress:** `primary` represents committed minutes; `destructive` represents over-capacity. The remaining-minute text shifts from `primary`, to `foreground`, to `capacity-caution` as capacity is used, then to `destructive` when over capacity.
 - **Behavior:** The rail is a signal, not a chart or performance score.
+
+### Persistent Composer
+
+- **Structure:** A quiet, bounded footer holds the capture field, manual save, unavailable AI placeholder, and settings utility without adding a floating card treatment.
+- **Hierarchy:** Manual save becomes `primary` only when the capture has a valid title; utilities stay `outline`, and unavailable controls use the standard disabled treatment.
+- **Behavior:** The footer remains available as task content scrolls and connects directly to the task-detail panel when one is open.
 
 ### Task Detail Panel
 
