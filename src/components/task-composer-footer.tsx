@@ -2,18 +2,20 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { SentIcon, Settings01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { WindowMode } from "@/lib/window-mode";
 
 type TaskComposerFooterProps = {
   aiIsConfigured: boolean;
+  windowMode: WindowMode;
 };
 
-export function TaskComposerFooter({ aiIsConfigured }: TaskComposerFooterProps) {
+export function TaskComposerFooter({ aiIsConfigured, windowMode }: TaskComposerFooterProps) {
   return (
     <footer
       aria-label="Task composer"
-      className="absolute inset-x-0 bottom-0 z-10 h-16 border-t border-border bg-background/95 px-4 py-3 sm:px-6"
+      className={`absolute inset-x-0 bottom-0 z-10 h-16 border-t border-border bg-background/95 px-4 py-3 sm:px-6 ${windowMode === "full" ? "px-8" : ""}`}
     >
-      <form className="mx-auto flex h-10 w-full max-w-xl items-center gap-1.5" onSubmit={(event) => event.preventDefault()}>
+      <form className={`mx-auto flex h-10 w-full max-w-xl items-center gap-1.5 ${windowMode === "full" ? "max-w-3xl" : ""}`} onSubmit={(event) => event.preventDefault()}>
         <Input
           aria-label="New task"
           className="h-10 text-menu disabled:bg-background disabled:opacity-100"

@@ -10,13 +10,32 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
+        "title": "Slate",
+        "width": 760,
+        "height": 820,
+        "minWidth": 560,
+        "minHeight": 620,
+        "center": true,
+        "visible": false
+      },
+      {
+        "label": "popover",
         "title": "Slate",
         "width": 440,
         "height": 640,
         "minWidth": 360,
-        "minHeight": 520
+        "minHeight": 520,
+        "decorations": false,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visibleOnAllWorkspaces": true,
+        "transparent": true,
+        "shadow": true,
+        "visible": false
       }
     ],
     "security": {

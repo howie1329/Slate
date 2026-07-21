@@ -134,4 +134,19 @@
   html {
     @apply font-sans;
   }
+
+  html:has([data-window-mode="popover"]),
+  body:has([data-window-mode="popover"]) {
+    background: transparent;
+  }
+}
+
+@layer components {
+  [data-window-mode="full"] .slate-workspace > section {
+    @apply px-8;
+  }
+
+  [data-window-mode="full"] .slate-workspace > section > div {
+    @apply max-w-3xl;
+  }
 }
