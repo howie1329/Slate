@@ -5,10 +5,11 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { Settings } from "@/lib/planner";
 import {
-  useDeleteApiKey,
   usePlannerState,
   useSetApiKey,
   useUpdateSettings,
@@ -18,11 +19,16 @@ export const Route = createFileRoute("/settings")({
   component: SettingsPage,
 });
 
+const MODEL_OPTIONS = [
+  { label: "GPT-5 mini", value: "openai/gpt-5-mini" },
+  { label: "Claude Sonnet 4.5", value: "anthropic/claude-sonnet-4.5" },
+  { label: "Gemini 2.5 Flash", value: "google/gemini-2.5-flash" },
+] as const;
+
 function SettingsPage() {
   const planner = usePlannerState();
   const updateSettings = useUpdateSettings();
   const setApiKey = useSetApiKey();
-  const deleteApiKey = useDeleteApiKey();
   const [draft, setDraft] = useState<Settings | null>(null);
   const [apiKey, setApiKeyValue] = useState("");
 
@@ -68,18 +74,7 @@ function SettingsPage() {
     );
   }
 
-  function handleDeleteApiKey() {
-    if (!draft) {
-      return;
-    }
-
-    deleteApiKey.mutate(draft.aiProvider, {
-      onSuccess: () => toast.success("API key removed from macOS Keychain."),
-      onError: (error) => toast.error(error instanceof Error ? error.message : "Could not remove API key."),
-    });
-  }
-
-  const isSaving = updateSettings.isPending || setApiKey.isPending || deleteApiKey.isPending;
+  const isSaving = updateSettings.isPending || setApiKey.isPending;
 
   return (
     <section aria-labelledby="settings-heading" className="flex h-full min-h-0 flex-col">
@@ -101,41 +96,54 @@ function SettingsPage() {
           <SettingsGroup description="Used for planning your day." title="Daily capacity">
             <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor="daily-capacity">
               <span>Daily capacity</span>
-              <span className="flex w-28 items-center gap-1.5">
-                <Input
-                  className="h-8 text-right tabular-nums"
+              <InputGroup className="w-32">
+                <InputGroupInput
+                  className="text-right tabular-nums"
                   id="daily-capacity"
                   min="1"
                   onChange={(event) => updateDraft({ dailyCapacityMinutes: Number(event.target.value) })}
                   type="number"
                   value={draft.dailyCapacityMinutes}
                 />
-                <span className="text-xs text-muted-foreground">min</span>
-              </span>
+                <InputGroupAddon>minutes</InputGroupAddon>
+              </InputGroup>
             </label>
           </SettingsGroup>
 
           <SettingsGroup description="Your key is stored securely in the macOS Keychain." title="AI connection">
             <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor="ai-provider">
               <span>Provider</span>
-              <select
-                className="h-8 rounded-lg border border-input bg-transparent px-2 text-xs font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                id="ai-provider"
-                onChange={(event) => updateDraft({ aiProvider: event.target.value as Settings["aiProvider"] })}
+              <Select
+                onValueChange={(value) => updateDraft({ aiProvider: value as Settings["aiProvider"] })}
                 value={draft.aiProvider}
               >
-                <option value="vercel-gateway">Vercel AI Gateway</option>
-                <option value="openrouter">OpenRouter</option>
-              </select>
+                <SelectTrigger aria-label="AI provider" className="w-40 text-xs font-normal" id="ai-provider">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="vercel-gateway">Vercel AI Gateway</SelectItem>
+                    <SelectItem value="openrouter">OpenRouter</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </label>
             <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor="ai-model">
               <span>Model</span>
-              <Input
-                className="h-8 w-40 text-right text-xs font-normal"
-                id="ai-model"
-                onChange={(event) => updateDraft({ aiModel: event.target.value })}
-                value={draft.aiModel}
-              />
+              <Select onValueChange={(value) => updateDraft({ aiModel: value ?? "" })} value={draft.aiModel}>
+                <SelectTrigger aria-label="AI model" className="w-40 text-xs font-normal" id="ai-model">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {MODEL_OPTIONS.map((model) => (
+                      <SelectItem key={model.value} value={model.value}>
+                        {model.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </label>
             <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor="api-key">
               <span>API key</span>
@@ -148,17 +156,20 @@ function SettingsPage() {
                   type="password"
                   value={apiKey}
                 />
-                <ConfiguredState configured={planner.data.aiAvailability === "configured"} />
+                <Button
+                  aria-label="Save API key"
+                  disabled={!apiKey.trim() || isSaving}
+                  onClick={handleSaveApiKey}
+                  size="icon"
+                  title="Save API key"
+                  type="button"
+                  variant="destructive"
+                >
+                  <HugeiconsIcon aria-hidden="true" data-icon="inline-start" icon={Tick02Icon} strokeWidth={2.5} />
+                </Button>
               </span>
             </label>
-            <div className="flex justify-end gap-2">
-              <Button disabled={!apiKey.trim() || isSaving} onClick={handleSaveApiKey} size="sm" type="button" variant="outline">
-                Save key
-              </Button>
-              <Button disabled={planner.data.aiAvailability !== "configured" || isSaving} onClick={handleDeleteApiKey} size="sm" type="button" variant="outline">
-                Remove key
-              </Button>
-            </div>
+            <ConfiguredState configured={planner.data.aiAvailability === "configured"} />
           </SettingsGroup>
 
           <SettingsGroup description="Guides how Slate plans your day." title="Planning instruction">
