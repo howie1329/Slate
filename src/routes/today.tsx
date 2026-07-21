@@ -80,7 +80,7 @@ function TodayPage() {
                   onCheckedChange={() => toggleTask(task.id)}
                 />
                 <p
-                  className={`m-0 min-w-0 flex-1 truncate text-base leading-6 ${
+                  className={`m-0 min-w-0 flex-1 truncate text-sm leading-5 ${
                     isCompleted ? "text-muted-foreground line-through" : "text-foreground"
                   }`}
                 >
@@ -95,13 +95,13 @@ function TodayPage() {
                 </span>
                 <button
                   aria-label={`Task options for ${task.title}`}
-                  className="grid size-10 shrink-0 place-items-center rounded-md text-lg leading-none text-muted-foreground outline-none transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-100 motion-reduce:transition-none"
+                  className="grid size-10 shrink-0 place-items-center rounded-md text-xl leading-none text-muted-foreground outline-none transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-100 motion-reduce:transition-none"
                   disabled
                   title="Task actions are not available yet"
                   type="button"
                 >
-                  <span aria-hidden="true" className="-mt-1 tracking-[0.12em]">
-                    ···
+                  <span aria-hidden="true" className="block -translate-y-px">
+                    ⋯
                   </span>
                 </button>
               </li>

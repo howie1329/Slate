@@ -41,13 +41,10 @@ function SlateShell() {
           <span
             aria-label={aiIsConfigured ? "AI is set up" : "AI is not set up"}
             role="status"
-            className="justify-self-end grid size-8 place-items-center rounded-full border border-border bg-card"
-          >
-            <span
-              aria-hidden="true"
-              className={`size-2 rounded-full ${aiIsConfigured ? "bg-primary" : "bg-muted-foreground"}`}
-            />
-          </span>
+            className={`justify-self-end size-2.5 rounded-full ${
+              aiIsConfigured ? "bg-primary" : "bg-muted-foreground"
+            }`}
+          />
         </div>
       </header>
 
