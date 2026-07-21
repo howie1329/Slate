@@ -4,6 +4,8 @@
 
 Turn the current placeholder shell into a reliable menu-bar-first workflow for capturing tasks, assigning time estimates, planning work onto today, and completing it against a daily capacity budget. The target is a focused five-hour implementation, so every phase must preserve the narrow product boundary in `docs/product-brief.md`.
 
+> **Persistence update:** [`003-sqlite-persistence.md`](003-sqlite-persistence.md) supersedes this plan's persistence-specific details where they differ, including derived task status, scoped task ordering, the native SQLite repository, TanStack Query caching, and cross-window invalidation.
+
 ## Scope
 
 ### In scope

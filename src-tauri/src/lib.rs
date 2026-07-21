@@ -1,3 +1,5 @@
+mod credentials;
+mod persistence;
 mod window_controller;
 
 #[tauri::command]
@@ -18,9 +20,27 @@ pub fn run() {
     let builder = builder.plugin(tauri_nspanel::init());
 
     builder
-        .setup(|app| Ok(window_controller::setup(&app.handle())?))
+        .setup(|app| {
+            persistence::setup(&app.handle())?;
+            Ok(window_controller::setup(&app.handle())?)
+        })
         .on_window_event(window_controller::handle_window_event)
-        .invoke_handler(tauri::generate_handler![open_full_app, hide_popover])
+        .invoke_handler(tauri::generate_handler![
+            open_full_app,
+            hide_popover,
+            persistence::get_planner_snapshot,
+            persistence::create_task,
+            persistence::update_task,
+            persistence::set_task_completed,
+            persistence::set_task_scheduled_date,
+            persistence::delete_task,
+            persistence::reorder_tasks,
+            persistence::update_settings,
+            persistence::apply_planner_plan,
+            persistence::retry_persistence,
+            credentials::set_api_key,
+            credentials::delete_api_key,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

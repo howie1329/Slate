@@ -4,6 +4,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
+import { PlannerQueryProvider } from "@/lib/planner-query";
 import { router } from "./router";
 import "./styles.css";
 
@@ -15,11 +16,13 @@ declare module "@tanstack/react-router" {
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <ThemeProvider>
-      <TooltipProvider>
-        <RouterProvider router={router} />
-        <Toaster />
-      </TooltipProvider>
-    </ThemeProvider>
+    <PlannerQueryProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <RouterProvider router={router} />
+          <Toaster />
+        </TooltipProvider>
+      </ThemeProvider>
+    </PlannerQueryProvider>
   </React.StrictMode>,
 );
