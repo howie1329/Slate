@@ -1,28 +1,34 @@
 # Slate
 
-Slate is a local-first macOS planner for deciding what work realistically fits into today. Tasks have an estimated duration, the user sets a daily capacity limit, and Slate makes the tradeoffs visible without turning planning into calendar time-blocking.
+Slate is a local-first macOS planner for deciding what work realistically fits into today. Tasks have an estimated duration, the user sets a daily capacity limit, and Slate makes the tradeoffs visible without becoming a calendar or time-blocking tool.
 
-The current repository contains the visual workspace, native macOS menu-bar shell, and a local persistence foundation. Tasks and non-sensitive preferences are stored in SQLite, provider-specific API keys are stored in macOS Keychain, and the popover and full window refresh from the same local source of truth.
+## Current state
 
-The target product is designed around a compact menu-bar popover that can do the same work as the full app:
+The repository contains a working local planning foundation:
 
-- **Today**: the commitment plan, capacity meter, completion state, and overflow handling.
-- **Log**: tasks that need estimates, have no date, are scheduled for upcoming dates, are overdue, or are completed.
-- **Settings**: daily capacity, AI provider/model/key, and the persistent planning instruction.
-- **Persistent footer**: quick capture, AI-assisted capture, Plan My Day, and AI availability.
+- Tauri 2 macOS host with a menu-bar popover and full application window.
+- `/today`, `/backlog`, and `/settings` routes using the shared workspace shell.
+- SQLite-backed tasks, task ordering, daily capacity, and non-sensitive preferences.
+- Native task creation, editing, completion, deletion, and date scheduling.
+- Today capacity and over-capacity state.
+- macOS Keychain storage for provider API keys.
+- Shared local state between the popover and full window through native change events and TanStack Query invalidation.
+- Light and dark themes and compact task-detail editing above the persistent footer.
 
-The target MVP is intentionally small: local SQLite persistence, secure macOS Keychain storage for BYOK credentials, menu-bar access, and two optional AI actions using Vercel AI SDK v7 with Vercel Gateway or OpenRouter.
+The current product is still pre-1.0. The next work is to finish the deterministic daily loop, implement the reviewable AI actions, add the remaining ordering behavior, and harden the compact-window and persistence states. AI controls are present in the interface but are currently disabled until their native provider and review-tray flow is shipped.
 
-## Stack
+The product direction and staged expansion plan live in [the product brief](docs/product-brief.md) and [the roadmap](docs/roadmap.md).
 
-- Tauri 2
-- React 19 and TypeScript
-- Vite
-- TanStack Router with file-based routes
-- Tailwind CSS 4 via the Vite plugin
-- SQLite through a native Rust `rusqlite` repository with bundled SQLite
-- macOS Keychain access through the Tauri layer
-- Vercel AI SDK v7 with Vercel Gateway and OpenRouter (planned)
+## Product shape
+
+Slate is designed around a compact menu-bar popover that can perform the essential daily work:
+
+- **Today:** committed tasks, remaining capacity, over-capacity state, and completed work.
+- **Backlog:** captured work grouped by estimate and date state.
+- **Settings:** daily capacity, AI provider configuration, API key state, and planning instruction.
+- **Persistent footer:** quick capture, Save, AI action, and Settings access.
+
+The full window provides more room for the same workflow. It is not an unlock gate for essential planning behavior.
 
 ## Development
 
@@ -31,7 +37,7 @@ npm install
 npm run dev:desktop
 ```
 
-`npm run dev:desktop` starts Vite on port 1420 and launches the native Slate tray app. The popover opens from the menu-bar icon; the full app is available through Open Full App.
+`npm run dev:desktop` starts Vite on port 1420 and launches the native Slate tray app. The popover opens from the macOS menu bar; the full app is available through Open Full App.
 
 ## Validation and release builds
 
@@ -42,43 +48,41 @@ npm run tauri -- build
 
 The production application and DMG are generated under `src-tauri/target/release/bundle/`.
 
+## Stack
+
+- Tauri 2
+- React 19 and TypeScript
+- Vite
+- TanStack Router with file-based routes
+- Tailwind CSS 4 via the Vite plugin
+- SQLite through a native Rust `rusqlite` repository with bundled SQLite
+- macOS Keychain access through the Tauri layer
+- TanStack Query for renderer caching and cross-window invalidation
+- Native Rust AI provider adapter planned for the 1.0 AI actions
+
 ## Project structure
 
 ```text
 src/
   routes/             File-based TanStack Router routes and workspace views
-  router.tsx          Router configuration
+  components/         Workspace, task, and footer interactions
+  lib/                Renderer/native planner boundary and query hooks
   styles.css          Global Tailwind entry point and visual tokens
-src-tauri/            Native macOS host, tray/popover behavior, and window commands
+src-tauri/
+  src/                Native persistence, credentials, window, and tray behavior
 docs/
-  product-brief.md    Product definition, MVP boundary, and final direction
-  plans/               Implementation plans
+  product-brief.md    Product definition and 1.0 contract
+  roadmap.md          Directional roadmap and expansion stages
+  plans/              Implementation plans
 ```
-
-The current `/today`, `/backlog`, and `/settings` routes read from the native SQLite repository. The `/backlog` route remains the backlog-style task view while the product continues toward the full Log workflow. The same persisted state is available in both the menu-bar popover and full app.
-
-## Current status
-
-Implemented:
-
-- Compact/full workspace shell with light and dark themes.
-- macOS menu-bar tray icon and compact popover.
-- Popover dismissal on focus loss and Open Full App behavior.
-- SQLite-backed tasks, scoped ordering, and non-sensitive preferences.
-- Provider-specific API key storage in macOS Keychain.
-- TanStack Query cache invalidation across the popover and full app after native mutations.
-- Persistent capture, completion toggles, settings, and theme selection.
-
-Planned MVP work:
-
-- Task editing, scheduling, deletion, drag-and-drop ordering, and complete capacity/over-capacity behavior.
-- AI Assist, Plan My Day, and reviewable AI result states.
 
 ## Product principles
 
-- Duration is the primary planning unit; the MVP does not model energy, priorities, or calendar time blocks.
-- AI is optional. Manual capture, editing, scheduling, completion, and persistence work without a key or network connection.
-- AI suggestions are always reviewable and require confirmation before changing tasks or plans.
-- Manual task order is a soft planning signal: it gives the user influence without pretending to be an absolute priority system.
-- Over-capacity plans are allowed but made visibly explicit; Slate helps users find a way out instead of fighting them.
-- Future integrations such as Convex, Clerk, Composio, Gmail, and GitHub are version 2+ concerns.
+- Duration is the primary planning unit; Slate does not model energy, priorities, or calendar time blocks in the core loop.
+- Backlog contains captured but uncommitted work. Today contains deliberate commitments.
+- Manual capture and task management remain usable without an AI key or network connection.
+- AI suggestions are reviewable and require confirmation before changing tasks or plans.
+- Unfinished work is never silently rolled into another day.
+- Over-capacity plans remain possible but are made visibly explicit.
+- Local SQLite is the source of truth; native commands are the boundary for privileged operations.
+- Future integrations, sync, mobile, Spaces, and local agent access are separate expansions that must earn their complexity.

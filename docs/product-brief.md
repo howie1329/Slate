@@ -1,94 +1,134 @@
-# Slate product brief
+# Slate Product Brief
+
+> **Status:** Current product contract and 1.0 direction
+>
+> This brief describes what Slate is now, what 1.0 must prove, and which boundaries future work must preserve. The staged expansion plan lives in [the roadmap](roadmap.md).
 
 ## Product definition
 
-Slate is a local-first macOS planner that helps one person decide what work realistically fits into today. Its defining idea is a daily commitment budget: tasks have an estimated duration, and the product makes the cost of a commitment visible before and after it is added to the day.
+Slate is a local-first macOS planner that helps one person decide what work realistically fits into today. Its defining idea is a daily commitment budget: tasks have an estimated duration, and Slate makes the cost of a commitment visible before and after it is added to the day.
 
-Slate should feel calmer than a conventional task manager. It is not a project-management suite, a calendar replacement, a time-blocking tool, or an autonomous AI that plans a person’s life for them.
+Slate should feel calmer than a conventional task manager. It is not a project-management suite, calendar replacement, time-blocking tool, team workspace, or autonomous AI that plans a person’s life for them.
 
 ## Target user
 
 An individual knowledge worker who captures more work than they can reliably finish and wants a small, private desktop tool for deciding what actually fits today.
 
+## Current product state
+
+The current application is a pre-1.0 local planning foundation. It already provides:
+
+- A Tauri macOS shell with a menu-bar popover and full application window.
+- Today, Backlog, and Settings routes using the same workspace shell.
+- Local SQLite persistence for tasks, ordering data, daily capacity, and non-sensitive preferences.
+- Task creation, editing, completion, deletion, and calendar-date scheduling.
+- Visible Today capacity, remaining minutes, and over-capacity state.
+- A task-detail panel above the persistent footer.
+- macOS Keychain storage for provider API keys.
+- Cross-window refresh through native planner-change events and TanStack Query invalidation.
+
+The following are deliberately not presented as shipped yet:
+
+- AI Assist and Plan My Day provider requests.
+- The review tray for accepting or dismissing AI proposals.
+- A finished drag-and-drop ordering experience.
+- Global quick capture, end-of-day review, Spaces, integrations, sync, mobile, or MCP.
+
+The current interface may expose preparation for these capabilities, but the manual workflow remains the product’s source of truth until each capability is implemented and validated.
+
 ## Product surfaces
 
-- **Today** is the default workspace. It shows today’s dated tasks, active committed minutes, remaining capacity, over-capacity state, and completed work at the bottom.
-- **Log** is the task record. It groups tasks into Needs estimate, Unscheduled, Upcoming, Overdue / needs reschedule, and Completed.
-- **Settings** contains daily capacity, AI provider/model/key, and the persistent planning instruction.
-- **Persistent footer** is always available in the workspace. It contains quick capture, Save, AI Assist, Plan My Day, and the AI availability indicator.
-- **Menu-bar popover** toggles from the macOS menu bar, dismisses when clicking outside, and exposes the same GUI and actions as the full app. An Open Full App action opens the larger version of the same shell.
+- **Today** is the default workspace. It shows dated tasks for today, active committed minutes, remaining capacity, over-capacity state, and completed work at the bottom.
+- **Backlog** is the current task record. It groups captured work into Needs estimate, Unscheduled, Overdue / needs reschedule, Upcoming, and Completed.
+- **Settings** contains daily capacity, AI provider/model/key configuration, and the persistent planning instruction.
+- **Persistent footer** is always available in the workspace. It supports quick manual capture, Save, the AI action placeholder, and Settings access. The AI action becomes useful only after the 1.0 provider and review flow is shipped.
+- **Menu-bar popover** is the primary surface. It dismisses when focus leaves it and must support the essential daily loop within the compact window.
+- **Full window** provides more room for the same workflow. It may later support configuration, comparison, history, and review surfaces, but it must not be required for ordinary daily planning.
 
-## MVP
+The term **Log** may become a future product label if it makes the broader task record clearer. The current route and user-facing surface remain Backlog until that change is earned through testing.
 
-The MVP is a five-hour-hackathon-sized, local-first daily planning loop:
+## 1.0 product goal
 
-1. Capture a task from the persistent footer with a single input.
-2. Save it manually or use AI Assist to suggest a title, duration, and optional date.
-3. Review, edit, delete, complete, or return tasks to Log.
-4. Set a daily capacity in Settings; the default is 240 minutes / 4 hours.
-5. Plan only tasks with valid positive duration estimates onto Today.
-6. Use Plan My Day to generate a reviewable additive plan from Log tasks and the persistent planning instruction.
-7. Use Plan My Day again to fill newly available capacity when capacity or circumstances change.
-8. Drag and drop active tasks in Today and Log to organize their order; ordering persists per day or Log section.
-9. Persist tasks, ordering, and preferences in local SQLite across restarts.
-10. Use the same GUI in the menu-bar popover and full app.
+Make the local capture-to-commit-to-completion loop reliable enough that Slate is useful without any future roadmap feature.
 
-### MVP behavior rules
+The 1.0 loop is:
 
-- A task requires a title, but duration may be empty at quick capture. Such tasks show Needs estimate and cannot enter Today or an AI plan until sized.
-- Duration is measured in whole minutes. The MVP has no energy field, priority field, time-of-day, start/end-of-day, or calendar time-block model.
-- A task’s scheduled date is a calendar date only (`YYYY-MM-DD`). No date means it remains unscheduled in Log; today’s date puts it on Today; a future date appears under Upcoming.
-- Plan My Day only considers tasks with valid durations and fills remaining capacity. It preserves all existing uncompleted Today tasks, uses dates, task text, and the persistent planning instruction, and does not silently change data. Running it again fills any newly available capacity; it does not remove or reorder existing commitments.
-- Active tasks can be reordered with drag and drop in Today and Log. Ordering is persisted per day for Today and per Log section for unscheduled/upcoming work. Completed tasks remain grouped as history and do not need manual ordering.
-- Dragging changes organization only; it does not change duration, capacity, date, or status.
-- Log order is a soft planning signal for Plan My Day. Earlier active tasks are generally preferred when capacity is limited, but explicit dates, overdue state, the planning instruction, duration fit, and the AI’s judgment can outweigh the order. The result remains reviewable rather than guaranteed.
-- AI results appear in a reusable result tray directly above the persistent footer. The user must accept or dismiss task suggestions and plans before any changes are written.
-- AI is optional. Without a configured key or network access, manual capture and task management remain fully usable. AI controls may be disabled or show an availability state.
-- The app allows a task to push Today over capacity. The meter and offending task show the overage, and the primary recovery action is Return to Log, which removes the date. The user may also run Plan My Day again after making changes or keep the task on Today.
-- Completed tasks remain visible at the bottom of Today in a muted completed state, do not count toward active remaining capacity, and also appear in Log → Completed.
-- Unfinished tasks keep their original date after it passes and appear in Log → Overdue / needs reschedule. Slate never silently rolls them into tomorrow.
-- The AI provider selector supports Vercel Gateway and OpenRouter, with a curated list of two or three supported models. The selected provider and model persist in Settings.
-- API keys are stored in the macOS Keychain through the Tauri layer. Non-sensitive preferences are stored in SQLite.
+1. Capture a task from the persistent footer with a title.
+2. Add or suggest a positive whole-minute estimate.
+3. Keep captured but uncommitted work in Backlog.
+4. Deliberately place eligible work on Today.
+5. See the cost of the commitment against daily capacity.
+6. Complete, edit, return, or delete the work.
+7. Use AI only as an optional, reviewable aid for capture and planning.
 
-### MVP success criteria
+## 1.0 behavior contract
 
-- A new user can capture a task, set capacity, and build a first plan without instructions.
-- A returning user can understand what fits today in one glance from the menu-bar popover.
-- A user can perform every MVP action from the popover, while the full app provides more room for the same GUI.
+- A task requires a non-empty title. Duration may be empty at quick capture; unsized tasks remain in Backlog and cannot enter Today or an AI-generated plan until sized.
+- Duration is measured in whole minutes. The core loop does not model energy, priority, time of day, start/end times, or calendar blocks.
+- A scheduled date is a calendar date only (`YYYY-MM-DD`). No date means the task is unscheduled; today’s date places it on Today; a future date appears under Upcoming; a past date appears under Overdue / needs reschedule.
+- Today contains deliberate commitments, not an automatically rolled-forward list.
+- Unfinished tasks keep their original date after it passes. Slate never silently moves them to tomorrow.
+- Active Today tasks count against the daily capacity. Completed tasks remain visible as history but do not count toward active remaining capacity.
+- Slate may allow a user to keep an over-capacity Today plan. The meter and affected task make the overage visible, and recovery actions help the user return work to Backlog or revise the plan.
+- Plan My Day considers only eligible estimated Backlog tasks and the current remaining capacity. It preserves existing uncompleted Today commitments, proposes an additive plan, and never silently removes or reorders existing commitments.
+- Every AI result is transient until the user accepts it. Dismiss and Redo do not write task or plan changes.
+- Accepted Plan My Day assignments are validated again at the native SQLite boundary and applied atomically. A stale or invalid proposal must make no partial writes.
+- Manual capture, editing, scheduling, completion, deletion, and persistence work without an AI provider, API key, or network connection.
+- API keys remain in macOS Keychain. They do not appear in SQLite, planner snapshots, renderer review state, change events, or logs.
+
+## AI actions for 1.0
+
+The persistent footer has one context-sensitive AI action:
+
+- With composer text, it becomes **AI Assist** and proposes a cleaner title, a positive whole-minute estimate, and an optional date only when the user has not already supplied one.
+- With an empty composer, it becomes **Plan My Day** and proposes eligible Backlog tasks that fit the remaining capacity.
+
+Both actions use a compact review tray above the footer. The user can edit or dismiss an AI Assist proposal, or review and accept/dismiss a Plan My Day proposal. The native layer owns provider requests, structured-result validation, and credential access. The renderer receives only safe, non-secret proposal data.
+
+The detailed request and result contract lives in [the AI actions brief](ai-actions-brief.md).
+
+## 1.0 success criteria
+
+- A new user can capture a task, set capacity, estimate work, and understand Today without instructions.
+- A returning user can see what fits today from the menu-bar popover in one glance.
+- Every essential daily action works in the popover and full window.
 - Closing and reopening the app does not lose tasks, estimates, dates, capacity, completion state, or non-sensitive preferences.
-- AI actions produce reviewable structured results and never block the manual workflow.
-- The workflow stays usable in the current 440×640 shell and down to the configured 360×520 minimum.
+- Over-capacity and persistence failures are understandable and recoverable.
+- AI actions save effort without making the user feel that commitments changed behind their back.
+- The workflow remains usable in the configured compact window, including the 360 × 520 minimum.
+- The product can be packaged and demonstrated without explaining unfinished core behavior.
 
-## Explicitly out of MVP
+## Explicitly out of 1.0
 
-- Accounts, Clerk, Convex, cloud sync, collaboration, and sharing.
+- Accounts, cloud sync, collaboration, and sharing.
 - Calendar integrations, time-of-day scheduling, and automatic recurring plans.
-- Recurring tasks, projects, tags, subtasks, explicit priorities, energy modeling, and complex filters.
-- Rich task notes and long-form task context.
-- AI chat history, background agents, autonomous commits, model discovery, pricing UI, or provider-specific controls.
-- Notifications, focus timers, productivity scores, and analytics.
+- Spaces, nested projects, tags, subtasks, dependencies, explicit priority systems, and energy modeling.
+- Rich notes and long-form task context.
+- AI chat history, background agents, autonomous commits, model discovery, pricing UI, or provider-specific control surfaces.
+- Notifications, focus timers, productivity scores, streaks, badges, rankings, and analytics dashboards.
+- Mobile applications and external task integrations.
 
-These may become final-product capabilities only after the deterministic local workflow is reliable.
+These are not rejected permanently. They remain outside 1.0 until the deterministic local workflow is reliable and real usage shows that the added complexity solves a recurring problem.
 
-## Final product direction
+## Long-term direction
 
-The final product remains a focused personal planning system, expanded around the same commitment-budget model:
+Slate may expand around the same commitment-budget model in the following order:
 
-- A fast menu-bar and global-shortcut capture surface that feeds the Log.
-- A multi-day planner that proposes realistic plans from capacity, dates, deadlines, and user direction while keeping the user in control.
-- Stronger AI assistance for clarification, estimation, triage, corrective replanning, and end-of-day review. Suggestions still require review before changing commitments.
-- Projects and areas for organization without turning the product into a task database.
-- Recurring tasks, defer/reschedule flows, reminders, and lightweight calendar context.
-- Optional encrypted sync across the user’s Apple devices, with local data remaining usable offline.
-- Optional Convex and Clerk integrations, followed by external context from systems such as Composio, Gmail, and GitHub.
-- Small, respectful summaries such as planned versus completed time; no productivity gamification.
+1. **Daily resilience:** global capture, end-of-day review, anchors, and contextual recovery when the day changes.
+2. **Spaces:** distinct planning contexts with their own capacity only when users need them.
+3. **Calibration:** respectful feedback and conservative suggestions that improve estimates and capacity without scoring productivity.
+4. **Outside context:** reviewed candidate actions from systems such as GitHub, Gmail, and calendar-informed capacity.
+5. **Optional device expansion:** mobile capture and review, followed by sync only when a real multi-device need and conflict model exist.
+6. **Local agent access:** an optional, permissioned MCP interface that captures agent-discovered work into Backlog by default.
 
-The final product should preserve the MVP promises: local-first behavior, visible time cost, deliberate commitment, and a quiet desktop experience.
+Each expansion is conditional. The full sequencing, entry criteria, exit criteria, and non-goals are maintained in [the roadmap](roadmap.md).
 
 ## Product guardrails
 
 - Protect the daily decision from feature sprawl.
 - Prefer explicit user choices over hidden automation.
 - Keep estimates and capacity understandable in minutes.
-- Preserve an offline-capable core even if sync is added later.
+- Preserve a useful offline-capable core even if external services are added later.
+- Keep the menu-bar popover capable of the normal daily loop.
+- Treat external work as a candidate until the user reviews it.
 - Add a feature only when it makes deciding what fits today easier.
