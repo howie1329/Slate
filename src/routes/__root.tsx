@@ -92,21 +92,7 @@ function SlateShell() {
         <>
           <header className={`shrink-0 px-4 pt-3 sm:px-6 ${windowMode === "full" ? "px-8" : ""}`}>
             <div className={`mx-auto grid h-10 w-full max-w-xl grid-cols-[4rem_auto_4rem] items-center ${windowMode === "full" ? "max-w-3xl" : ""}`}>
-              {windowMode === "popover" ? (
-                <Button
-                  aria-label="Open full app"
-                  className="justify-self-start text-muted-foreground"
-                  onClick={handleOpenFullApp}
-                  type="button"
-                  size="icon"
-                  title="Open full app"
-                  variant="ghost"
-                >
-                  <HugeiconsIcon data-icon="inline-start" icon={ArrowUpRight01Icon} strokeWidth={1.8} />
-                </Button>
-              ) : (
-                <span aria-hidden="true" />
-              )}
+              <HeaderSummary pathname={pathname} planner={planner.data} />
               <nav
                 className="flex justify-self-center items-center rounded-full bg-muted p-1"
                 aria-label="Task views"
@@ -126,7 +112,21 @@ function SlateShell() {
                   Backlog
                 </Link>
               </nav>
-              <HeaderSummary pathname={pathname} planner={planner.data} />
+              {windowMode === "popover" ? (
+                <Button
+                  aria-label="Open full app"
+                  className="justify-self-end text-muted-foreground"
+                  onClick={handleOpenFullApp}
+                  type="button"
+                  size="icon"
+                  title="Open full app"
+                  variant="ghost"
+                >
+                  <HugeiconsIcon data-icon="inline-start" icon={ArrowUpRight01Icon} strokeWidth={1.8} />
+                </Button>
+              ) : (
+                <span aria-hidden="true" className="justify-self-end" />
+              )}
             </div>
           </header>
 
@@ -177,7 +177,7 @@ function HeaderSummary({ pathname, planner }: HeaderSummaryProps) {
     return (
       <span
         aria-label={label}
-        className={`justify-self-end text-menu font-semibold tabular-nums transition-colors duration-200 motion-reduce:transition-none ${tone}`}
+        className={`justify-self-start text-menu font-semibold tabular-nums transition-colors duration-200 motion-reduce:transition-none ${tone}`}
         role="status"
       >
         {summary}
@@ -189,7 +189,7 @@ function HeaderSummary({ pathname, planner }: HeaderSummaryProps) {
     const taskCount = planner.tasks.filter((task) => task.completedAt === null).length;
 
     return (
-      <span aria-label={`${taskCount} tasks left`} className="justify-self-end text-menu font-semibold tabular-nums text-foreground" role="status">
+      <span aria-label={`${taskCount} tasks left`} className="justify-self-start text-menu font-semibold tabular-nums text-foreground" role="status">
         {taskCount}
       </span>
     );
