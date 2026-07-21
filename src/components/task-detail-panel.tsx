@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Calendar01Icon,
-  Cancel01Icon,
+  Clock01Icon,
   Delete02Icon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
@@ -87,14 +87,6 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
 
   const selectedTask = task;
 
-  function resetDraft() {
-    setTitle(selectedTask.title);
-    setEstimate(selectedTask.estimateMinutes?.toString() ?? "");
-    setScheduledDate(selectedTask.scheduledDate);
-    setEditingField(null);
-    clearSelection();
-  }
-
   function parseEstimate() {
     if (!normalizedEstimate) {
       return null;
@@ -146,7 +138,7 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
   return (
     <form
       aria-label={`Edit ${selectedTask.title}`}
-      className="task-detail-panel absolute inset-x-4 bottom-full rounded-t-xl border-x border-t border-[var(--task-detail-border)] bg-[var(--task-detail)] text-[var(--task-detail-foreground)]"
+      className="task-detail-panel absolute inset-x-4 bottom-full rounded-t-xl border-x border-t border-[var(--task-detail-border)] bg-[var(--task-detail)] text-[var(--task-detail-foreground)] duration-200 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-reduce:animate-none"
       data-task-detail
       onSubmit={handleSave}
     >
@@ -187,16 +179,16 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
               render={
                 <Button
                   aria-label="Delete task"
-                  className="text-destructive hover:bg-destructive/15 hover:text-destructive"
+                  className="text-[var(--task-detail-muted)] hover:bg-destructive/10 hover:text-destructive"
                   disabled={isSaving}
-                  size="icon"
+                  size="icon-sm"
                   title="Delete task"
                   type="button"
                   variant="ghost"
                 />
               }
             >
-              <HugeiconsIcon icon={Delete02Icon} strokeWidth={1.8} />
+            <HugeiconsIcon icon={Delete02Icon} strokeWidth={1.7} />
             </DialogTrigger>
             <DialogContent showCloseButton={false}>
               <DialogHeader>
@@ -216,77 +208,70 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
             </DialogContent>
           </Dialog>
           <Button
-            aria-label="Discard changes"
-            className="text-[var(--task-detail-foreground)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
-            disabled={isSaving}
-            onClick={resetDraft}
-            size="icon"
-            title="Discard changes"
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.8} />
-          </Button>
-          <Button
             aria-label="Save changes"
+            className={isDirty ? undefined : "text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-muted)]"}
             disabled={!isDirty || isSaving}
-            size="icon"
+            size="icon-sm"
             title="Save changes"
             type="submit"
+            variant={isDirty ? "default" : "ghost"}
           >
-            <HugeiconsIcon icon={Tick02Icon} strokeWidth={1.9} />
+            <HugeiconsIcon icon={Tick02Icon} strokeWidth={1.7} />
           </Button>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <div className="min-w-0 flex-1">
-            {editingField === "estimate" ? (
-              <Input
-                aria-label="Estimate in minutes"
-                autoFocus
-                className="h-8 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] placeholder:text-[var(--task-detail-muted)] focus-visible:border-ring"
-                disabled={isSaving}
-                inputMode="numeric"
-                min="1"
-                onBlur={() => setEditingField(null)}
-                onChange={(event) => setEstimate(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    setEditingField(null);
-                  }
-                }}
-                placeholder="Set estimate"
-                type="number"
-                value={estimate}
-              />
-            ) : (
-              <button
-                aria-label="Edit estimate"
-                className="flex h-8 w-full items-center rounded-md px-2 text-menu tabular-nums outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none"
-                disabled={isSaving}
-                onClick={() => setEditingField("estimate")}
-                type="button"
-              >
-                {estimate.trim() ? `${estimate.trim()} min` : "Set estimate"}
-              </button>
-            )}
-          </div>
+        <div className="flex min-w-0 items-center gap-1">
+          {editingField === "estimate" ? (
+            <Input
+              aria-label="Estimate in minutes"
+              autoFocus
+              className="h-8 w-28 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] placeholder:text-[var(--task-detail-muted)] focus-visible:border-ring"
+              disabled={isSaving}
+              inputMode="numeric"
+              min="1"
+              onBlur={() => setEditingField(null)}
+              onChange={(event) => setEstimate(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  setEditingField(null);
+                }
+              }}
+              placeholder="Set estimate"
+              type="number"
+              value={estimate}
+            />
+          ) : (
+            <button
+              aria-label="Edit estimate"
+              className="flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-menu tabular-nums outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none"
+              disabled={isSaving}
+              onClick={() => setEditingField("estimate")}
+              type="button"
+            >
+              <HugeiconsIcon aria-hidden="true" icon={Clock01Icon} size={15} strokeWidth={1.7} />
+              <span>{estimate.trim() ? `${estimate.trim()} min` : "Set estimate"}</span>
+            </button>
+          )}
+
+          <span aria-hidden="true" className="text-menu text-[var(--task-detail-muted)]">
+            ·
+          </span>
 
           <Popover>
             <PopoverTrigger
               render={
                 <Button
                   aria-label="Edit due date"
-                  className="h-8 min-w-0 flex-1 justify-start border-[var(--task-detail-border)] bg-transparent px-2 text-[var(--task-detail-foreground)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
+                  className="h-8 min-w-0 justify-start px-2 text-[var(--task-detail-foreground)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
                   disabled={isSaving}
                   title="Edit due date"
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                 />
               }
             >
-              <HugeiconsIcon data-icon="inline-start" icon={Calendar01Icon} strokeWidth={1.8} />
+              <HugeiconsIcon data-icon="inline-start" icon={Calendar01Icon} strokeWidth={1.7} />
               <span className="truncate text-menu">{formatDueDate(scheduledDate)}</span>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-auto p-0" side="top" sideOffset={8}>
