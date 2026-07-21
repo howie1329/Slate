@@ -36,7 +36,7 @@ function SlateShell() {
               className={navLinkClass}
               activeProps={{ className: activeNavLinkClass }}
             >
-              Log
+              Backlog
             </Link>
           </nav>
           <span
