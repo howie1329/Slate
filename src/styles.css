@@ -7,6 +7,10 @@
 @theme {
   --font-sans: "Avenir Next", "Helvetica Neue", sans-serif;
   --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  --text-menu: 0.8125rem;
+  --text-menu--line-height: 1.125rem;
+  --text-menu-label: 0.6875rem;
+  --text-menu-label--line-height: 0.875rem;
 }
 
 @theme inline {
