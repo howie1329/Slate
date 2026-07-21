@@ -194,6 +194,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 - **Border:** One quiet `border` establishes structure. Do not add decorative shadows to static panels.
 - **Internal Padding:** Use `8px` compact spacing, `10px` control spacing, and `20px` panel spacing.
 - **Settings groups:** A muted-tinted surface with a quiet border, compact heading, short description, and one consistent control vocabulary.
+- **Settings footer:** Keep local-storage context, app version, and the global save action together in one quiet persistent boundary.
 
 ### Inputs / Fields
 

@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
+import appPackage from "../../package.json";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -24,6 +25,7 @@ const MODEL_OPTIONS = [
   { label: "Claude Sonnet 4.5", value: "anthropic/claude-sonnet-4.5" },
   { label: "Gemini 2.5 Flash", value: "google/gemini-2.5-flash" },
 ] as const;
+const APP_VERSION = appPackage.version;
 
 function SettingsPage() {
   const planner = usePlannerState();
@@ -163,7 +165,7 @@ function SettingsPage() {
                   size="icon"
                   title="Save API key"
                   type="button"
-                  variant="destructive"
+                  variant="default"
                 >
                   <HugeiconsIcon aria-hidden="true" data-icon="inline-start" icon={Tick02Icon} strokeWidth={2.5} />
                 </Button>
@@ -188,7 +190,9 @@ function SettingsPage() {
 
       <footer className="shrink-0 border-t border-border bg-background px-4 py-3 sm:px-6">
         <div className="mx-auto flex h-8 w-full max-w-xl items-center justify-between gap-3">
-          <p className="m-0 text-xs text-muted-foreground">Stored locally on this Mac.</p>
+          <p className="m-0 text-xs text-muted-foreground">
+            Stored locally on this Mac. <span aria-label={`Slate version ${APP_VERSION}`}>Slate v{APP_VERSION}</span>
+          </p>
           <Button disabled={isSaving} onClick={handleSaveSettings} size="sm" type="button">
             Save changes
           </Button>
@@ -212,8 +216,8 @@ function SettingsGroup({ children, description, title }: SettingsGroupProps) {
       <h2 className="m-0 text-menu-label font-semibold text-foreground" id={headingId}>
         {title}
       </h2>
+      <p className="mb-0 mt-1 text-xs leading-4 text-muted-foreground">{description}</p>
       <div className="mt-3 space-y-2.5">{children}</div>
-      <p className="mb-0 mt-3 text-xs leading-4 text-muted-foreground">{description}</p>
     </section>
   );
 }

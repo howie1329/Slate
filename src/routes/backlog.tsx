@@ -31,6 +31,9 @@ function BacklogPage() {
     ["Upcoming", "log:upcoming"],
   ] as const;
   const completedTasks = tasks.filter((task) => task.completedAt !== null);
+  const hasVisibleTasks = tasks.some(
+    (task) => task.completedAt !== null || scopeForTask(task, today) !== `today:${today}`,
+  );
 
   function toggleTask(taskId: string) {
     const task = tasks.find((candidate) => candidate.id === taskId);
@@ -50,7 +53,7 @@ function BacklogPage() {
         <h1 id="backlog-heading" className="sr-only">
           Backlog
         </h1>
-        {tasks.length === 0 ? (
+        {!hasVisibleTasks ? (
           <PlannerEmptyState
             actionLabel="Add a task"
             description="Capture work here, then decide when it deserves space in your day."
