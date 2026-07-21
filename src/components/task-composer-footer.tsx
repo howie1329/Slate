@@ -1,5 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SentIcon, Settings01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { WindowMode } from "@/lib/window-mode";
@@ -10,6 +11,8 @@ type TaskComposerFooterProps = {
 };
 
 export function TaskComposerFooter({ aiIsConfigured, windowMode }: TaskComposerFooterProps) {
+  const navigate = useNavigate();
+
   return (
     <footer
       aria-label="Task composer"
@@ -46,10 +49,10 @@ export function TaskComposerFooter({ aiIsConfigured, windowMode }: TaskComposerF
         </Button>
         <Button
           aria-label="Open settings"
-          className="size-8 rounded-md disabled:opacity-100"
-          disabled
+          className="size-8 rounded-md"
+          onClick={() => navigate({ to: "/settings" })}
           size="icon"
-          title="Settings will be available here"
+          title="Open settings"
           type="button"
           variant="outline"
         >
