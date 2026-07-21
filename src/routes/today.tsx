@@ -51,7 +51,7 @@ function TodayPage() {
   }
 
   return (
-    <section className={`flex h-full min-h-0 flex-col overflow-y-auto px-4 pt-5 sm:px-6 sm:pt-6 ${selectedTaskId ? "pb-48" : "pb-24"}`} aria-label="Today tasks">
+    <section className={`flex h-full min-h-0 flex-col overflow-y-auto px-4 pt-2 sm:px-6 sm:pt-3 ${selectedTaskId ? "pb-48" : "pb-24"}`} aria-label="Today tasks">
       <div className="mx-auto w-full max-w-xl">
         {activeTasks.length === 0 && completedTasks.length === 0 ? (
           <PlannerEmptyState
@@ -74,7 +74,7 @@ function TodayPage() {
             <HugeiconsIcon icon={Sun01Icon} strokeWidth={1.8} />
           </PlannerEmptyState>
         ) : (
-          <ul className="m-0 mt-6 list-none divide-y divide-border p-0">
+          <ul className="m-0 mt-2 list-none divide-y divide-border p-0">
             {[...activeTasks, ...completedTasks].map((task) => {
               const isCompleted = task.completedAt !== null;
               const isOverflowTask = !isCompleted && task.id === overflowTaskId;
