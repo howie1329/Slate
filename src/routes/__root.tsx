@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
+import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Link, Outlet, createRootRoute, useRouterState } from "@tanstack/react-router";
 import { TaskComposerFooter } from "@/components/task-composer-footer";
 import { TaskSelectionProvider, useTaskSelection } from "@/components/task-selection";
 import { Button } from "@/components/ui/button";
-import { retryPersistence } from "@/lib/planner";
+import { retryPersistence, type PlannerSnapshot } from "@/lib/planner";
+import { calculateCapacityState, scopeForTask } from "@/lib/task-groups";
 import { hidePopover, openFullApp, useWindowMode } from "@/lib/window-mode";
 import { usePlannerState } from "@/lib/planner-query";
 
@@ -25,7 +28,6 @@ function SlateShell() {
   const planner = usePlannerState();
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectFailed, setReconnectFailed] = useState(false);
-  const aiIsConfigured = planner.data?.aiAvailability === "configured";
   const windowMode = useWindowMode();
   const isSettingsPage = useRouterState({
     select: (state) => state.location.pathname === "/settings",
@@ -91,13 +93,17 @@ function SlateShell() {
           <header className={`shrink-0 px-4 pt-3 sm:px-6 ${windowMode === "full" ? "px-8" : ""}`}>
             <div className={`mx-auto grid h-10 w-full max-w-xl grid-cols-[4rem_auto_4rem] items-center ${windowMode === "full" ? "max-w-3xl" : ""}`}>
               {windowMode === "popover" ? (
-                <button
-                  className="justify-self-start rounded-md px-2 py-1 text-menu font-medium text-muted-foreground outline-none transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none"
+                <Button
+                  aria-label="Open full app"
+                  className="justify-self-start text-muted-foreground"
                   onClick={handleOpenFullApp}
                   type="button"
+                  size="icon"
+                  title="Open full app"
+                  variant="ghost"
                 >
-                  Open
-                </button>
+                  <HugeiconsIcon data-icon="inline-start" icon={ArrowUpRight01Icon} strokeWidth={1.8} />
+                </Button>
               ) : (
                 <span aria-hidden="true" />
               )}
@@ -120,13 +126,7 @@ function SlateShell() {
                   Backlog
                 </Link>
               </nav>
-              <span
-                aria-label={aiIsConfigured ? "AI is set up" : "AI is not set up"}
-                role="status"
-                className={`justify-self-end size-2.5 rounded-full ${
-                  aiIsConfigured ? "bg-primary" : "bg-muted-foreground"
-                }`}
-              />
+              <HeaderSummary pathname={pathname} planner={planner.data} />
             </div>
           </header>
 
@@ -135,7 +135,7 @@ function SlateShell() {
           </div>
 
           <TaskComposerFooter
-            aiIsConfigured={aiIsConfigured}
+            aiIsConfigured={planner.data?.aiAvailability === "configured"}
             scheduledDate={pathname === "/today" ? planner.data?.today ?? null : null}
             windowMode={windowMode}
           />
@@ -143,6 +143,59 @@ function SlateShell() {
       )}
     </main>
   );
+}
+
+type HeaderSummaryProps = {
+  pathname: string;
+  planner: PlannerSnapshot | undefined;
+};
+
+function HeaderSummary({ pathname, planner }: HeaderSummaryProps) {
+  if (!planner) {
+    return <span aria-hidden="true" />;
+  }
+
+  if (pathname === "/today") {
+    const todayScope = `today:${planner.today}`;
+    const activeTasks = planner.tasks.filter((task) => scopeForTask(task, planner.today) === todayScope);
+    const capacity = calculateCapacityState(activeTasks, planner.settings.dailyCapacityMinutes);
+    const capacityRatio = planner.settings.dailyCapacityMinutes > 0
+      ? capacity.remainingMinutes / planner.settings.dailyCapacityMinutes
+      : 0;
+    const tone = capacity.isOverCapacity
+      ? "text-destructive"
+      : capacityRatio <= 0.2
+        ? "text-capacity-caution"
+        : capacityRatio <= 0.5
+          ? "text-foreground"
+          : "text-primary";
+    const summary = capacity.isOverCapacity ? `+${capacity.overageMinutes}m` : `${capacity.remainingMinutes}m`;
+    const label = capacity.isOverCapacity
+      ? `${capacity.overageMinutes} minutes over capacity`
+      : `${capacity.remainingMinutes} minutes remaining`;
+
+    return (
+      <span
+        aria-label={label}
+        className={`justify-self-end text-menu font-semibold tabular-nums transition-colors duration-200 motion-reduce:transition-none ${tone}`}
+        role="status"
+      >
+        {summary}
+      </span>
+    );
+  }
+
+  if (pathname === "/backlog") {
+    const taskCount = planner.tasks.filter((task) => task.completedAt === null).length;
+
+    return (
+      <span aria-label={`${taskCount} tasks left`} className="justify-self-end text-menu font-semibold tabular-nums text-foreground" role="status">
+        {taskCount}
+      </span>
+    );
+  }
+
+  return <span aria-hidden="true" />;
 }
 
 type PersistenceRecoveryProps = {

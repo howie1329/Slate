@@ -50,10 +50,6 @@ function BacklogPage() {
         <h1 id="backlog-heading" className="sr-only">
           Backlog
         </h1>
-        <p className="m-0 text-sm font-semibold leading-5 tabular-nums text-foreground">
-          {tasks.filter((task) => task.completedAt === null).length} tasks
-        </p>
-
         {tasks.length === 0 ? (
           <PlannerEmptyState
             actionLabel="Add a task"

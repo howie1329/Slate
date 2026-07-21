@@ -57,21 +57,13 @@ function TodayPage() {
   return (
     <section className={`flex h-full min-h-0 flex-col overflow-y-auto px-4 pt-5 sm:px-6 sm:pt-6 ${selectedTaskId ? "pb-48" : "pb-24"}`} aria-label="Today tasks">
       <div className="mx-auto w-full max-w-xl">
-        <div className="flex items-baseline justify-between gap-4">
-          <p className="m-0 text-sm font-semibold leading-5 tabular-nums text-foreground">
-            {capacityStatus}
-          </p>
-          <p className="m-0 text-menu-label font-semibold text-muted-foreground">
-            committed
-          </p>
-        </div>
         <div
           aria-label={`${committedMinutes} of ${capacityMinutes} minutes committed`}
           aria-valuemax={100}
           aria-valuemin={0}
           aria-valuenow={capacityPercentage}
           aria-valuetext={capacityStatus}
-          className="mt-2 h-1 overflow-hidden rounded-full bg-muted"
+          className="mt-1 h-1 overflow-hidden rounded-full bg-muted"
           role="progressbar"
         >
           <span
