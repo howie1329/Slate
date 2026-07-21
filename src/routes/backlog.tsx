@@ -1,7 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { InboxIcon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PlannerEmptyState } from "@/components/planner-empty-state";
 import { useTaskSelection } from "@/components/task-selection";
+import { focusTaskComposer } from "@/lib/task-composer";
 import { usePlannerState, useSetTaskCompleted } from "@/lib/planner-query";
 import { formatMinutes, orderTasks, scopeForTask } from "@/lib/task-groups";
 import type { Task } from "@/lib/planner";
@@ -50,29 +54,42 @@ function BacklogPage() {
           {tasks.filter((task) => task.completedAt === null).length} tasks
         </p>
 
-        {groups.map(([label, scope]) => (
-          <TaskGroup
-            key={scope}
-            label={label}
-            onToggleTask={toggleTask}
-            pending={setTaskCompleted.isPending}
-            selectedTaskId={selectedTaskId}
-            onSelectTask={selectTask}
-            tasks={orderTasks(
-              tasks.filter((task) => scopeForTask(task, today) === scope),
-              orderByScope,
-              scope,
-            )}
-          />
-        ))}
-        <TaskGroup
-          label="Completed"
-          onToggleTask={toggleTask}
-          pending={setTaskCompleted.isPending}
-          selectedTaskId={selectedTaskId}
-          onSelectTask={selectTask}
-          tasks={completedTasks}
-        />
+        {tasks.length === 0 ? (
+          <PlannerEmptyState
+            actionLabel="Add a task"
+            description="Capture work here, then decide when it deserves space in your day."
+            onAction={focusTaskComposer}
+            title="Your backlog is clear."
+          >
+            <HugeiconsIcon icon={InboxIcon} strokeWidth={1.8} />
+          </PlannerEmptyState>
+        ) : (
+          <>
+            {groups.map(([label, scope]) => (
+              <TaskGroup
+                key={scope}
+                label={label}
+                onToggleTask={toggleTask}
+                pending={setTaskCompleted.isPending}
+                selectedTaskId={selectedTaskId}
+                onSelectTask={selectTask}
+                tasks={orderTasks(
+                  tasks.filter((task) => scopeForTask(task, today) === scope),
+                  orderByScope,
+                  scope,
+                )}
+              />
+            ))}
+            <TaskGroup
+              label="Completed"
+              onToggleTask={toggleTask}
+              pending={setTaskCompleted.isPending}
+              selectedTaskId={selectedTaskId}
+              onSelectTask={selectTask}
+              tasks={completedTasks}
+            />
+          </>
+        )}
       </div>
     </section>
   );

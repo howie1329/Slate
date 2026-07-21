@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TaskDetailPanel } from "@/components/task-detail-panel";
 import { useTaskSelection } from "@/components/task-selection";
+import { taskComposerInputId } from "@/lib/task-composer";
 import type { LocalDate } from "@/lib/planner";
 import type { WindowMode } from "@/lib/window-mode";
 import { useCreateTask } from "@/lib/planner-query";
@@ -51,6 +52,7 @@ export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }
           aria-label="New task"
           className="h-10 text-menu"
           disabled={createTask.isPending}
+          id={taskComposerInputId}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="Add a task"
           value={title}
