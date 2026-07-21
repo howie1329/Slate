@@ -42,7 +42,7 @@ function localDateFromDate(value: Date): LocalDate {
 
 function formatDueDate(value: LocalDate | null) {
   if (!value) {
-    return "Set due date";
+    return "Set date";
   }
 
   return dateFromLocalDate(value).toLocaleDateString(undefined, {
@@ -142,90 +142,43 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
       data-task-detail
       onSubmit={handleSave}
     >
-      <div className={`mx-auto flex w-full max-w-xl flex-col gap-2 px-4 py-2 sm:px-6 ${windowMode === "full" ? "max-w-3xl px-8" : ""}`}>
-        <div className="flex min-w-0 items-center gap-1.5">
-          <div className="min-w-0 flex-1">
-            {editingField === "title" ? (
-              <Input
-                aria-label="Task title"
-                autoFocus
-                className="h-8 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] placeholder:text-[var(--task-detail-muted)] focus-visible:border-ring"
-                disabled={isSaving}
-                onBlur={() => setEditingField(null)}
-                onChange={(event) => setTitle(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    setEditingField(null);
-                  }
-                }}
-                value={title}
-              />
-            ) : (
-              <button
-                aria-label="Edit task title"
-                className="flex h-8 w-full items-center truncate rounded-md px-2 text-left text-menu font-medium outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none"
-                disabled={isSaving}
-                onClick={() => setEditingField("title")}
-                type="button"
-              >
-                {title || "Untitled task"}
-              </button>
-            )}
-          </div>
-
-          <Dialog>
-            <DialogTrigger
-              render={
-                <Button
-                  aria-label="Delete task"
-                  className="text-[var(--task-detail-muted)] hover:bg-destructive/10 hover:text-destructive"
-                  disabled={isSaving}
-                  size="icon-sm"
-                  title="Delete task"
-                  type="button"
-                  variant="ghost"
-                />
-              }
+      <div className={`mx-auto flex min-h-12 w-full max-w-xl min-w-0 items-center gap-1 px-4 py-2 sm:px-6 ${windowMode === "full" ? "max-w-3xl px-8" : ""}`}>
+        <div className="min-w-0 flex-1">
+          {editingField === "title" ? (
+            <Input
+              aria-label="Task title"
+              autoFocus
+              className="h-8 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] placeholder:text-[var(--task-detail-muted)] focus-visible:border-ring"
+              disabled={isSaving}
+              onBlur={() => setEditingField(null)}
+              onChange={(event) => setTitle(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  setEditingField(null);
+                }
+              }}
+              value={title}
+            />
+          ) : (
+            <button
+              aria-label="Edit task title"
+              className="flex h-8 w-full items-center truncate rounded-md px-2 text-left text-menu font-medium outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none"
+              disabled={isSaving}
+              onClick={() => setEditingField("title")}
+              type="button"
             >
-            <HugeiconsIcon icon={Delete02Icon} strokeWidth={1.7} />
-            </DialogTrigger>
-            <DialogContent data-task-detail-dialog showCloseButton={false}>
-              <DialogHeader>
-                <DialogTitle>Delete task?</DialogTitle>
-                <DialogDescription>
-                  “{selectedTask.title}” will be removed from this Mac and cannot be restored.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <DialogClose render={<Button disabled={isSaving} type="button" variant="outline" />}>
-                  Keep task
-                </DialogClose>
-                <Button disabled={isSaving} onClick={handleDelete} type="button" variant="destructive">
-                  Delete task
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          <Button
-            aria-label="Save changes"
-            className={isDirty ? undefined : "text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-muted)]"}
-            disabled={!isDirty || isSaving}
-            size="icon-sm"
-            title="Save changes"
-            type="submit"
-            variant={isDirty ? "default" : "ghost"}
-          >
-            <HugeiconsIcon icon={Tick02Icon} strokeWidth={1.7} />
-          </Button>
+              {title || "Untitled task"}
+            </button>
+          )}
         </div>
 
-        <div className="flex min-w-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           {editingField === "estimate" ? (
             <Input
               aria-label="Estimate in minutes"
               autoFocus
-              className="h-8 w-28 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] placeholder:text-[var(--task-detail-muted)] focus-visible:border-ring"
+              className="h-8 w-20 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] placeholder:text-[var(--task-detail-muted)] focus-visible:border-ring"
               disabled={isSaving}
               inputMode="numeric"
               min="1"
@@ -237,7 +190,7 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
                   setEditingField(null);
                 }
               }}
-              placeholder="Set estimate"
+              placeholder="Minutes"
               type="number"
               value={estimate}
             />
@@ -250,13 +203,9 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
               type="button"
             >
               <HugeiconsIcon aria-hidden="true" icon={Clock01Icon} size={15} strokeWidth={1.7} />
-              <span>{estimate.trim() ? `${estimate.trim()} min` : "Set estimate"}</span>
+              <span>{estimate.trim() ? `${estimate.trim()}m` : "Set time"}</span>
             </button>
           )}
-
-          <span aria-hidden="true" className="text-menu text-[var(--task-detail-muted)]">
-            ·
-          </span>
 
           <Popover>
             <PopoverTrigger
@@ -286,6 +235,51 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
               />
             </PopoverContent>
           </Popover>
+
+          <Dialog>
+            <DialogTrigger
+              render={
+                <Button
+                  aria-label="Delete task"
+                  className="text-[var(--task-detail-muted)] hover:bg-destructive/10 hover:text-destructive"
+                  disabled={isSaving}
+                  size="icon-sm"
+                  title="Delete task"
+                  type="button"
+                  variant="ghost"
+                />
+              }
+            >
+              <HugeiconsIcon icon={Delete02Icon} strokeWidth={1.7} />
+            </DialogTrigger>
+            <DialogContent data-task-detail-dialog showCloseButton={false}>
+              <DialogHeader>
+                <DialogTitle>Delete task?</DialogTitle>
+                <DialogDescription>
+                  “{selectedTask.title}” will be removed from this Mac and cannot be restored.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose render={<Button disabled={isSaving} type="button" variant="outline" />}>
+                  Keep task
+                </DialogClose>
+                <Button disabled={isSaving} onClick={handleDelete} type="button" variant="destructive">
+                  Delete task
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Button
+            aria-label="Save changes"
+            className={isDirty ? undefined : "text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-muted)]"}
+            disabled={!isDirty || isSaving}
+            size="icon-sm"
+            title="Save changes"
+            type="submit"
+            variant={isDirty ? "default" : "ghost"}
+          >
+            <HugeiconsIcon icon={Tick02Icon} strokeWidth={1.7} />
+          </Button>
         </div>
       </div>
     </form>
