@@ -30,9 +30,7 @@
         "minHeight": 520,
         "decorations": false,
         "resizable": false,
-        "alwaysOnTop": true,
         "skipTaskbar": true,
-        "visibleOnAllWorkspaces": true,
         "transparent": true,
         "shadow": true,
         "visible": false

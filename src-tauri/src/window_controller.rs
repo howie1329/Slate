@@ -1,11 +1,24 @@
-#[cfg(target_os = "macos")]
-use objc2_app_kit::{NSPopUpMenuWindowLevel, NSWindow, NSWindowCollectionBehavior};
 use tauri::{
     image::Image,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, PhysicalPosition, Position, Rect, Runtime, WebviewWindow,
 };
+#[cfg(target_os = "macos")]
+use tauri_nspanel::{
+    tauri_panel, CollectionBehavior, ManagerExt, PanelLevel, StyleMask, WebviewWindowExt,
+};
+
+#[cfg(target_os = "macos")]
+tauri_panel! {
+    panel!(SlatePopoverPanel {
+        config: {
+            can_become_key_window: true,
+            can_become_main_window: false,
+            is_floating_panel: true,
+        }
+    })
+}
 
 pub const MAIN_WINDOW_LABEL: &str = "main";
 pub const POPOVER_WINDOW_LABEL: &str = "popover";
@@ -19,8 +32,6 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     app.set_activation_policy(tauri::ActivationPolicy::Accessory)?;
 
     let popover = popover_window(app)?;
-    popover.set_always_on_top(true)?;
-    popover.set_visible_on_all_workspaces(true)?;
     configure_macos_popover(&popover)?;
 
     let open_full_app_item = MenuItem::with_id(
@@ -74,8 +85,7 @@ pub fn toggle_popover<R: Runtime>(app: &AppHandle<R>, tray_rect: Rect) -> tauri:
     }
 
     position_popover(app, &popover, tray_rect)?;
-    popover.show()?;
-    popover.set_focus()
+    show_popover(app, &popover)
 }
 
 pub fn hide_popover<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
@@ -111,15 +121,17 @@ pub fn handle_window_event<R: Runtime>(window: &tauri::Window<R>, event: &tauri:
 }
 
 fn main_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>> {
-    app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
-        tauri::Error::AssetNotFound(format!("window {MAIN_WINDOW_LABEL} is not available"))
-    })
+    app.get_webview_window(MAIN_WINDOW_LABEL)
+        .ok_or_else(|| missing_window_error(MAIN_WINDOW_LABEL))
 }
 
 fn popover_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>> {
-    app.get_webview_window(POPOVER_WINDOW_LABEL).ok_or_else(|| {
-        tauri::Error::AssetNotFound(format!("window {POPOVER_WINDOW_LABEL} is not available"))
-    })
+    app.get_webview_window(POPOVER_WINDOW_LABEL)
+        .ok_or_else(|| missing_window_error(POPOVER_WINDOW_LABEL))
+}
+
+fn missing_window_error(label: &str) -> tauri::Error {
+    tauri::Error::AssetNotFound(format!("window {label} is not available"))
 }
 
 fn position_popover<R: Runtime>(
@@ -177,22 +189,38 @@ fn clamp_to_work_area(value: i32, min: i32, max: i32) -> i32 {
 
 #[cfg(target_os = "macos")]
 fn configure_macos_popover<R: Runtime>(popover: &WebviewWindow<R>) -> tauri::Result<()> {
-    let ns_window = popover.ns_window()? as usize;
+    let panel = popover.to_panel::<SlatePopoverPanel<R>>()?;
+    panel.set_level(PanelLevel::Floating.value());
+    panel.set_style_mask(StyleMask::empty().nonactivating_panel().into());
+    panel.set_collection_behavior(
+        CollectionBehavior::new()
+            .full_screen_auxiliary()
+            .can_join_all_spaces()
+            .into(),
+    );
+    panel.set_hides_on_deactivate(false);
 
-    popover.run_on_main_thread(move || unsafe {
-        let ns_window = &*(ns_window as *mut NSWindow);
-        ns_window.setLevel(NSPopUpMenuWindowLevel);
-        ns_window.setCollectionBehavior(
-            ns_window.collectionBehavior()
-                | NSWindowCollectionBehavior::CanJoinAllSpaces
-                | NSWindowCollectionBehavior::FullScreenAuxiliary,
-        );
-    })
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn show_popover<R: Runtime>(app: &AppHandle<R>, _: &WebviewWindow<R>) -> tauri::Result<()> {
+    let panel = app
+        .get_webview_panel(POPOVER_WINDOW_LABEL)
+        .map_err(|_| missing_window_error(POPOVER_WINDOW_LABEL))?;
+    panel.show_and_make_key();
+    Ok(())
 }
 
 #[cfg(not(target_os = "macos"))]
 fn configure_macos_popover<R: Runtime>(_: &WebviewWindow<R>) -> tauri::Result<()> {
     Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn show_popover<R: Runtime>(_: &AppHandle<R>, popover: &WebviewWindow<R>) -> tauri::Result<()> {
+    popover.show()?;
+    popover.set_focus()
 }
 
 fn menu_bar_icon() -> Image<'static> {
