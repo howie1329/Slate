@@ -186,7 +186,10 @@ function HeaderSummary({ pathname, planner }: HeaderSummaryProps) {
   }
 
   if (pathname === "/backlog") {
-    const taskCount = planner.tasks.filter((task) => task.completedAt === null).length;
+    const todayScope = `today:${planner.today}`;
+    const taskCount = planner.tasks.filter(
+      (task) => task.completedAt === null && scopeForTask(task, planner.today) !== todayScope,
+    ).length;
 
     return (
       <span aria-label={`${taskCount} tasks left`} className="justify-self-start text-menu font-semibold tabular-nums text-foreground" role="status">
