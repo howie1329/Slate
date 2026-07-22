@@ -27,13 +27,13 @@ const panelEnterEase = [0.23, 1, 0.32, 1] as const;
 const panelVariants = {
   hidden: {
     opacity: 0,
-    transform: "translateY(8px)",
+    transform: "translateY(10px)",
   },
   visible: {
     opacity: 1,
     transform: "translateY(0)",
     transition: {
-      duration: 0.2,
+      duration: 0.22,
       ease: panelEnterEase,
     },
   },
@@ -45,9 +45,9 @@ const panelVariants = {
         }
       : {
           opacity: 0,
-          transform: "translateY(4px)",
+          transform: "translateY(6px)",
           transition: {
-            duration: 0.14,
+            duration: 0.16,
             ease: panelEnterEase,
           },
         },

@@ -26,9 +26,9 @@ Use these default timings:
 | Situation | Duration | Character |
 | --- | --- | --- |
 | Hover, press, saved/pending icon | 100-150 ms | CSS transition or tiny opacity/scale change |
-| Task insertion, removal, or group change | 140-180 ms | Opacity plus 4-6 px vertical movement |
+| Task insertion, removal, or group change | 160-200 ms | Opacity plus 6-8 px vertical movement |
 | Footer-adjacent tray | 180-220 ms | Short upward entry; matching downward exit |
-| View change | 120-160 ms | Opacity crossfade only |
+| View change | 180-200 ms | Opacity plus no more than 4 px vertical movement |
 | Dialog and popover | 100 ms | Keep the existing CSS treatment |
 
 Use a single calm ease-out curve. Make exits faster through duration rather than a slow ease-in curve. Avoid bouncy springs and overshoot; they conflict with Slate's measured, reflective character.
@@ -77,7 +77,7 @@ Do not use character-by-character AI typing. The current AI scope is non-streami
 
 ### Navigation and settings
 
-Today, Backlog, and Settings should change context with a short opacity crossfade while preserving the persistent shell where it exists. Do not slide full pages horizontally: that makes the compact macOS popover feel like a mobile application.
+Pointer navigation between Today, Backlog, and Settings uses a 180-200ms opacity fade with no more than 4px of vertical movement. Today and Backlog retain the persistent shell while only workspace content transitions; Settings transitions as its own surface. Keyboard navigation remains immediate. Do not slide full pages horizontally: that makes the compact macOS popover feel like a mobile application.
 
 Settings save and API-key save should use the existing toast for durable confirmation. During a pending save, swap the action icon for a small spinner; on completion, restore it. The AI-status dot may transition color/opacity when configuration changes, but should not pulse continuously.
 

@@ -19,6 +19,7 @@ type TaskRowProps = {
 };
 
 const taskRowEase = [0.23, 1, 0.32, 1] as const;
+const taskLayoutEase = [0.77, 0, 0.175, 1] as const;
 
 export function TaskRow({
   isOverflow = false,
@@ -36,13 +37,13 @@ export function TaskRow({
   const rowVariants = {
     hidden: {
       opacity: 0,
-      transform: "translateY(6px)",
+      transform: "translateY(8px)",
     },
     visible: {
       opacity: 1,
       transform: "translateY(0)",
       transition: {
-        duration: 0.16,
+        duration: 0.18,
         ease: taskRowEase,
       },
     },
@@ -50,9 +51,9 @@ export function TaskRow({
       mutation?.transition === "animate" && mutation.taskId === task.id
         ? {
             opacity: 0,
-            transform: "translateY(-4px)",
+            transform: "translateY(-6px)",
             transition: {
-              duration: 0.14,
+              duration: 0.16,
               ease: taskRowEase,
             },
           }
@@ -65,49 +66,55 @@ export function TaskRow({
   return (
     <motion.li
       animate="visible"
-      className={cn(
-        "group/task-row relative flex min-h-11 items-center gap-2 transition-colors duration-150 hover:bg-muted motion-reduce:transition-none",
-        isSelected && "bg-muted",
-        isOverflow && "ring-1 ring-inset ring-destructive",
-      )}
+      className="relative"
       data-task-row
       exit="exit"
       initial={shouldAnimateEnter ? "hidden" : false}
       layout={canAnimateLayout ? "position" : false}
-      variants={rowVariants}
+      transition={{ layout: { duration: 0.2, ease: taskLayoutEase } }}
     >
-      <Checkbox
-        aria-label={`Mark ${task.title} as ${isCompleted ? "incomplete" : "complete"}`}
-        checked={isCompleted}
-        className="ml-1 size-5 rounded-full after:-inset-3"
-        disabled={isPending}
-        onCheckedChange={() => onToggleTask(task.id, toggleTransitionRef.current)}
-        onKeyDownCapture={() => {
-          toggleTransitionRef.current = "instant";
-        }}
-        onPointerDownCapture={() => {
-          toggleTransitionRef.current = "animate";
-        }}
-      />
-      <button
-        aria-expanded={isSelected}
-        aria-label={`Edit ${task.title}${isOverflow ? ", pushes today over capacity" : ""}`}
-        className="flex min-w-0 flex-1 self-stretch items-center gap-3 rounded-md pl-1 pr-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-        onClick={(event) => onSelectTask(task.id, event.detail > 0 ? "animate" : "instant")}
-        type="button"
+      <motion.div
+        className={cn(
+          "group/task-row flex min-h-11 items-center gap-2 transition-colors duration-150 hover:bg-muted motion-reduce:transition-none",
+          isSelected && "bg-muted",
+          isOverflow && "ring-1 ring-inset ring-destructive",
+        )}
+        custom={taskMutation}
+        variants={rowVariants}
       >
-        <span
-          className={cn(
-            "min-w-0 flex-1 truncate text-menu",
-            isCompleted ? "text-muted-foreground line-through" : "text-foreground",
-          )}
+        <Checkbox
+          aria-label={`Mark ${task.title} as ${isCompleted ? "incomplete" : "complete"}`}
+          checked={isCompleted}
+          className="ml-1 size-5 rounded-full after:-inset-3"
+          disabled={isPending}
+          onCheckedChange={() => onToggleTask(task.id, toggleTransitionRef.current)}
+          onKeyDownCapture={() => {
+            toggleTransitionRef.current = "instant";
+          }}
+          onPointerDownCapture={() => {
+            toggleTransitionRef.current = "animate";
+          }}
+        />
+        <button
+          aria-expanded={isSelected}
+          aria-label={`Edit ${task.title}${isOverflow ? ", pushes today over capacity" : ""}`}
+          className="flex min-w-0 flex-1 self-stretch items-center gap-3 rounded-md pl-1 pr-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          onClick={(event) => onSelectTask(task.id, event.detail > 0 ? "animate" : "instant")}
+          type="button"
         >
-          {task.title}
-        </span>
-        <span className="shrink-0 text-xs leading-4 tabular-nums text-muted-foreground">
-          {formatMinutes(task.estimateMinutes)}
-        </span>
-      </button>
+          <span
+            className={cn(
+              "min-w-0 flex-1 truncate text-menu",
+              isCompleted ? "text-muted-foreground line-through" : "text-foreground",
+            )}
+          >
+            {task.title}
+          </span>
+          <span className="shrink-0 text-xs leading-4 tabular-nums text-muted-foreground">
+            {formatMinutes(task.estimateMinutes)}
+          </span>
+        </button>
+      </motion.div>
     </motion.li>
   );
 }

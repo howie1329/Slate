@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type MouseEvent } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SentIcon, Settings01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
 import { useNavigate } from "@tanstack/react-router";
@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TaskDetailPanel } from "@/components/task-detail-panel";
+import { useRouteMotion } from "@/components/route-motion";
 import { useTaskMotion, type TaskMotionTransition } from "@/components/task-motion";
 import { useTaskSelection } from "@/components/task-selection";
 import { taskComposerInputId } from "@/lib/task-composer";
@@ -24,6 +25,7 @@ export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }
   const navigate = useNavigate();
   const createTask = useCreateTask();
   const { recordTaskMutation } = useTaskMotion();
+  const { setRouteTransition } = useRouteMotion();
   const { selectedTaskId, selectedTaskTransition } = useTaskSelection();
   const [title, setTitle] = useState("");
   const createTransitionRef = useRef<TaskMotionTransition>("instant");
@@ -45,6 +47,11 @@ export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }
         onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save task."),
       },
     );
+  }
+
+  function handleOpenSettings(event: MouseEvent<HTMLButtonElement>) {
+    setRouteTransition(event.detail > 0 ? "animate" : "instant");
+    void navigate({ to: "/settings" });
   }
 
   return (
@@ -106,7 +113,7 @@ export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }
         <Button
           aria-label="Open settings"
           className="size-8 rounded-md"
-          onClick={() => navigate({ to: "/settings" })}
+          onClick={handleOpenSettings}
           size="icon"
           title="Open settings"
           type="button"

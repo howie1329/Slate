@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import type { TaskMotionTransition } from "@/components/task-motion";
@@ -8,7 +8,7 @@ type PlannerEmptyStateProps = {
   actionLabel: string;
   children: ReactNode;
   description: string;
-  onAction: () => void;
+  onAction: (event: MouseEvent<HTMLButtonElement>) => void;
   title: string;
   transition?: TaskMotionTransition;
 };
@@ -18,9 +18,9 @@ const emptyStateEase = [0.23, 1, 0.32, 1] as const;
 export function PlannerEmptyState({ actionLabel, children, description, onAction, title, transition = "instant" }: PlannerEmptyStateProps) {
   return (
     <motion.div
-      animate={{ opacity: 1 }}
-      initial={transition === "animate" ? { opacity: 0 } : false}
-      transition={{ duration: 0.14, ease: emptyStateEase }}
+      animate={{ opacity: 1, transform: "translateY(0)" }}
+      initial={transition === "animate" ? { opacity: 0, transform: "translateY(6px)" } : false}
+      transition={{ duration: 0.18, ease: emptyStateEase }}
     >
       <Empty className="mt-6 min-h-48 justify-center gap-4 px-4 py-6 sm:min-h-64">
         <EmptyHeader>

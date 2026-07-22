@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Sun01Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 import { PlannerEmptyState } from "@/components/planner-empty-state";
 import { TaskGroup } from "@/components/task-group";
+import { useRouteMotion } from "@/components/route-motion";
 import { useTaskMotion, type TaskMotionTransition } from "@/components/task-motion";
 import { useTaskSelection } from "@/components/task-selection";
 import type { PlannerSnapshot } from "@/lib/planner";
@@ -30,6 +31,7 @@ function TodayWorkspace({ planner }: { planner: PlannerSnapshot }) {
   const setTaskCompleted = useSetTaskCompleted();
   const navigate = useNavigate();
   const { recordTaskMutation, taskMutation } = useTaskMotion();
+  const { setRouteTransition } = useRouteMotion();
   const { selectedTaskId, selectTask } = useTaskSelection();
 
   const { settings, tasks, today, orderByScope } = planner;
@@ -112,8 +114,9 @@ function TodayWorkspace({ planner }: { planner: PlannerSnapshot }) {
                 ? "Choose what deserves space before you make a commitment."
                 : "Add one task below to make your first commitment."
             }
-            onAction={() => {
+            onAction={(event: MouseEvent<HTMLButtonElement>) => {
               if (hasBacklogTasks) {
+                setRouteTransition(event.detail > 0 ? "animate" : "instant");
                 void navigate({ to: "/backlog" });
                 return;
               }
