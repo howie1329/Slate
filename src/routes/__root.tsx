@@ -1,6 +1,7 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import NumberFlow from "@number-flow/react";
 import { Link, Outlet, createRootRoute, useRouterState } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { TaskComposerFooter } from "@/components/task-composer-footer";
@@ -20,6 +21,8 @@ const activeNavLinkClass =
   "inline-flex h-8 items-center justify-center rounded-full bg-foreground px-3.5 text-menu font-semibold text-background no-underline outline-none transition-colors duration-150 hover:bg-foreground/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none";
 
 const routeFadeEase = [0.23, 1, 0.32, 1] as const;
+const headerNumberTransformTiming = { duration: 180, easing: "ease-out" };
+const headerNumberOpacityTiming = { duration: 120, easing: "ease-out" };
 
 export const Route = createRootRoute({
   component: () => (
@@ -210,7 +213,6 @@ function HeaderSummary({ pathname, planner }: HeaderSummaryProps) {
         : capacityRatio <= 0.5
           ? "text-foreground"
           : "text-primary";
-    const summary = capacity.isOverCapacity ? `+${capacity.overageMinutes}m` : `${capacity.remainingMinutes}m`;
     const label = capacity.isOverCapacity
       ? `${capacity.overageMinutes} minutes over capacity`
       : `${capacity.remainingMinutes} minutes remaining`;
@@ -221,7 +223,11 @@ function HeaderSummary({ pathname, planner }: HeaderSummaryProps) {
         className={`justify-self-start text-menu font-semibold tabular-nums transition-colors duration-200 motion-reduce:transition-none ${tone}`}
         role="status"
       >
-        {summary}
+        <HeaderNumber
+          prefix={capacity.isOverCapacity ? "+" : undefined}
+          suffix="m"
+          value={capacity.isOverCapacity ? capacity.overageMinutes : capacity.remainingMinutes}
+        />
       </span>
     );
   }
@@ -234,12 +240,27 @@ function HeaderSummary({ pathname, planner }: HeaderSummaryProps) {
 
     return (
       <span aria-label={`${taskCount} tasks left`} className="justify-self-start text-menu font-semibold tabular-nums text-foreground" role="status">
-        {taskCount}
+        <HeaderNumber value={taskCount} />
       </span>
     );
   }
 
   return <span aria-hidden="true" />;
+}
+
+function HeaderNumber({ prefix, suffix, value }: { prefix?: string; suffix?: string; value: number }) {
+  return (
+    <NumberFlow
+      aria-hidden="true"
+      className="tabular-nums"
+      opacityTiming={headerNumberOpacityTiming}
+      prefix={prefix}
+      respectMotionPreference
+      suffix={suffix}
+      transformTiming={headerNumberTransformTiming}
+      value={value}
+    />
+  );
 }
 
 function TodayCapacityProgress({ planner, windowMode }: { planner: PlannerSnapshot | undefined; windowMode: WindowMode }) {

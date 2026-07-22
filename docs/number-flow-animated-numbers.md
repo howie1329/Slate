@@ -1,6 +1,6 @@
 # Animated header numbers with Number Flow
 
-**Status:** Proposed.
+**Status:** Implemented.
 
 ## Purpose
 
@@ -103,4 +103,3 @@ Follow Slate’s existing design system:
 ## Success criteria
 
 The feature is successful when a user can immediately notice a changed Today capacity or Backlog count, while the interface still feels calm and compact. Reduced Motion must remove non-essential movement, and the displayed value must always match the latest confirmed planner snapshot.
-

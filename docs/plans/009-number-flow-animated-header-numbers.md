@@ -1,6 +1,6 @@
 # Add Number Flow to animated header metrics
 
-**Status:** Proposed.
+**Status:** Implemented.
 
 ## Objective
 
@@ -137,4 +137,3 @@ Manually validate in `npm run dev:desktop`:
 - Reassess animating task-row duration metadata only after observing real use of the header metrics.
 - Reuse Number Flow for other numeric summaries only when the number has clear user meaning and the motion remains consistent with Slate’s quiet utility character.
 - Do not add a global numeric animation wrapper without a concrete reuse boundary.
-

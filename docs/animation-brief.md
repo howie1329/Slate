@@ -56,7 +56,7 @@ This applies to `src/routes/today.tsx` and `src/routes/backlog.tsx`. A later dra
 
 The Today capacity rail already uses a CSS width/color transition. Keep that implementation. Its role is to communicate a numeric update, not become a chart animation.
 
-When a completed or scheduled task changes the total, let the rail transition once. Do not count up the minutes label or add a pulse unless the state crosses the over-capacity boundary. At that boundary, the existing destructive color and offending-task treatment are sufficient.
+When a completed or scheduled task changes the total, let the rail transition once. The Today remaining/overage label and Backlog count may use one short Number Flow digit transition after the confirmed snapshot update. Do not use Number Flow’s `continuous` plugin, count through intermediate values, or add a pulse. With Reduced Motion, update the value without digit movement. At the over-capacity boundary, the existing destructive color and offending-task treatment remain sufficient.
 
 ### Task detail panel
 
