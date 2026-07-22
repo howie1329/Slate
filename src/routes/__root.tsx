@@ -72,7 +72,7 @@ function SlateShell() {
         if (
           selectedTaskId &&
           event.target instanceof HTMLElement &&
-          !event.target.closest("[data-task-detail], [data-task-row], [data-task-calendar], [data-task-detail-dialog]")
+          !event.target.closest("[data-task-detail], [data-task-row], [data-task-calendar]")
         ) {
           clearSelection();
         }
