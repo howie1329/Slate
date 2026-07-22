@@ -12,6 +12,7 @@ type TaskRowProps = {
   isPending: boolean;
   isSelected: boolean;
   onSelectTask: (taskId: string, transition?: TaskSelectionTransition) => void;
+  onMotionComplete: (version: number) => void;
   onToggleTask: (taskId: string, transition?: TaskMotionTransition) => void;
   shouldAnimateEnter: boolean;
   task: Task;
@@ -25,6 +26,7 @@ export function TaskRow({
   isOverflow = false,
   isPending,
   isSelected,
+  onMotionComplete,
   onSelectTask,
   onToggleTask,
   shouldAnimateEnter,
@@ -71,6 +73,11 @@ export function TaskRow({
       exit="exit"
       initial={shouldAnimateEnter ? "hidden" : false}
       layout={canAnimateLayout ? "position" : false}
+      onLayoutAnimationComplete={() => {
+        if (taskMutation) {
+          onMotionComplete(taskMutation.version);
+        }
+      }}
       transition={{ layout: { duration: 0.2, ease: taskLayoutEase } }}
     >
       <motion.div
@@ -80,6 +87,11 @@ export function TaskRow({
           isOverflow && "ring-1 ring-inset ring-destructive",
         )}
         custom={taskMutation}
+        onAnimationComplete={(definition) => {
+          if (definition === "visible" && shouldAnimateEnter && taskMutation) {
+            onMotionComplete(taskMutation.version);
+          }
+        }}
         variants={rowVariants}
       >
         <Checkbox

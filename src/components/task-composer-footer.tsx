@@ -1,6 +1,6 @@
 import { useRef, useState, type MouseEvent } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { SentIcon, Settings01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
+import { Loading03Icon, SentIcon, Settings01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
 import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence } from "motion/react";
 import { toast } from "sonner";
@@ -24,7 +24,7 @@ type TaskComposerFooterProps = {
 export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }: TaskComposerFooterProps) {
   const navigate = useNavigate();
   const createTask = useCreateTask();
-  const { recordTaskMutation } = useTaskMotion();
+  const { clearTaskMutation, recordTaskMutation, taskMutation } = useTaskMotion();
   const { setRouteTransition } = useRouteMotion();
   const { selectedTaskId, selectedTaskTransition } = useTaskSelection();
   const [title, setTitle] = useState("");
@@ -59,7 +59,16 @@ export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }
       aria-label="Task composer"
       className={`absolute inset-x-0 bottom-0 z-10 h-16 bg-background px-4 py-3 sm:px-6 ${selectedTaskId ? "" : "border-t border-border"} ${windowMode === "full" ? "px-8" : ""}`}
     >
-      <AnimatePresence custom={selectedTaskTransition} initial={false}>
+      <AnimatePresence
+        custom={selectedTaskTransition}
+        initial={false}
+        onExitComplete={() => {
+          if (taskMutation) {
+            const completedVersion = taskMutation.version;
+            window.setTimeout(() => clearTaskMutation(completedVersion), 50);
+          }
+        }}
+      >
         {selectedTaskId ? (
           <TaskDetailPanel
             key={selectedTaskId}
@@ -89,15 +98,19 @@ export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }
           value={title}
         />
         <Button
-          aria-label="Create task"
+          aria-label={createTask.isPending ? "Saving task" : "Create task"}
           className="size-8 rounded-md"
           disabled={!hasTitle || createTask.isPending}
           size="icon"
-          title="Save task"
+          title={createTask.isPending ? "Saving task" : "Save task"}
           type="submit"
           variant={hasTitle ? "default" : "outline"}
         >
-          <HugeiconsIcon icon={SentIcon} strokeWidth={1.8} />
+          <HugeiconsIcon
+            className={createTask.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
+            icon={createTask.isPending ? Loading03Icon : SentIcon}
+            strokeWidth={1.8}
+          />
         </Button>
         <Button
           aria-label="Plan my day with AI"

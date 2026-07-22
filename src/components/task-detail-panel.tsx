@@ -356,15 +356,19 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
             </Button>
           ) : (
             <Button
-              aria-label="Save changes"
+              aria-label={updateTask.isPending ? "Saving changes" : "Save changes"}
               className={isDirty ? undefined : "text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-muted)]"}
               disabled={!isDirty || isSaving}
               size="icon-sm"
-              title="Save changes"
+              title={updateTask.isPending ? "Saving changes" : "Save changes"}
               type="submit"
               variant={isDirty ? "default" : "ghost"}
             >
-              <HugeiconsIcon icon={Tick02Icon} strokeWidth={1.7} />
+              <HugeiconsIcon
+                className={updateTask.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
+                icon={updateTask.isPending ? Loading03Icon : Tick02Icon}
+                strokeWidth={1.7}
+              />
             </Button>
           )}
         </div>

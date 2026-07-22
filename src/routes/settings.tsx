@@ -1,6 +1,6 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, Loading03Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import appPackage from "../../package.json";
@@ -166,15 +166,21 @@ function SettingsPage() {
                   value={apiKey}
                 />
                 <Button
-                  aria-label="Save API key"
+                  aria-label={setApiKey.isPending ? "Saving API key" : "Save API key"}
                   disabled={!apiKey.trim() || isSaving}
                   onClick={handleSaveApiKey}
                   size="icon"
-                  title="Save API key"
+                  title={setApiKey.isPending ? "Saving API key" : "Save API key"}
                   type="button"
                   variant="default"
                 >
-                  <HugeiconsIcon aria-hidden="true" data-icon="inline-start" icon={Tick02Icon} strokeWidth={2.5} />
+                  <HugeiconsIcon
+                    aria-hidden="true"
+                    className={setApiKey.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
+                    data-icon="inline-start"
+                    icon={setApiKey.isPending ? Loading03Icon : Tick02Icon}
+                    strokeWidth={2.5}
+                  />
                 </Button>
               </span>
             </label>
@@ -200,7 +206,22 @@ function SettingsPage() {
           <p className="m-0 text-xs text-muted-foreground">
             Stored locally on this Mac. <span aria-label={`Slate version ${APP_VERSION}`}>Slate v{APP_VERSION}</span>
           </p>
-          <Button disabled={isSaving} onClick={handleSaveSettings} size="sm" type="button">
+          <Button
+            aria-label={updateSettings.isPending ? "Saving settings" : "Save changes"}
+            disabled={isSaving}
+            onClick={handleSaveSettings}
+            size="sm"
+            type="button"
+          >
+            {updateSettings.isPending ? (
+              <HugeiconsIcon
+                aria-hidden="true"
+                className="animate-spin motion-reduce:animate-none"
+                data-icon="inline-start"
+                icon={Loading03Icon}
+                strokeWidth={2}
+              />
+            ) : null}
             Save changes
           </Button>
         </div>

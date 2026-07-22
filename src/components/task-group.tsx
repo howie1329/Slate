@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
-import type { TaskMutationMotion, TaskMotionTransition } from "@/components/task-motion";
+import { useTaskMotion, type TaskMutationMotion, type TaskMotionTransition } from "@/components/task-motion";
 import { TaskRow } from "@/components/task-row";
 import type { TaskSelectionTransition } from "@/components/task-selection";
 import type { Task } from "@/lib/planner";
@@ -31,6 +31,7 @@ export function TaskGroup({
   taskMutation = null,
   tasks,
 }: TaskGroupProps) {
+  const { clearTaskMutation } = useTaskMotion();
   const [hasRenderedTasks, setHasRenderedTasks] = useState(tasks.length > 0);
   const previousTaskIdsRef = useRef(new Set(tasks.map((task) => task.id)));
   const handledMotionVersionRef = useRef<number | null>(null);
@@ -70,6 +71,10 @@ export function TaskGroup({
           custom={taskMutation}
           initial={false}
           onExitComplete={() => {
+            if (taskMutation) {
+              const completedVersion = taskMutation.version;
+              window.setTimeout(() => clearTaskMutation(completedVersion), 50);
+            }
             if (tasks.length === 0) {
               setHasRenderedTasks(false);
               onTasksExitComplete?.();
@@ -82,6 +87,7 @@ export function TaskGroup({
               isOverflow={task.id === overflowTaskId && task.completedAt === null}
               isPending={pending}
               isSelected={selectedTaskId === task.id}
+              onMotionComplete={clearTaskMutation}
               onSelectTask={onSelectTask}
               onToggleTask={onToggleTask}
               shouldAnimateEnter={task.id === enteringTaskId}

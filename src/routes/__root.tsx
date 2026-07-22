@@ -47,14 +47,17 @@ function SlateShell() {
 
   useEffect(() => {
     clearSelection("instant");
-  }, [clearSelection, pathname]);
+    setRouteTransition("instant");
+  }, [clearSelection, pathname, setRouteTransition]);
 
   function handleOpenFullApp() {
     void openFullApp();
   }
 
-  function handleRouteNavigation(event: MouseEvent<HTMLAnchorElement>) {
-    setRouteTransition(event.detail > 0 ? "animate" : "instant");
+  function handleRouteNavigation(event: MouseEvent<HTMLAnchorElement>, destination: string) {
+    setRouteTransition(
+      destination !== pathname && event.detail > 0 ? "animate" : "instant",
+    );
   }
 
   async function handleRetryPersistence() {
@@ -117,7 +120,7 @@ function SlateShell() {
                   to="/today"
                   className={navLinkClass}
                   activeProps={{ className: activeNavLinkClass }}
-                  onClick={handleRouteNavigation}
+                  onClick={(event) => handleRouteNavigation(event, "/today")}
                 >
                   Today
                 </Link>
@@ -125,7 +128,7 @@ function SlateShell() {
                   to="/backlog"
                   className={navLinkClass}
                   activeProps={{ className: activeNavLinkClass }}
-                  onClick={handleRouteNavigation}
+                  onClick={(event) => handleRouteNavigation(event, "/backlog")}
                 >
                   Backlog
                 </Link>
