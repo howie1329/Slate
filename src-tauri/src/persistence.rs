@@ -218,6 +218,26 @@ impl Repository {
         })?;
         let transaction = self.connection.transaction().map_err(database_error)?;
         ensure_task_exists(&transaction, &input.id)?;
+        let (previous_estimate, previous_date, completed_at) = transaction
+            .query_row(
+                "SELECT estimate_minutes, scheduled_date, completed_at FROM tasks WHERE id = ?1",
+                [&input.id],
+                |row| {
+                    Ok((
+                        row.get::<_, Option<i64>>(0)?,
+                        row.get::<_, Option<String>>(1)?,
+                        row.get::<_, Option<String>>(2)?,
+                    ))
+                },
+            )
+            .map_err(database_error)?;
+        let today = local_today();
+        let previous_scope = active_scope(previous_estimate, previous_date.as_deref(), &today);
+        let destination_scope = active_scope(
+            input.estimate_minutes,
+            input.scheduled_date.as_deref(),
+            &today,
+        );
         transaction
             .execute(
                 "UPDATE tasks SET title = ?1, estimate_minutes = ?2, scheduled_date = ?3 WHERE id = ?4",
@@ -229,12 +249,27 @@ impl Repository {
                 ],
             )
             .map_err(database_error)?;
+        if completed_at.is_none() && previous_scope != destination_scope {
+            move_task_to_scope_start(&transaction, &input.id, &destination_scope)?;
+        }
         transaction.commit().map_err(database_error)
     }
 
     fn set_task_completed(&mut self, input: CompletionInput) -> Result<(), String> {
         let transaction = self.connection.transaction().map_err(database_error)?;
         ensure_task_exists(&transaction, &input.id)?;
+        let (estimate_minutes, scheduled_date) = transaction
+            .query_row(
+                "SELECT estimate_minutes, scheduled_date FROM tasks WHERE id = ?1",
+                [&input.id],
+                |row| {
+                    Ok((
+                        row.get::<_, Option<i64>>(0)?,
+                        row.get::<_, Option<String>>(1)?,
+                    ))
+                },
+            )
+            .map_err(database_error)?;
         transaction
             .execute(
                 "UPDATE tasks SET completed_at = ?1 WHERE id = ?2",
@@ -248,6 +283,11 @@ impl Repository {
                 ],
             )
             .map_err(database_error)?;
+        if !input.completed {
+            let destination_scope =
+                active_scope(estimate_minutes, scheduled_date.as_deref(), &local_today());
+            move_task_to_scope_start(&transaction, &input.id, &destination_scope)?;
+        }
         transaction.commit().map_err(database_error)
     }
 
@@ -255,12 +295,32 @@ impl Repository {
         validate_scheduled_date(input.scheduled_date.as_deref())?;
         let transaction = self.connection.transaction().map_err(database_error)?;
         ensure_task_exists(&transaction, &input.id)?;
+        let (estimate_minutes, previous_date, completed_at) = transaction
+            .query_row(
+                "SELECT estimate_minutes, scheduled_date, completed_at FROM tasks WHERE id = ?1",
+                [&input.id],
+                |row| {
+                    Ok((
+                        row.get::<_, Option<i64>>(0)?,
+                        row.get::<_, Option<String>>(1)?,
+                        row.get::<_, Option<String>>(2)?,
+                    ))
+                },
+            )
+            .map_err(database_error)?;
+        let today = local_today();
+        let previous_scope = active_scope(estimate_minutes, previous_date.as_deref(), &today);
+        let destination_scope =
+            active_scope(estimate_minutes, input.scheduled_date.as_deref(), &today);
         transaction
             .execute(
                 "UPDATE tasks SET scheduled_date = ?1 WHERE id = ?2",
                 params![input.scheduled_date, input.id],
             )
             .map_err(database_error)?;
+        if completed_at.is_none() && previous_scope != destination_scope {
+            move_task_to_scope_start(&transaction, &input.id, &destination_scope)?;
+        }
         transaction.commit().map_err(database_error)
     }
 
@@ -575,6 +635,46 @@ fn ensure_task_exists(connection: &rusqlite::Transaction<'_>, task_id: &str) -> 
     }
 }
 
+fn active_scope(
+    estimate_minutes: Option<i64>,
+    scheduled_date: Option<&str>,
+    today: &str,
+) -> String {
+    if estimate_minutes.is_none() {
+        return "log:needs-estimate".into();
+    }
+
+    match scheduled_date {
+        Some(date) if date == today => format!("today:{today}"),
+        None => "log:unscheduled".into(),
+        Some(date) if date < today => "log:overdue".into(),
+        Some(_) => "log:upcoming".into(),
+    }
+}
+
+fn move_task_to_scope_start(
+    transaction: &rusqlite::Transaction<'_>,
+    task_id: &str,
+    scope: &str,
+) -> Result<(), String> {
+    transaction
+        .execute("DELETE FROM task_orders WHERE task_id = ?1", [task_id])
+        .map_err(database_error)?;
+    transaction
+        .execute(
+            "UPDATE task_orders SET position = position + 1 WHERE scope = ?1",
+            [scope],
+        )
+        .map_err(database_error)?;
+    transaction
+        .execute(
+            "INSERT INTO task_orders (scope, task_id, position) VALUES (?1, ?2, 0)",
+            params![scope, task_id],
+        )
+        .map_err(database_error)?;
+    Ok(())
+}
+
 fn validate_task_input(input: &TaskInput) -> Result<(), String> {
     if input.title.trim().is_empty() {
         return Err("Task title is required.".into());
@@ -781,6 +881,86 @@ mod tests {
         assert_eq!(
             snapshot.order_by_scope.get("log:unscheduled"),
             Some(&vec![second.id, first.id]),
+        );
+    }
+
+    #[test]
+    fn moved_tasks_enter_at_the_start_of_the_destination_scope() {
+        let mut database = TestDatabase::new();
+        let first = create_task(&mut database.repository, "First");
+        let second = create_task(&mut database.repository, "Second");
+        database
+            .repository
+            .create_task(TaskInput {
+                title: "Needs estimate".into(),
+                estimate_minutes: None,
+                scheduled_date: None,
+            })
+            .expect("create task without estimate");
+        let moved = database
+            .repository
+            .tasks()
+            .expect("load tasks")
+            .into_iter()
+            .find(|task| task.title == "Needs estimate")
+            .expect("created task without estimate");
+
+        database
+            .repository
+            .reorder_tasks(ReorderTasksInput {
+                scope: "log:unscheduled".into(),
+                task_ids: vec![first.id.clone(), second.id.clone()],
+            })
+            .expect("order destination tasks");
+        database
+            .repository
+            .update_task(UpdateTaskInput {
+                id: moved.id.clone(),
+                title: moved.title,
+                estimate_minutes: Some(30),
+                scheduled_date: None,
+            })
+            .expect("move task into destination scope");
+
+        let snapshot = database.repository.snapshot().expect("snapshot");
+        assert_eq!(
+            snapshot.order_by_scope.get("log:unscheduled"),
+            Some(&vec![moved.id, first.id, second.id]),
+        );
+    }
+
+    #[test]
+    fn restored_tasks_return_to_the_start_of_their_scope() {
+        let mut database = TestDatabase::new();
+        let first = create_task(&mut database.repository, "First");
+        let restored = create_task(&mut database.repository, "Restore me");
+
+        database
+            .repository
+            .reorder_tasks(ReorderTasksInput {
+                scope: "log:unscheduled".into(),
+                task_ids: vec![first.id.clone(), restored.id.clone()],
+            })
+            .expect("order tasks");
+        database
+            .repository
+            .set_task_completed(CompletionInput {
+                id: restored.id.clone(),
+                completed: true,
+            })
+            .expect("complete task");
+        database
+            .repository
+            .set_task_completed(CompletionInput {
+                id: restored.id.clone(),
+                completed: false,
+            })
+            .expect("restore task");
+
+        let snapshot = database.repository.snapshot().expect("snapshot");
+        assert_eq!(
+            snapshot.order_by_scope.get("log:unscheduled"),
+            Some(&vec![restored.id, first.id]),
         );
     }
 

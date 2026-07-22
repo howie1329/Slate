@@ -42,6 +42,7 @@ Today and Backlog are the highest-value use of Motion.
 - Render task rows as `motion.li` with `layout="position"` so neighbouring rows settle into place after a pointer-initiated change.
 - Wrap each list in `AnimatePresence` to animate a newly created task in and a deleted task out when that action came from a pointer. Keyboard-initiated mutations remain immediate.
 - A pointer-initiated completion change moves the task between active and Completed groups. Animate the item and the resulting layout, including capacity changes, rather than animating the checkbox in isolation.
+- When a task changes sections, place it at the start of the destination section. Do not make the user track a moved task to the section tail; restored tasks and newly completed Today tasks likewise return at the start of their destination.
 - Start a create, update, delete, or completion animation only after the local mutation succeeds and the planner snapshot updates. SQLite remains the source of truth.
 - Empty states may fade in after a mutation leaves a list empty; they should not animate on initial page render.
 

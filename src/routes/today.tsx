@@ -44,7 +44,7 @@ function TodayWorkspace({ planner }: { planner: PlannerSnapshot }) {
   );
   const completedTasks = scheduledToday
     .filter((task) => task.completedAt !== null)
-    .sort((first, second) => (first.completedAt ?? "").localeCompare(second.completedAt ?? ""));
+    .sort((first, second) => (second.completedAt ?? "").localeCompare(first.completedAt ?? ""));
   const hasBacklogTasks = tasks.some(
     (task) => task.completedAt === null && scopeForTask(task, today) !== todayScope,
   );
