@@ -2,13 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { InboxIcon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
-import { Checkbox } from "@/components/ui/checkbox";
 import { PlannerEmptyState } from "@/components/planner-empty-state";
+import { TaskGroup } from "@/components/task-group";
 import { useTaskSelection } from "@/components/task-selection";
 import { focusTaskComposer } from "@/lib/task-composer";
 import { usePlannerState, useSetTaskCompleted } from "@/lib/planner-query";
-import { formatMinutes, orderTasks, scopeForTask } from "@/lib/task-groups";
-import type { Task } from "@/lib/planner";
+import { orderTasks, scopeForTask } from "@/lib/task-groups";
 
 export const Route = createFileRoute("/backlog")({
   component: BacklogPage,
@@ -30,9 +29,8 @@ function BacklogPage() {
     ["Overdue / needs reschedule", "log:overdue"],
     ["Upcoming", "log:upcoming"],
   ] as const;
-  const completedTasks = tasks.filter((task) => task.completedAt !== null);
   const hasVisibleTasks = tasks.some(
-    (task) => task.completedAt !== null || scopeForTask(task, today) !== `today:${today}`,
+    (task) => task.completedAt === null && scopeForTask(task, today) !== `today:${today}`,
   );
 
   function toggleTask(taskId: string) {
@@ -79,81 +77,9 @@ function BacklogPage() {
                 )}
               />
             ))}
-            <TaskGroup
-              label="Completed"
-              onToggleTask={toggleTask}
-              pending={setTaskCompleted.isPending}
-              selectedTaskId={selectedTaskId}
-              onSelectTask={selectTask}
-              tasks={completedTasks}
-            />
           </>
         )}
       </div>
-    </section>
-  );
-}
-
-type TaskGroupProps = {
-  label: string;
-  onToggleTask: (taskId: string) => void;
-  onSelectTask: (taskId: string) => void;
-  pending: boolean;
-  selectedTaskId: string | null;
-  tasks: Task[];
-};
-
-function TaskGroup({ label, onSelectTask, onToggleTask, pending, selectedTaskId, tasks }: TaskGroupProps) {
-  if (tasks.length === 0) {
-    return null;
-  }
-
-  return (
-    <section className="mt-5" aria-label={label}>
-      <h2 className="m-0 border-b border-border pb-2 text-menu-label font-medium text-muted-foreground">
-        {label}
-      </h2>
-      <ul className="m-0 list-none divide-y divide-border p-0">
-        {tasks.map((task) => {
-          const isCompleted = task.completedAt !== null;
-
-          return (
-            <li key={task.id} className="flex min-h-14 items-center gap-3 py-1" data-task-row>
-              <Checkbox
-                aria-label={`Mark ${task.title} as ${isCompleted ? "incomplete" : "complete"}`}
-                checked={isCompleted}
-                className="size-5 rounded-full after:-inset-3"
-              disabled={pending}
-              onCheckedChange={() => onToggleTask(task.id)}
-              />
-              <button
-                aria-expanded={selectedTaskId === task.id}
-                aria-label={`Edit ${task.title}`}
-                className={`flex min-w-0 flex-1 items-center gap-3 rounded-md px-1.5 py-2 text-left outline-none transition-colors duration-150 hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none ${
-                  selectedTaskId === task.id ? "bg-muted" : ""
-                }`}
-                onClick={() => onSelectTask(task.id)}
-                type="button"
-              >
-                <span
-                  className={`min-w-0 flex-1 truncate text-menu ${
-                    isCompleted ? "text-muted-foreground line-through" : "text-foreground"
-                  }`}
-                >
-                  {task.title}
-                </span>
-                <span
-                  className={`shrink-0 text-xs leading-none tabular-nums ${
-                    isCompleted ? "text-primary" : "text-muted-foreground"
-                  }`}
-                >
-                  {formatMinutes(task.estimateMinutes)}
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
     </section>
   );
 }

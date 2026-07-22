@@ -1,24 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Calendar01Icon,
+  Cancel01Icon,
   Clock01Icon,
   Delete02Icon,
+  Loading03Icon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useDeleteTask, usePlannerState, useUpdateTask } from "@/lib/planner-query";
@@ -61,6 +53,8 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
   const [estimate, setEstimate] = useState("");
   const [scheduledDate, setScheduledDate] = useState<LocalDate | null>(null);
   const [editingField, setEditingField] = useState<EditingField>(null);
+  const [deleteArmed, setDeleteArmed] = useState(false);
+  const keepTaskButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!task) {
@@ -71,7 +65,14 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
     setEstimate(task.estimateMinutes?.toString() ?? "");
     setScheduledDate(task.scheduledDate);
     setEditingField(null);
+    setDeleteArmed(false);
   }, [task]);
+
+  useEffect(() => {
+    if (deleteArmed) {
+      keepTaskButtonRef.current?.focus();
+    }
+  }, [deleteArmed]);
 
   const normalizedEstimate = useMemo(() => estimate.trim(), [estimate]);
   const isDirty =
@@ -80,6 +81,7 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
       normalizedEstimate !== (task.estimateMinutes?.toString() ?? "") ||
       scheduledDate !== task.scheduledDate);
   const isSaving = updateTask.isPending || deleteTask.isPending;
+  const controlsDisabled = isSaving || deleteArmed;
 
   if (!task) {
     return null;
@@ -98,6 +100,8 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
 
   function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (deleteArmed) return;
+
     const estimateMinutes = parseEstimate();
     const trimmedTitle = title.trim();
 
@@ -125,7 +129,18 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
     );
   }
 
-  function handleDelete() {
+  function handleDelete(event: React.MouseEvent<HTMLButtonElement>) {
+    if (!deleteArmed) {
+      setEditingField(null);
+      setDeleteArmed(true);
+      return;
+    }
+
+    if (event.detail > 1) {
+      keepTaskButtonRef.current?.focus();
+      return;
+    }
+
     deleteTask.mutate(selectedTask.id, {
       onSuccess: () => {
         clearSelection();
@@ -140,6 +155,13 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
       aria-label={`Edit ${selectedTask.title}`}
       className="task-detail-panel absolute inset-x-4 bottom-full rounded-t-xl border-x border-t border-[var(--task-detail-border)] bg-[var(--task-detail)] text-[var(--task-detail-foreground)] duration-200 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-reduce:animate-none"
       data-task-detail
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && deleteArmed) {
+          event.preventDefault();
+          event.stopPropagation();
+          setDeleteArmed(false);
+        }
+      }}
       onSubmit={handleSave}
     >
       <div className={`mx-auto flex min-h-12 w-full max-w-xl min-w-0 items-center gap-1 px-4 py-2 sm:px-6 ${windowMode === "full" ? "max-w-3xl px-8" : ""}`}>
@@ -149,7 +171,7 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
               aria-label="Task title"
               autoFocus
               className="h-8 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] placeholder:text-[var(--task-detail-muted)] focus-visible:border-ring"
-              disabled={isSaving}
+              disabled={controlsDisabled}
               onBlur={() => setEditingField(null)}
               onChange={(event) => setTitle(event.target.value)}
               onKeyDown={(event) => {
@@ -164,7 +186,7 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
             <button
               aria-label="Edit task title"
               className="flex h-8 w-full items-center truncate rounded-md px-2 text-left text-menu font-medium outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none"
-              disabled={isSaving}
+              disabled={controlsDisabled}
               onClick={() => setEditingField("title")}
               type="button"
             >
@@ -179,7 +201,7 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
               aria-label="Estimate in minutes"
               autoFocus
               className="h-8 w-20 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] placeholder:text-[var(--task-detail-muted)] focus-visible:border-ring"
-              disabled={isSaving}
+              disabled={controlsDisabled}
               inputMode="numeric"
               min="1"
               onBlur={() => setEditingField(null)}
@@ -198,7 +220,7 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
             <button
               aria-label="Edit estimate"
               className="flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-menu tabular-nums outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none"
-              disabled={isSaving}
+              disabled={controlsDisabled}
               onClick={() => setEditingField("estimate")}
               type="button"
             >
@@ -213,7 +235,7 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
                 <Button
                   aria-label="Edit due date"
                   className="h-8 min-w-0 justify-start px-2 text-[var(--task-detail-foreground)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
-                  disabled={isSaving}
+                  disabled={controlsDisabled}
                   title="Edit due date"
                   type="button"
                   variant="ghost"
@@ -236,52 +258,55 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
             </PopoverContent>
           </Popover>
 
-          <Dialog>
-            <DialogTrigger
-              render={
-                <Button
-                  aria-label="Delete task"
-                  className="text-[var(--task-detail-muted)] hover:bg-destructive/10 hover:text-destructive"
-                  disabled={isSaving}
-                  size="icon-sm"
-                  title="Delete task"
-                  type="button"
-                  variant="ghost"
-                />
-              }
-            >
-              <HugeiconsIcon icon={Delete02Icon} strokeWidth={1.7} />
-            </DialogTrigger>
-            <DialogContent data-task-detail-dialog showCloseButton={false}>
-              <DialogHeader>
-                <DialogTitle>Delete task?</DialogTitle>
-                <DialogDescription>
-                  “{selectedTask.title}” will be removed from this Mac and cannot be restored.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <DialogClose render={<Button disabled={isSaving} type="button" variant="outline" />}>
-                  Keep task
-                </DialogClose>
-                <Button disabled={isSaving} onClick={handleDelete} type="button" variant="destructive">
-                  Delete task
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
           <Button
-            aria-label="Save changes"
-            className={isDirty ? undefined : "text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-muted)]"}
-            disabled={!isDirty || isSaving}
+            aria-label={deleteArmed ? (deleteTask.isPending ? "Deleting task" : "Confirm delete task") : "Delete task"}
+            aria-pressed={deleteArmed}
+            className={deleteArmed ? undefined : "text-[var(--task-detail-muted)] hover:bg-destructive/10 hover:text-destructive"}
+            disabled={isSaving}
+            onClick={handleDelete}
             size="icon-sm"
-            title="Save changes"
-            type="submit"
-            variant={isDirty ? "default" : "ghost"}
+            title={deleteArmed ? (deleteTask.isPending ? "Deleting task" : "Confirm delete task") : "Delete task"}
+            type="button"
+            variant={deleteArmed ? "destructive" : "ghost"}
           >
-            <HugeiconsIcon icon={Tick02Icon} strokeWidth={1.7} />
+            <HugeiconsIcon
+              className={deleteTask.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
+              icon={deleteTask.isPending ? Loading03Icon : Delete02Icon}
+              strokeWidth={1.7}
+            />
           </Button>
+          {deleteArmed ? (
+            <Button
+              aria-label="Keep task"
+              className="text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
+              disabled={isSaving}
+              onClick={() => setDeleteArmed(false)}
+              ref={keepTaskButtonRef}
+              size="icon-sm"
+              title="Keep task"
+              type="button"
+              variant="ghost"
+            >
+              <HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.7} />
+            </Button>
+          ) : (
+            <Button
+              aria-label="Save changes"
+              className={isDirty ? undefined : "text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-muted)]"}
+              disabled={!isDirty || isSaving}
+              size="icon-sm"
+              title="Save changes"
+              type="submit"
+              variant={isDirty ? "default" : "ghost"}
+            >
+              <HugeiconsIcon icon={Tick02Icon} strokeWidth={1.7} />
+            </Button>
+          )}
         </div>
       </div>
+      <span aria-live="polite" className="sr-only">
+        {deleteArmed ? "Delete confirmation. Choose Keep task or Confirm delete task." : ""}
+      </span>
     </form>
   );
 }
