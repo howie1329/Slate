@@ -13,6 +13,7 @@ Motion for React (`motion/react`) is the animation library for stateful interfac
 - **Be compact.** The menu-bar popover must remain usable down to 360 x 520. No large movement, decorative page entrances, or unbounded animated panels.
 - **Respect user preference.** The app honours macOS Reduced Motion. Reduced-motion mode replaces spatial movement and layout animation with short opacity changes, or removes non-essential animation entirely.
 - **Do not delay work.** Persistence, keyboard input, focus changes, and error feedback happen immediately. Animation follows confirmed state; it never blocks the next action.
+- **Keep keyboard actions instant.** Pointer-initiated transitions may animate; keyboard-initiated selection, dismissal, and task actions appear immediately.
 
 ## Motion system
 
@@ -30,7 +31,7 @@ Use these default timings:
 | View change | 120-160 ms | Opacity crossfade only |
 | Dialog and popover | 100 ms | Keep the existing CSS treatment |
 
-Use a single calm ease-out curve for entering elements and a short ease-in curve for exits. Avoid bouncy springs and overshoot; they conflict with Slate's measured, reflective character.
+Use a single calm ease-out curve. Make exits faster through duration rather than a slow ease-in curve. Avoid bouncy springs and overshoot; they conflict with Slate's measured, reflective character.
 
 ## Current surfaces
 
@@ -38,9 +39,9 @@ Use a single calm ease-out curve for entering elements and a short ease-in curve
 
 Today and Backlog are the highest-value use of Motion.
 
-- Render task rows as `motion.li` with `layout="position"` so neighbouring rows settle into place after a change.
-- Wrap each list in `AnimatePresence` to animate a newly created task in and a deleted task out.
-- A completion change moves the task between active and Completed groups. Animate the item and the resulting layout, including capacity changes, rather than animating the checkbox in isolation.
+- Render task rows as `motion.li` with `layout="position"` so neighbouring rows settle into place after a pointer-initiated change.
+- Wrap each list in `AnimatePresence` to animate a newly created task in and a deleted task out when that action came from a pointer. Keyboard-initiated mutations remain immediate.
+- A pointer-initiated completion change moves the task between active and Completed groups. Animate the item and the resulting layout, including capacity changes, rather than animating the checkbox in isolation.
 - Start a create, update, delete, or completion animation only after the local mutation succeeds and the planner snapshot updates. SQLite remains the source of truth.
 - Empty states may fade in after a mutation leaves a list empty; they should not animate on initial page render.
 
@@ -54,9 +55,9 @@ When a completed or scheduled task changes the total, let the rail transition on
 
 ### Task detail panel
 
-The task detail panel above the persistent footer already enters with CSS. Upgrade this to a paired Motion enter/exit transition so opening a task, saving it, deleting it, clicking away, and pressing Escape share one consistent departure.
+The task detail panel above the persistent footer already enters with CSS. Upgrade pointer-initiated opening and dismissal to a paired Motion enter/exit transition; keyboard interactions remain immediate.
 
-The panel should be the only elevated task-editing surface. Field edits, title toggles, date selection, and focus changes remain immediate; do not animate form controls while someone is typing.
+The panel should be the only elevated task-editing surface. Pointer-initiated opening and dismissal use the paired transition; keyboard opening and dismissal, including Escape, are immediate. Field edits, title toggles, date selection, and focus changes remain immediate; do not animate form controls while someone is typing.
 
 ### Manual task capture
 

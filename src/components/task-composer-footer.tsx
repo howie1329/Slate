@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SentIcon, Settings01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
 import { useNavigate } from "@tanstack/react-router";
+import { AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TaskDetailPanel } from "@/components/task-detail-panel";
+import { useTaskMotion, type TaskMotionTransition } from "@/components/task-motion";
 import { useTaskSelection } from "@/components/task-selection";
 import { taskComposerInputId } from "@/lib/task-composer";
 import type { LocalDate } from "@/lib/planner";
@@ -21,8 +23,10 @@ type TaskComposerFooterProps = {
 export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }: TaskComposerFooterProps) {
   const navigate = useNavigate();
   const createTask = useCreateTask();
-  const { selectedTaskId } = useTaskSelection();
+  const { recordTaskMutation } = useTaskMotion();
+  const { selectedTaskId, selectedTaskTransition } = useTaskSelection();
   const [title, setTitle] = useState("");
+  const createTransitionRef = useRef<TaskMotionTransition>("instant");
   const hasTitle = title.trim().length > 0;
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -33,6 +37,7 @@ export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }
       return;
     }
 
+    recordTaskMutation({ kind: "create", transition: createTransitionRef.current });
     createTask.mutate(
       { title: trimmedTitle, estimateMinutes: null, scheduledDate },
       {
@@ -47,8 +52,26 @@ export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }
       aria-label="Task composer"
       className={`absolute inset-x-0 bottom-0 z-10 h-16 bg-background px-4 py-3 sm:px-6 ${selectedTaskId ? "" : "border-t border-border"} ${windowMode === "full" ? "px-8" : ""}`}
     >
-      <TaskDetailPanel windowMode={windowMode} />
-      <form className={`mx-auto flex h-10 w-full max-w-xl items-center gap-1.5 ${windowMode === "full" ? "max-w-3xl" : ""}`} onSubmit={handleSubmit}>
+      <AnimatePresence custom={selectedTaskTransition} initial={false}>
+        {selectedTaskId ? (
+          <TaskDetailPanel
+            key={selectedTaskId}
+            taskId={selectedTaskId}
+            transition={selectedTaskTransition}
+            windowMode={windowMode}
+          />
+        ) : null}
+      </AnimatePresence>
+      <form
+        className={`mx-auto flex h-10 w-full max-w-xl items-center gap-1.5 ${windowMode === "full" ? "max-w-3xl" : ""}`}
+        onKeyDownCapture={() => {
+          createTransitionRef.current = "instant";
+        }}
+        onPointerDownCapture={() => {
+          createTransitionRef.current = "animate";
+        }}
+        onSubmit={handleSubmit}
+      >
         <Input
           aria-label="New task"
           className="h-10 text-menu"

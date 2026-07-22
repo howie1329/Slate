@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { motion } from "motion/react";
 import {
   Calendar01Icon,
   Cancel01Icon,
@@ -13,12 +14,44 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useTaskMotion } from "@/components/task-motion";
 import { useDeleteTask, usePlannerState, useUpdateTask } from "@/lib/planner-query";
-import type { LocalDate } from "@/lib/planner";
-import { useTaskSelection } from "@/components/task-selection";
+import type { LocalDate, Task } from "@/lib/planner";
+import { useTaskSelection, type TaskSelectionTransition } from "@/components/task-selection";
 import type { WindowMode } from "@/lib/window-mode";
 
 type EditingField = "estimate" | "title" | null;
+
+const panelEnterEase = [0.23, 1, 0.32, 1] as const;
+
+const panelVariants = {
+  hidden: {
+    opacity: 0,
+    transform: "translateY(8px)",
+  },
+  visible: {
+    opacity: 1,
+    transform: "translateY(0)",
+    transition: {
+      duration: 0.2,
+      ease: panelEnterEase,
+    },
+  },
+  exit: (transition: TaskSelectionTransition) =>
+    transition === "instant"
+      ? {
+          opacity: 0,
+          transition: { duration: 0 },
+        }
+      : {
+          opacity: 0,
+          transform: "translateY(4px)",
+          transition: {
+            duration: 0.14,
+            ease: panelEnterEase,
+          },
+        },
+};
 
 function dateFromLocalDate(value: LocalDate) {
   return new Date(`${value}T00:00:00`);
@@ -43,18 +76,31 @@ function formatDueDate(value: LocalDate | null) {
   });
 }
 
-export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
+type TaskDetailPanelProps = {
+  taskId: string;
+  transition: TaskSelectionTransition;
+  windowMode: WindowMode;
+};
+
+export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPanelProps) {
   const planner = usePlannerState();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
-  const { clearSelection, selectedTaskId } = useTaskSelection();
-  const task = planner.data?.tasks.find((candidate) => candidate.id === selectedTaskId);
+  const { recordTaskMutation } = useTaskMotion();
+  const { clearSelection } = useTaskSelection();
+  const task = planner.data?.tasks.find((candidate) => candidate.id === taskId);
+  const lastTaskRef = useRef<Task | null>(null);
+  if (task) {
+    lastTaskRef.current = task;
+  }
+  const selectedTask = task ?? lastTaskRef.current;
   const [title, setTitle] = useState("");
   const [estimate, setEstimate] = useState("");
   const [scheduledDate, setScheduledDate] = useState<LocalDate | null>(null);
   const [editingField, setEditingField] = useState<EditingField>(null);
   const [deleteArmed, setDeleteArmed] = useState(false);
   const keepTaskButtonRef = useRef<HTMLButtonElement>(null);
+  const interactionTransitionRef = useRef<TaskSelectionTransition>(transition);
 
   useEffect(() => {
     if (!task) {
@@ -76,18 +122,17 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
 
   const normalizedEstimate = useMemo(() => estimate.trim(), [estimate]);
   const isDirty =
-    task !== undefined &&
-    (title !== task.title ||
-      normalizedEstimate !== (task.estimateMinutes?.toString() ?? "") ||
-      scheduledDate !== task.scheduledDate);
+    selectedTask !== null &&
+    (title !== selectedTask.title ||
+      normalizedEstimate !== (selectedTask.estimateMinutes?.toString() ?? "") ||
+      scheduledDate !== selectedTask.scheduledDate);
   const isSaving = updateTask.isPending || deleteTask.isPending;
   const controlsDisabled = isSaving || deleteArmed;
 
-  if (!task) {
+  if (!selectedTask) {
     return null;
   }
-
-  const selectedTask = task;
+  const activeTask = selectedTask;
 
   function parseEstimate() {
     if (!normalizedEstimate) {
@@ -117,11 +162,16 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
       return;
     }
 
+    recordTaskMutation({
+      kind: "move",
+      taskId: activeTask.id,
+      transition: interactionTransitionRef.current,
+    });
     updateTask.mutate(
-      { id: selectedTask.id, title: trimmedTitle, estimateMinutes, scheduledDate },
+      { id: activeTask.id, title: trimmedTitle, estimateMinutes, scheduledDate },
       {
         onSuccess: () => {
-          clearSelection();
+          clearSelection(interactionTransitionRef.current);
           toast.success("Task updated.");
         },
         onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update task."),
@@ -141,9 +191,14 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
       return;
     }
 
-    deleteTask.mutate(selectedTask.id, {
+    recordTaskMutation({
+      kind: "delete",
+      taskId: activeTask.id,
+      transition: interactionTransitionRef.current,
+    });
+    deleteTask.mutate(activeTask.id, {
       onSuccess: () => {
-        clearSelection();
+        clearSelection(interactionTransitionRef.current);
         toast.success("Task deleted.");
       },
       onError: (error) => toast.error(error instanceof Error ? error.message : "Could not delete task."),
@@ -151,10 +206,16 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
   }
 
   return (
-    <form
+    <motion.form
       aria-label={`Edit ${selectedTask.title}`}
-      className="task-detail-panel absolute inset-x-4 bottom-full rounded-t-xl border-x border-t border-[var(--task-detail-border)] bg-[var(--task-detail)] text-[var(--task-detail-foreground)] duration-200 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-reduce:animate-none"
+      animate="visible"
+      className="task-detail-panel absolute inset-x-4 bottom-full rounded-t-xl border-x border-t border-[var(--task-detail-border)] bg-[var(--task-detail)] text-[var(--task-detail-foreground)]"
+      exit="exit"
+      initial={transition === "animate" ? "hidden" : false}
       data-task-detail
+      onKeyDownCapture={() => {
+        interactionTransitionRef.current = "instant";
+      }}
       onKeyDown={(event) => {
         if (event.key === "Escape" && deleteArmed) {
           event.preventDefault();
@@ -162,7 +223,11 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
           setDeleteArmed(false);
         }
       }}
+      onPointerDownCapture={() => {
+        interactionTransitionRef.current = "animate";
+      }}
       onSubmit={handleSave}
+      variants={panelVariants}
     >
       <div className={`mx-auto flex min-h-12 w-full max-w-xl min-w-0 items-center gap-1 px-4 py-2 sm:px-6 ${windowMode === "full" ? "max-w-3xl px-8" : ""}`}>
         <div className="min-w-0 flex-1">
@@ -307,6 +372,6 @@ export function TaskDetailPanel({ windowMode }: { windowMode: WindowMode }) {
       <span aria-live="polite" className="sr-only">
         {deleteArmed ? "Delete confirmation. Choose Keep task or Confirm delete task." : ""}
       </span>
-    </form>
+    </motion.form>
   );
 }

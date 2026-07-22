@@ -3,6 +3,7 @@ import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Link, Outlet, createRootRoute, useRouterState } from "@tanstack/react-router";
 import { TaskComposerFooter } from "@/components/task-composer-footer";
+import { TaskMotionProvider } from "@/components/task-motion";
 import { TaskSelectionProvider, useTaskSelection } from "@/components/task-selection";
 import { Button } from "@/components/ui/button";
 import { retryPersistence, type PlannerSnapshot } from "@/lib/planner";
@@ -18,9 +19,11 @@ const activeNavLinkClass =
 
 export const Route = createRootRoute({
   component: () => (
-    <TaskSelectionProvider>
-      <SlateShell />
-    </TaskSelectionProvider>
+    <TaskMotionProvider>
+      <TaskSelectionProvider>
+        <SlateShell />
+      </TaskSelectionProvider>
+    </TaskMotionProvider>
   ),
 });
 
@@ -36,7 +39,7 @@ function SlateShell() {
   const { clearSelection, selectedTaskId } = useTaskSelection();
 
   useEffect(() => {
-    clearSelection();
+    clearSelection("instant");
   }, [clearSelection, pathname]);
 
   function handleOpenFullApp() {
@@ -80,7 +83,7 @@ function SlateShell() {
       onKeyDown={(event) => {
         if (event.key === "Escape" && selectedTaskId && !event.defaultPrevented) {
           event.preventDefault();
-          clearSelection();
+          clearSelection("instant");
         } else if (windowMode === "popover" && event.key === "Escape" && !event.defaultPrevented) {
           void hidePopover();
         }
