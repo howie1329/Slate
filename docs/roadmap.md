@@ -53,6 +53,7 @@ Slate currently has the foundation for the first usable daily planning loop:
 - Renderer caching and cross-window invalidation through TanStack Query and native change events.
 - Compact task-detail interaction above the persistent footer.
 - Light and dark themes with a restrained visual system.
+- Pointer-only Motion transitions for task presence/layout, task-detail entry and exit, route changes, empty states, and pending-save feedback.
 
 The immediate product is not finished yet:
 

@@ -1,5 +1,7 @@
 # Slate animation brief
 
+> **Status:** Core task-list, task-detail, navigation, empty-state, and pending-save motion is shipped on `codex/animations`. The AI review-tray motion remains planned work.
+
 ## Purpose
 
 Animation in Slate makes task changes, review states, and navigation easier to follow. It is never decorative or attention-seeking. Slate is a quiet desktop utility: motion should confirm an action, preserve context, or direct focus to a meaningful change.
@@ -20,6 +22,8 @@ Motion for React (`motion/react`) is the animation library for stateful interfac
 ### Global policy
 
 Configure Motion once at the app shell with `MotionConfig reducedMotion="user"`. Prefer opacity and `transform`; do not animate `top`, `left`, `width`, or `height` directly except where a vetted layout transition requires it.
+
+Pointer intent is one-shot. Route and task mutation transitions reset after the relevant transition completes, so keyboard navigation, history navigation, and later data refreshes do not inherit stale pointer animation.
 
 Use these default timings:
 
@@ -43,7 +47,7 @@ Today and Backlog are the highest-value use of Motion.
 - Wrap each list in `AnimatePresence` to animate a newly created task in and a deleted task out when that action came from a pointer. Keyboard-initiated mutations remain immediate.
 - A pointer-initiated completion change moves the task between active and Completed groups. Animate the item and the resulting layout, including capacity changes, rather than animating the checkbox in isolation.
 - When a task changes sections, place it at the start of the destination section. Do not make the user track a moved task to the section tail; restored tasks and newly completed Today tasks likewise return at the start of their destination.
-- Start a create, update, delete, or completion animation only after the local mutation succeeds and the planner snapshot updates. SQLite remains the source of truth.
+- Record pointer intent before a local mutation so the renderer can prepare the transition, but animate the changed list only after the mutation succeeds and the planner snapshot updates. Failed writes do not produce a list transition. SQLite remains the source of truth.
 - Empty states may fade in after a mutation leaves a list empty; they should not animate on initial page render.
 
 This applies to `src/routes/today.tsx` and `src/routes/backlog.tsx`. A later drag-and-drop implementation should reuse the same layout animation and add keyboard-operable reorder controls; drag motion must not be the only way to reorder.
@@ -56,13 +60,13 @@ When a completed or scheduled task changes the total, let the rail transition on
 
 ### Task detail panel
 
-The task detail panel above the persistent footer already enters with CSS. Upgrade pointer-initiated opening and dismissal to a paired Motion enter/exit transition; keyboard interactions remain immediate.
+The task detail panel above the persistent footer uses a paired Motion enter/exit transition for pointer-initiated opening and dismissal; keyboard interactions remain immediate.
 
 The panel should be the only elevated task-editing surface. Pointer-initiated opening and dismissal use the paired transition; keyboard opening and dismissal, including Escape, are immediate. Field edits, title toggles, date selection, and focus changes remain immediate; do not animate form controls while someone is typing.
 
 ### Manual task capture
 
-After a successful Save from the persistent footer, clear the composer immediately and let the destination task row enter from its list. The Save icon may briefly show a pending spinner while the mutation is in flight, but should not show a celebratory animation.
+After a successful Save from the persistent footer, clear the composer immediately and let the destination task row enter from its list. The Save icon shows a pending spinner while the mutation is in flight, but does not show a celebratory animation. Task-detail, Settings, and API-key saves use the same pending-feedback pattern.
 
 ### AI Assist and Plan My Day
 
@@ -80,7 +84,7 @@ Do not use character-by-character AI typing. The current AI scope is non-streami
 
 Pointer navigation between Today, Backlog, and Settings uses a 180-200ms opacity fade with no more than 4px of vertical movement. Today and Backlog retain the persistent shell while only workspace content transitions; Settings transitions as its own surface. Keyboard navigation remains immediate. Do not slide full pages horizontally: that makes the compact macOS popover feel like a mobile application.
 
-Settings save and API-key save should use the existing toast for durable confirmation. During a pending save, swap the action icon for a small spinner; on completion, restore it. The AI-status dot may transition color/opacity when configuration changes, but should not pulse continuously.
+Settings save and API-key save use the existing toast for durable confirmation. During a pending save, the action icon swaps for a small spinner; on completion, it restores. The AI-status dot may transition color/opacity when configuration changes, but should not pulse continuously.
 
 ### Existing primitive animations
 
@@ -94,14 +98,14 @@ Keep the current CSS animations for dialogs, popovers, and selects. They already
 - No global wrapper that makes every component animate by default.
 - No custom physics tuning per screen; use the shared timings above.
 
-## Implementation order
+## Implementation status and remaining order
 
-1. Install `motion`, add the root reduced-motion configuration, and keep a small shared transition token module if repeated values become necessary.
-2. Add task-list layout and presence transitions for create, delete, complete, and restore actions.
-3. Convert the task detail panel to paired presence transitions.
-4. Build the AI review tray with loading-to-result transitions as part of the planned AI feature.
-5. Add the minimal route crossfade and pending-save icon treatment.
-6. Validate in both full and menu-bar popover modes, including macOS Reduced Motion and the 360 x 520 minimum window.
+1. [x] Install `motion` and add the root reduced-motion configuration.
+2. [x] Add task-list layout and presence transitions for create, delete, complete, restore, and cross-section moves.
+3. [x] Convert the task detail panel to paired presence transitions.
+4. [ ] Build the AI review tray with loading-to-result transitions as part of the planned AI feature.
+5. [x] Add the minimal route fade and pending-save icon treatment.
+6. [ ] Validate in both full and menu-bar popover modes, including macOS Reduced Motion and the 360 x 520 minimum window.
 
 ## Acceptance criteria
 
