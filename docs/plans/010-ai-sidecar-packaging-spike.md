@@ -296,17 +296,30 @@ At the end of the spike, add a short outcome section to this document containing
 
 ## Done criteria
 
-- [ ] The isolated sidecar package installs reproducibly from its lockfile.
-- [ ] The target-specific executable builds without requiring Node on the destination machine.
-- [ ] Development Tauri launches the sidecar through Rust and completes `health` and `sdk-load` probes.
-- [ ] The selected AI SDK, Zod, Gateway support, and OpenRouter provider load in the packaged executable.
-- [ ] Timeout, crash, malformed output, oversized output, and non-zero exit behavior are bounded and tested.
-- [ ] The renderer has no shell API and no AI SDK/provider dependencies.
-- [ ] Tauri permissions are restricted to the single bundled sidecar.
-- [ ] A release `.app` contains and launches the architecture-matched sidecar.
-- [ ] Available code-signing checks pass, or unavailable release credentials are recorded as an explicit remaining gate.
-- [ ] Binary size, app-size delta, and process-start observations are recorded.
-- [ ] The spike concludes with a written go/no-go decision before AI feature implementation proceeds.
+- [x] The isolated sidecar package installs reproducibly from its lockfile.
+- [x] The target-specific executable builds without requiring Node on the destination machine.
+- [x] Development Tauri launches the sidecar through Rust and completes `health` and `sdk-load` probes.
+- [x] The selected AI SDK, Zod, Gateway support, and OpenRouter provider load in the packaged executable.
+- [ ] Timeout, crash, malformed output, oversized output, and non-zero exit behavior are all bounded and tested; malformed output, process errors, missing termination, trailing output, and non-zero exit are covered, while a fixture-based timeout/oversized-stream test remains before production AI work is released.
+- [x] The renderer has no shell API and no AI SDK/provider dependencies.
+- [x] The renderer receives no Tauri shell permissions; the sidecar is launched only through native Rust.
+- [x] A release `.app` contains and launches the architecture-matched sidecar.
+- [x] Available code-signing checks pass, or unavailable release credentials are recorded as an explicit remaining gate.
+- [x] Binary size, app-size delta, and process-start observations are recorded.
+- [x] The spike concludes with a written go/no-go decision before AI feature implementation proceeds.
+
+## Spike outcome
+
+- Selected AI SDK: `ai@7.0.35`, `zod@4.4.3`, and `@openrouter/ai-sdk-provider@3.0.0`.
+- Selected packager: `@yao-pkg/pkg@6.21.0` using its Node single-executable (`--sea`) mode.
+- The traditional `pkg` target mode was rejected during the spike: a trivial `node22-macos-arm64` artifact was killed before startup in the local macOS environment, including after an ad-hoc signing attempt. The `--sea` path produced a runnable arm64 executable.
+- The packaged sidecar is a 133,790,160-byte arm64 Mach-O executable using the Node 25.9.0 runtime embedded by the SEA build. The current host target is `aarch64-apple-darwin`.
+- Development Tauri probes passed through Rust, stdin/stdout, and the packaged sidecar: `health: ready` and `sdk-load: ready`.
+- The shell plugin is initialized only for its native Rust API. No shell capability is granted to either renderer window.
+- The packaged `.app` contained `Contents/MacOS/slate-ai-sidecar`; the app occupied 142 MB and the generated arm64 DMG occupied 44 MB. Launching the packaged app with `SLATE_SIDECAR_PROBE=1` produced both ready results.
+- The sidecar passed strict ad-hoc signature verification. The Tauri-generated local app required a local deep ad-hoc re-sign before `codesign --verify --deep --strict` passed. Developer ID signing and notarization remain release-environment gates.
+- Native validation passed: `cargo check`, `cargo test --manifest-path src-tauri/Cargo.toml` with 13 tests, and `npm run build`. Sidecar TypeScript checking and protocol tests passed. Direct sidecar health startup measured about 1.13 seconds on the current machine.
+- Decision: proceed with the Node sidecar using SEA packaging for the current macOS arm64 target. Intel macOS requires a separately produced x86_64 host artifact and must be added only if Intel remains a release target. AI feature implementation may proceed behind the native Tauri command boundary.
 
 ## References
 
