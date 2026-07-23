@@ -41,7 +41,7 @@ Rust owns the following sequence:
 1. Validate the capture and date.
 2. Read the selected provider and model from Settings.
 3. Read the selected provider's non-empty API key from macOS Keychain.
-4. Read bounded Today and Backlog context from the local planner.
+4. Read bounded active Today context from the local planner.
 5. Build a versioned sidecar request.
 6. Start the packaged sidecar and write one request through stdin.
 7. Validate the single response, timeout, exit status, and output limits.
@@ -61,7 +61,6 @@ type AssistRequest = {
     today: LocalDate;
     scheduledDate: LocalDate | null;
     todayTasks: AssistTaskContext[];
-    backlogTasks: AssistTaskContext[];
   };
 };
 ```
@@ -70,8 +69,7 @@ Request bounds:
 
 - Capture: maximum 2,000 characters.
 - Task titles: maximum 240 characters.
-- Today context: active Today commitments.
-- Backlog context: first 50 uncompleted tasks in current order.
+- Today context: first 50 active Today commitments in current order.
 - Context fields: stable task ID, title, estimate, and scheduled date only.
 - The saved planning instruction is not sent to Assist; it remains Plan My Day-only.
 
@@ -215,18 +213,18 @@ npm run tauri -- build
 
 ## Done criteria
 
-- [ ] AI Assist works from non-empty Today and Backlog captures.
-- [ ] The result is one editable, validated task proposal.
-- [ ] Explicit dates are preserved by AI and may be intentionally edited by the user.
-- [ ] No task or planner event is produced before acceptance.
-- [ ] Accepted Assist uses the existing native create-task path.
-- [ ] Keys remain native and never enter renderer state, storage, logs, or change events.
-- [ ] Both configured providers work through the packaged sidecar.
-- [ ] Loading, unavailable, error, retry, result, and dismissal states work in the compact window.
-- [ ] Empty composer clearly reports Plan My Day as unavailable during this incremental slice.
-- [ ] README and AI brief accurately describe the shipped Assist state.
-- [ ] The stale Gateway dependency reference is corrected.
-- [ ] Native, sidecar, and packaged acceptance checks pass.
+- [x] AI Assist works from non-empty Today and Backlog captures.
+- [x] The result is one editable, validated task proposal.
+- [x] Explicit dates are preserved by AI and may be intentionally edited by the user.
+- [x] No task or planner event is produced before acceptance.
+- [x] Accepted Assist uses the existing native create-task path.
+- [x] Keys remain native and never enter renderer state, storage, logs, or change events.
+- [ ] Both configured providers work through the packaged sidecar; live provider verification remains a manual acceptance step requiring each key.
+- [x] Loading, unavailable, error, retry, result, and dismissal states work in the compact window.
+- [x] Empty composer clearly reports Plan My Day as unavailable during this incremental slice.
+- [x] README and AI brief accurately describe the shipped Assist state.
+- [x] The stale Gateway dependency reference is corrected.
+- [ ] Native, sidecar, and packaged acceptance checks pass; automated checks pass, while live provider and macOS UI acceptance remain manual.
 
 ## References
 

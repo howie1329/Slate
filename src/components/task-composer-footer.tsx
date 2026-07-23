@@ -4,6 +4,8 @@ import { Loading03Icon, SentIcon, Settings01Icon, SparklesIcon } from "@hugeicon
 import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence } from "motion/react";
 import { toast } from "sonner";
+import { AiReviewTray } from "@/components/ai-review-tray";
+import { useAiReview } from "@/components/ai-review";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TaskDetailPanel } from "@/components/task-detail-panel";
@@ -16,20 +18,32 @@ import type { WindowMode } from "@/lib/window-mode";
 import { useCreateTask } from "@/lib/planner-query";
 
 type TaskComposerFooterProps = {
-  aiIsConfigured: boolean;
   scheduledDate: LocalDate | null;
   windowMode: WindowMode;
 };
 
-export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }: TaskComposerFooterProps) {
+export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFooterProps) {
   const navigate = useNavigate();
   const createTask = useCreateTask();
   const { clearTaskMutation, recordTaskMutation, taskMutation } = useTaskMotion();
   const { setRouteTransition } = useRouteMotion();
-  const { selectedTaskId, selectedTaskTransition } = useTaskSelection();
+  const { clearSelection, selectedTaskId, selectedTaskTransition } = useTaskSelection();
+  const aiReview = useAiReview();
   const [title, setTitle] = useState("");
   const createTransitionRef = useRef<TaskMotionTransition>("instant");
   const hasTitle = title.trim().length > 0;
+
+  function handleAiAction() {
+    clearSelection("instant");
+
+    if (hasTitle) {
+      const capture = title.trim();
+      setTitle("");
+      aiReview.startAssist(capture, scheduledDate);
+    } else {
+      aiReview.showPlanUnavailable();
+    }
+  }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,11 +83,24 @@ export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }
           }
         }}
       >
-        {selectedTaskId ? (
+        {selectedTaskId && aiReview.state.kind === "idle" ? (
           <TaskDetailPanel
             key={selectedTaskId}
             taskId={selectedTaskId}
             transition={selectedTaskTransition}
+            windowMode={windowMode}
+          />
+        ) : null}
+        {aiReview.state.kind !== "idle" ? (
+          <AiReviewTray
+            key="ai-review"
+            onDismiss={aiReview.dismiss}
+            onOpenSettings={() => {
+              setRouteTransition("animate");
+              void navigate({ to: "/settings" });
+            }}
+            onRedo={aiReview.redoAssist}
+            state={aiReview.state}
             windowMode={windowMode}
           />
         ) : null}
@@ -113,15 +140,20 @@ export function TaskComposerFooter({ aiIsConfigured, scheduledDate, windowMode }
           />
         </Button>
         <Button
-          aria-label="Plan my day with AI"
+          aria-label={aiReview.state.kind === "assist-loading" ? "Generating AI Assist proposal" : hasTitle ? "Use AI Assist" : "Plan my day with AI"}
           className="size-8 rounded-md"
-          disabled
+          disabled={aiReview.state.kind === "assist-loading"}
+          onClick={handleAiAction}
           size="icon"
-          title={aiIsConfigured ? "AI planning will be available here" : "Set up AI to plan your day"}
+          title={aiReview.state.kind === "assist-loading" ? "Generating AI Assist proposal" : hasTitle ? "Use AI Assist" : "Plan My Day"}
           type="button"
           variant="outline"
         >
-          <HugeiconsIcon icon={SparklesIcon} strokeWidth={1.8} />
+          <HugeiconsIcon
+            className={aiReview.state.kind === "assist-loading" ? "animate-pulse motion-reduce:animate-none" : undefined}
+            icon={SparklesIcon}
+            strokeWidth={1.8}
+          />
         </Button>
         <Button
           aria-label="Open settings"

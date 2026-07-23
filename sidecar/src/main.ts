@@ -1,5 +1,7 @@
+import { runAssist, normalizeAssistError } from "./assist.js";
 import { runSdkLoadProbe } from "./sdk-load.js";
 import {
+  assistResponse,
   errorResponse,
   MAX_REQUEST_BYTES,
   parseRequest,
@@ -48,6 +50,15 @@ async function main() {
     request = await readRequest();
   } catch {
     writeResponse(errorResponse("invalid-request"));
+    return;
+  }
+
+  if (request.operation === "assist") {
+    try {
+      writeResponse(assistResponse(await runAssist(request)));
+    } catch (error) {
+      writeResponse(errorResponse(normalizeAssistError(error)));
+    }
     return;
   }
 

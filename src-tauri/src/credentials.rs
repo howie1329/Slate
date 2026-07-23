@@ -20,14 +20,21 @@ fn entry(provider: &str) -> Result<Entry, String> {
 }
 
 pub fn has_api_key(provider: &str) -> bool {
-    entry(provider)
-        .and_then(|entry| {
-            entry
-                .get_password()
-                .map_err(|error| format!("Could not read the macOS Keychain: {error}"))
-        })
-        .map(|key| !key.trim().is_empty())
-        .unwrap_or(false)
+    read_api_key(provider).is_ok()
+}
+
+pub(crate) fn read_api_key(provider: &str) -> Result<String, String> {
+    let key = entry(provider).and_then(|entry| {
+        entry
+            .get_password()
+            .map_err(|_| "AI provider key is unavailable.".into())
+    })?;
+
+    if key.trim().is_empty() {
+        return Err("AI provider key is unavailable.".into());
+    }
+
+    Ok(key)
 }
 
 #[derive(Deserialize)]

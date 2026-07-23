@@ -12,6 +12,7 @@ import {
   createTask,
   deleteApiKey,
   deleteTask,
+  generateAiAssist,
   getPlannerSnapshot,
   isTauriWindow,
   reorderTasks,
@@ -21,6 +22,7 @@ import {
   updateSettings,
   updateTask,
   type PlannerPlanAssignment,
+  type AiAssistInput,
   type ReorderTasksInput,
   type SetTaskCompletedInput,
   type SetTaskScheduledDateInput,
@@ -146,5 +148,11 @@ export function useDeleteApiKey() {
   return useMutation({
     mutationFn: (provider: Settings["aiProvider"]) => deleteApiKey(provider),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: plannerStateQueryKey }),
+  });
+}
+
+export function useGenerateAiAssist() {
+  return useMutation({
+    mutationFn: (input: AiAssistInput) => generateAiAssist(input),
   });
 }

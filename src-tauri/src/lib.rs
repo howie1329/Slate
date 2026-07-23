@@ -1,3 +1,4 @@
+mod ai;
 mod credentials;
 mod persistence;
 mod sidecar;
@@ -42,6 +43,7 @@ pub fn run() {
             persistence::retry_persistence,
             credentials::set_api_key,
             credentials::delete_api_key,
+            ai::generate_ai_assist,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

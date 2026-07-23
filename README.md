@@ -15,7 +15,7 @@ The repository contains a working local planning foundation:
 - Shared local state between the popover and full window through native change events and TanStack Query invalidation.
 - Light and dark themes and compact task-detail editing above the persistent footer.
 
-The current product is still pre-1.0. The next work is to finish the deterministic daily loop, implement the reviewable AI actions, add the remaining ordering behavior, and harden the compact-window and persistence states. AI controls are present in the interface but are currently disabled until their native provider and review-tray flow is shipped.
+The current product is still pre-1.0. AI Assist is implemented as a reviewable vertical slice: provider requests cross the native Keychain boundary through the packaged Node sidecar, and accepted proposals use the existing task-creation path. Plan My Day remains visibly unavailable until its own atomic planning slice is shipped.
 
 The product direction and staged expansion plan live in [the product brief](docs/product-brief.md) and [the roadmap](docs/roadmap.md).
 
@@ -58,7 +58,7 @@ The production application and DMG are generated under `src-tauri/target/release
 - SQLite through a native Rust `rusqlite` repository with bundled SQLite
 - macOS Keychain access through the Tauri layer
 - TanStack Query for renderer caching and cross-window invalidation
-- Native Rust AI provider adapter planned for the 1.0 AI actions
+- Native Tauri provider boundary with a packaged Node sidecar using JavaScript AI SDKs
 
 ## Project structure
 

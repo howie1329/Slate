@@ -2,10 +2,7 @@ use std::time::Duration;
 
 use serde::Deserialize;
 use tauri::AppHandle;
-use tauri_plugin_shell::{
-    process::{CommandEvent, TerminatedPayload},
-    ShellExt,
-};
+use tauri_plugin_shell::{process::CommandEvent, ShellExt};
 
 const SIDECAR_NAME: &str = "slate-ai-sidecar";
 const PROBE_ENVIRONMENT_VARIABLE: &str = "SLATE_SIDECAR_PROBE";
@@ -51,6 +48,12 @@ pub fn start_probe_if_requested(app: &AppHandle) {
 }
 
 async fn run_probe(app: &AppHandle, operation: &str) -> Result<(), String> {
+    let request = format!("{{\"version\":1,\"operation\":\"{operation}\"}}");
+    let response = run_sidecar_request(app, &request).await?;
+    validate_response(operation, &response)
+}
+
+pub(crate) async fn run_sidecar_request(app: &AppHandle, request: &str) -> Result<String, String> {
     let command = app
         .shell()
         .sidecar(SIDECAR_NAME)
@@ -60,7 +63,7 @@ async fn run_probe(app: &AppHandle, operation: &str) -> Result<(), String> {
         .spawn()
         .map_err(|error| format!("Could not start the bundled sidecar: {error}"))?;
 
-    let request = format!("{{\"version\":1,\"operation\":\"{operation}\"}}\n");
+    let request = format!("{}\n", request.trim_end_matches('\n'));
     if let Err(error) = child.write(request.as_bytes()) {
         let _ = child.kill();
         return Err(format!("Could not write to the bundled sidecar: {error}"));
@@ -86,7 +89,8 @@ async fn run_probe(app: &AppHandle, operation: &str) -> Result<(), String> {
                 }
                 CommandEvent::Error(error) => return Err(error),
                 CommandEvent::Terminated(payload) => {
-                    return validate_response(operation, stdout, payload);
+                    validate_exit_code(payload.code)?;
+                    return response_line(stdout);
                 }
                 _ => {}
             }
@@ -105,20 +109,20 @@ async fn run_probe(app: &AppHandle, operation: &str) -> Result<(), String> {
         }
         Err(_) => {
             let _ = child.kill();
-            Err("Sidecar probe timed out.".into())
+            Err("Sidecar request timed out.".into())
         }
     }
 }
 
-fn validate_response(
-    operation: &str,
-    stdout: Vec<u8>,
-    termination: TerminatedPayload,
-) -> Result<(), String> {
-    if termination.code != Some(0) {
-        return Err(format!("Sidecar exited with code {:?}.", termination.code));
+fn validate_exit_code(code: Option<i32>) -> Result<(), String> {
+    if code == Some(0) {
+        Ok(())
+    } else {
+        Err(format!("Sidecar exited with code {:?}.", code))
     }
+}
 
+fn response_line(stdout: Vec<u8>) -> Result<String, String> {
     let response_text =
         String::from_utf8(stdout).map_err(|_| "Sidecar returned non-UTF-8 output.".to_string())?;
     let lines = response_text.lines().collect::<Vec<_>>();
@@ -126,7 +130,11 @@ fn validate_response(
         return Err("Sidecar returned an invalid number of response lines.".into());
     }
 
-    let response: SidecarResponse = serde_json::from_str(lines[0])
+    Ok(lines[0].to_string())
+}
+
+fn validate_response(operation: &str, response_line: &str) -> Result<(), String> {
+    let response: SidecarResponse = serde_json::from_str(response_line)
         .map_err(|_| "Sidecar returned malformed JSON.".to_string())?;
     if !response.ok {
         if response.result.is_some() {
@@ -156,21 +164,17 @@ fn validate_response(
 mod tests {
     use super::*;
 
-    fn terminated(code: Option<i32>) -> TerminatedPayload {
-        TerminatedPayload { code, signal: None }
-    }
-
     #[test]
     fn validates_a_ready_response() {
         let output = br#"{"ok":true,"result":{"operation":"health","status":"ready"}}
 "#;
-        assert!(validate_response("health", output.to_vec(), terminated(Some(0))).is_ok());
+        assert!(validate_response("health", std::str::from_utf8(output).unwrap()).is_ok());
     }
 
     #[test]
     fn rejects_a_non_zero_exit() {
-        let result = validate_response("health", Vec::new(), terminated(Some(1)));
-        assert!(result.is_err());
+        assert!(validate_exit_code(Some(1)).is_err());
+        assert!(validate_exit_code(None).is_err());
     }
 
     #[test]
@@ -178,13 +182,14 @@ mod tests {
         let output = br#"{"ok":true,"result":{"operation":"health","status":"ready"}}
 extra
 "#;
-        let result = validate_response("health", output.to_vec(), terminated(Some(0)));
+        let result =
+            response_line(output.to_vec()).and_then(|line| validate_response("health", &line));
         assert!(result.is_err());
     }
 
     #[test]
     fn rejects_malformed_json() {
-        let result = validate_response("health", b"not-json\n".to_vec(), terminated(Some(0)));
+        let result = validate_response("health", "not-json");
         assert!(result.is_err());
     }
 
@@ -192,7 +197,7 @@ extra
     fn rejects_a_mismatched_response() {
         let output = br#"{"ok":true,"result":{"operation":"sdk-load","status":"ready"}}
 "#;
-        let result = validate_response("health", output.to_vec(), terminated(Some(0)));
+        let result = validate_response("health", std::str::from_utf8(output).unwrap());
         assert!(result.is_err());
     }
 
@@ -200,7 +205,7 @@ extra
     fn rejects_an_ambiguous_response() {
         let output = br#"{"ok":true,"result":{"operation":"health","status":"ready"},"error":{"category":"internal"}}
 "#;
-        let result = validate_response("health", output.to_vec(), terminated(Some(0)));
+        let result = validate_response("health", std::str::from_utf8(output).unwrap());
         assert!(result.is_err());
     }
 }

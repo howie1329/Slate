@@ -29,6 +29,17 @@ export type PlannerSnapshot = {
   today: LocalDate;
 };
 
+export type AiAssistInput = {
+  capture: string;
+  scheduledDate: LocalDate | null;
+};
+
+export type AiAssistProposal = {
+  title: string;
+  estimateMinutes: number;
+  scheduledDate: LocalDate | null;
+};
+
 export type TaskInput = {
   title: string;
   estimateMinutes: number | null;
@@ -104,4 +115,8 @@ export function setApiKey(provider: AiProvider, apiKey: string) {
 
 export function deleteApiKey(provider: AiProvider) {
   return plannerInvoke<void>("delete_api_key", { input: { provider } });
+}
+
+export function generateAiAssist(input: AiAssistInput) {
+  return plannerInvoke<AiAssistProposal>("generate_ai_assist", { input });
 }

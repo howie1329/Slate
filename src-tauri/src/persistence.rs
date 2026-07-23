@@ -17,6 +17,7 @@ use uuid::Uuid;
 use crate::credentials;
 
 const DATABASE_FILE_NAME: &str = "slate.sqlite";
+const MAX_AI_CONTEXT_TASKS: usize = 50;
 const MIGRATION_1: &str = r#"
 CREATE TABLE tasks (
   id TEXT PRIMARY KEY NOT NULL,
@@ -90,6 +91,20 @@ pub struct PlannerSnapshot {
     today: String,
 }
 
+pub(crate) struct AiAssistTaskContext {
+    pub(crate) id: String,
+    pub(crate) title: String,
+    pub(crate) estimate_minutes: Option<i64>,
+    pub(crate) scheduled_date: Option<String>,
+}
+
+pub(crate) struct AiAssistContext {
+    pub(crate) provider: String,
+    pub(crate) model: String,
+    pub(crate) today: String,
+    pub(crate) today_tasks: Vec<AiAssistTaskContext>,
+}
+
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct PlannerChanged {
@@ -131,6 +146,26 @@ impl Repository {
             settings,
             ai_availability: ai_availability.into(),
             today: local_today(),
+        })
+    }
+
+    fn ai_assist_context(&self) -> Result<AiAssistContext, String> {
+        let settings = self.settings()?;
+        let tasks = self.tasks()?;
+        let order_by_scope = self.orders()?;
+        let today = local_today();
+        let today_scope = format!("today:{today}");
+
+        let today_tasks = ordered_ai_context(&tasks, &order_by_scope, &today_scope, &today)
+            .into_iter()
+            .take(MAX_AI_CONTEXT_TASKS)
+            .collect();
+
+        Ok(AiAssistContext {
+            provider: settings.ai_provider,
+            model: settings.ai_model,
+            today,
+            today_tasks,
         })
     }
 
@@ -473,6 +508,10 @@ pub fn get_planner_snapshot(state: State<PersistenceState>) -> Result<PlannerSna
     with_repository(&state, |repository| repository.snapshot())
 }
 
+pub(crate) fn read_ai_assist_context(state: &PersistenceState) -> Result<AiAssistContext, String> {
+    with_repository(state, |repository| repository.ai_assist_context())
+}
+
 #[tauri::command]
 pub fn create_task(
     app: AppHandle,
@@ -650,6 +689,54 @@ fn active_scope(
         Some(date) if date < today => "log:overdue".into(),
         Some(_) => "log:upcoming".into(),
     }
+}
+
+fn ordered_ai_context(
+    tasks: &[Task],
+    order_by_scope: &HashMap<String, Vec<String>>,
+    scope: &str,
+    today: &str,
+) -> Vec<AiAssistTaskContext> {
+    let positions = order_by_scope
+        .get(scope)
+        .into_iter()
+        .flat_map(|task_ids| task_ids.iter().enumerate())
+        .map(|(position, task_id)| (task_id.as_str(), position))
+        .collect::<HashMap<_, _>>();
+    let mut scoped_tasks = tasks
+        .iter()
+        .filter(|task| {
+            task.completed_at.is_none()
+                && active_scope(task.estimate_minutes, task.scheduled_date.as_deref(), today)
+                    == scope
+        })
+        .collect::<Vec<_>>();
+
+    scoped_tasks.sort_by(|first, second| {
+        let first_position = positions
+            .get(first.id.as_str())
+            .copied()
+            .unwrap_or(usize::MAX);
+        let second_position = positions
+            .get(second.id.as_str())
+            .copied()
+            .unwrap_or(usize::MAX);
+
+        first_position
+            .cmp(&second_position)
+            .then_with(|| first.created_at.cmp(&second.created_at))
+            .then_with(|| first.id.cmp(&second.id))
+    });
+
+    scoped_tasks
+        .into_iter()
+        .map(|task| AiAssistTaskContext {
+            id: task.id.clone(),
+            title: task.title.clone(),
+            estimate_minutes: task.estimate_minutes,
+            scheduled_date: task.scheduled_date.clone(),
+        })
+        .collect()
 }
 
 fn move_task_to_scope_start(
@@ -1019,5 +1106,31 @@ mod tests {
             .expect("task");
         assert_eq!(stored_task.scheduled_date, None);
         assert!(database.repository.orders().expect("orders").is_empty());
+    }
+
+    #[test]
+    fn ai_assist_context_includes_active_today_commitments() {
+        let mut database = TestDatabase::new();
+        let today = local_today();
+        let today_task = {
+            database
+                .repository
+                .create_task(TaskInput {
+                    title: "Today task".into(),
+                    estimate_minutes: Some(30),
+                    scheduled_date: Some(today.clone()),
+                })
+                .expect("create today task");
+            database
+                .repository
+                .tasks()
+                .expect("load today task")
+                .into_iter()
+                .find(|task| task.title == "Today task")
+                .expect("today task")
+        };
+        let context = database.repository.ai_assist_context().expect("AI context");
+        assert_eq!(context.today, today);
+        assert_eq!(context.today_tasks[0].id, today_task.id);
     }
 }

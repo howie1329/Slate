@@ -7,6 +7,10 @@ Slate has one AI action button in the persistent footer. The button changes beha
 - With non-empty input: **AI Assist**.
 - With empty or whitespace-only input: **Plan My Day**.
 
+## Implementation status
+
+AI Assist is implemented in the current vertical slice. It uses the native Keychain-backed provider boundary and packaged Node sidecar, presents one editable proposal, and writes a task only after acceptance. Plan My Day remains designed but unavailable until its own atomic review flow is implemented.
+
 The regular Save button remains available for manual task capture. AI is an optional acceleration layer; manual capture and task management must continue to work without a configured key or network access.
 
 ## Shared footer behavior
@@ -36,9 +40,8 @@ AI Assist turns rough capture text into a cleaner, more actionable task without 
 AI Assist receives:
 
 - The text currently in the composer.
-- The current workspace context.
+- The active Today commitments, when useful for local context.
 - The current scheduled date, if one already exists.
-- Relevant Log/backlog context when date inference may be useful.
 
 ### Suggested result
 
@@ -48,7 +51,7 @@ AI may suggest:
 - An estimated duration in whole positive minutes.
 - An optional scheduled date.
 
-The AI must not overwrite an explicit date. When capture begins from Today, the task already has Today’s date, so AI Assist focuses on title cleanup and duration estimation. When capture begins from Log/backlog without a date, AI may infer a date from the task text and available backlog context; if no date is justified, it should leave the task unscheduled.
+The AI must not overwrite an explicit date. When capture begins from Today, the task already has Today’s date, so AI Assist focuses on title cleanup and duration estimation. When capture begins from Log/backlog without a date, AI may infer a date from the capture only when it is clearly justified; otherwise it should leave the task unscheduled.
 
 ### Interaction
 

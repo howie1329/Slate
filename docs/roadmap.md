@@ -57,8 +57,8 @@ Slate currently has the foundation for the first usable daily planning loop:
 
 The immediate product is not finished yet:
 
-- AI Assist and Plan My Day are designed but not shipped; the footer AI control is currently disabled.
-- The review tray and safe plan-application flow still need implementation and testing.
+- AI Assist is implemented as the first reviewable vertical slice; Plan My Day remains designed but not shipped.
+- The atomic Plan My Day review and acceptance flow still needs implementation and testing.
 - The daily loop needs final empty, error, completed, and overloaded states.
 - Compact-window behavior, reduced motion, documentation, and packaged-build quality need a final pass.
 - The distinction between the current Backlog view and a future richer Log view should remain deliberate rather than being expanded prematurely.
