@@ -1,10 +1,11 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, Loading03Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import appPackage from "../../package.json";
 import { Button } from "@/components/ui/button";
+import { useRouteMotion } from "@/components/route-motion";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,6 +32,7 @@ function SettingsPage() {
   const planner = usePlannerState();
   const updateSettings = useUpdateSettings();
   const setApiKey = useSetApiKey();
+  const { setRouteTransition } = useRouteMotion();
   const [draft, setDraft] = useState<Settings | null>(null);
   const [apiKey, setApiKeyValue] = useState("");
 
@@ -76,6 +78,10 @@ function SettingsPage() {
     );
   }
 
+  function handleBackToToday(event: MouseEvent<HTMLAnchorElement>) {
+    setRouteTransition(event.detail > 0 ? "animate" : "instant");
+  }
+
   const isSaving = updateSettings.isPending || setApiKey.isPending;
 
   return (
@@ -85,6 +91,7 @@ function SettingsPage() {
           <Link
             aria-label="Back to Today"
             className="inline-flex h-8 items-center gap-1.5 rounded-md px-1 text-sm font-semibold text-foreground no-underline outline-none transition-colors duration-150 hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none"
+            onClick={handleBackToToday}
             to="/today"
           >
             <HugeiconsIcon aria-hidden="true" icon={ArrowLeft01Icon} size={16} strokeWidth={2} />
@@ -159,15 +166,21 @@ function SettingsPage() {
                   value={apiKey}
                 />
                 <Button
-                  aria-label="Save API key"
+                  aria-label={setApiKey.isPending ? "Saving API key" : "Save API key"}
                   disabled={!apiKey.trim() || isSaving}
                   onClick={handleSaveApiKey}
                   size="icon"
-                  title="Save API key"
+                  title={setApiKey.isPending ? "Saving API key" : "Save API key"}
                   type="button"
                   variant="default"
                 >
-                  <HugeiconsIcon aria-hidden="true" data-icon="inline-start" icon={Tick02Icon} strokeWidth={2.5} />
+                  <HugeiconsIcon
+                    aria-hidden="true"
+                    className={setApiKey.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
+                    data-icon="inline-start"
+                    icon={setApiKey.isPending ? Loading03Icon : Tick02Icon}
+                    strokeWidth={2.5}
+                  />
                 </Button>
               </span>
             </label>
@@ -193,7 +206,22 @@ function SettingsPage() {
           <p className="m-0 text-xs text-muted-foreground">
             Stored locally on this Mac. <span aria-label={`Slate version ${APP_VERSION}`}>Slate v{APP_VERSION}</span>
           </p>
-          <Button disabled={isSaving} onClick={handleSaveSettings} size="sm" type="button">
+          <Button
+            aria-label={updateSettings.isPending ? "Saving settings" : "Save changes"}
+            disabled={isSaving}
+            onClick={handleSaveSettings}
+            size="sm"
+            type="button"
+          >
+            {updateSettings.isPending ? (
+              <HugeiconsIcon
+                aria-hidden="true"
+                className="animate-spin motion-reduce:animate-none"
+                data-icon="inline-start"
+                icon={Loading03Icon}
+                strokeWidth={2}
+              />
+            ) : null}
             Save changes
           </Button>
         </div>

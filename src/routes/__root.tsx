@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import NumberFlow from "@number-flow/react";
 import { Link, Outlet, createRootRoute, useRouterState } from "@tanstack/react-router";
+import { motion } from "motion/react";
 import { TaskComposerFooter } from "@/components/task-composer-footer";
+import { RouteMotionProvider, useRouteMotion, type RouteMotionTransition } from "@/components/route-motion";
+import { TaskMotionProvider } from "@/components/task-motion";
 import { TaskSelectionProvider, useTaskSelection } from "@/components/task-selection";
 import { Button } from "@/components/ui/button";
 import { retryPersistence, type PlannerSnapshot } from "@/lib/planner";
@@ -16,11 +20,19 @@ const navLinkClass =
 const activeNavLinkClass =
   "inline-flex h-8 items-center justify-center rounded-full bg-foreground px-3.5 text-menu font-semibold text-background no-underline outline-none transition-colors duration-150 hover:bg-foreground/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none";
 
+const routeFadeEase = [0.23, 1, 0.32, 1] as const;
+const headerNumberTransformTiming = { duration: 180, easing: "ease-out" };
+const headerNumberOpacityTiming = { duration: 120, easing: "ease-out" };
+
 export const Route = createRootRoute({
   component: () => (
-    <TaskSelectionProvider>
-      <SlateShell />
-    </TaskSelectionProvider>
+    <RouteMotionProvider>
+      <TaskMotionProvider>
+        <TaskSelectionProvider>
+          <SlateShell />
+        </TaskSelectionProvider>
+      </TaskMotionProvider>
+    </RouteMotionProvider>
   ),
 });
 
@@ -34,13 +46,21 @@ function SlateShell() {
   });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const { clearSelection, selectedTaskId } = useTaskSelection();
+  const { routeTransition, setRouteTransition } = useRouteMotion();
 
   useEffect(() => {
-    clearSelection();
-  }, [clearSelection, pathname]);
+    clearSelection("instant");
+    setRouteTransition("instant");
+  }, [clearSelection, pathname, setRouteTransition]);
 
   function handleOpenFullApp() {
     void openFullApp();
+  }
+
+  function handleRouteNavigation(event: MouseEvent<HTMLAnchorElement>, destination: string) {
+    setRouteTransition(
+      destination !== pathname && event.detail > 0 ? "animate" : "instant",
+    );
   }
 
   async function handleRetryPersistence() {
@@ -80,14 +100,16 @@ function SlateShell() {
       onKeyDown={(event) => {
         if (event.key === "Escape" && selectedTaskId && !event.defaultPrevented) {
           event.preventDefault();
-          clearSelection();
+          clearSelection("instant");
         } else if (windowMode === "popover" && event.key === "Escape" && !event.defaultPrevented) {
           void hidePopover();
         }
       }}
     >
       {isSettingsPage ? (
-        <Outlet />
+        <RouteFade className="h-full min-h-0" key={pathname} transition={routeTransition}>
+          <Outlet />
+        </RouteFade>
       ) : (
         <>
           <header className={`shrink-0 bg-background px-4 pt-3 sm:px-6 ${pathname === "/today" ? "pb-3" : ""} ${windowMode === "full" ? "px-8" : ""}`}>
@@ -101,6 +123,7 @@ function SlateShell() {
                   to="/today"
                   className={navLinkClass}
                   activeProps={{ className: activeNavLinkClass }}
+                  onClick={(event) => handleRouteNavigation(event, "/today")}
                 >
                   Today
                 </Link>
@@ -108,6 +131,7 @@ function SlateShell() {
                   to="/backlog"
                   className={navLinkClass}
                   activeProps={{ className: activeNavLinkClass }}
+                  onClick={(event) => handleRouteNavigation(event, "/backlog")}
                 >
                   Backlog
                 </Link>
@@ -131,8 +155,10 @@ function SlateShell() {
             {pathname === "/today" ? <TodayCapacityProgress planner={planner.data} windowMode={windowMode} /> : null}
           </header>
 
-          <div className="slate-workspace min-h-0 flex-1">
-            <Outlet />
+          <div className="slate-workspace relative min-h-0 flex-1">
+            <RouteFade className="absolute inset-0" key={pathname} transition={routeTransition}>
+              <Outlet />
+            </RouteFade>
           </div>
 
           <TaskComposerFooter
@@ -143,6 +169,25 @@ function SlateShell() {
         </>
       )}
     </main>
+  );
+}
+
+type RouteFadeProps = {
+  children: ReactNode;
+  className?: string;
+  transition: RouteMotionTransition;
+};
+
+function RouteFade({ children, className, transition }: RouteFadeProps) {
+  return (
+    <motion.div
+      animate={{ opacity: 1, transform: "translateY(0)" }}
+      className={className}
+      initial={transition === "animate" ? { opacity: 0.35, transform: "translateY(4px)" } : false}
+      transition={{ duration: 0.2, ease: routeFadeEase }}
+    >
+      {children}
+    </motion.div>
   );
 }
 
@@ -168,7 +213,6 @@ function HeaderSummary({ pathname, planner }: HeaderSummaryProps) {
         : capacityRatio <= 0.5
           ? "text-foreground"
           : "text-primary";
-    const summary = capacity.isOverCapacity ? `+${capacity.overageMinutes}m` : `${capacity.remainingMinutes}m`;
     const label = capacity.isOverCapacity
       ? `${capacity.overageMinutes} minutes over capacity`
       : `${capacity.remainingMinutes} minutes remaining`;
@@ -179,7 +223,11 @@ function HeaderSummary({ pathname, planner }: HeaderSummaryProps) {
         className={`justify-self-start text-menu font-semibold tabular-nums transition-colors duration-200 motion-reduce:transition-none ${tone}`}
         role="status"
       >
-        {summary}
+        <HeaderNumber
+          prefix={capacity.isOverCapacity ? "+" : undefined}
+          suffix="m"
+          value={capacity.isOverCapacity ? capacity.overageMinutes : capacity.remainingMinutes}
+        />
       </span>
     );
   }
@@ -192,12 +240,27 @@ function HeaderSummary({ pathname, planner }: HeaderSummaryProps) {
 
     return (
       <span aria-label={`${taskCount} tasks left`} className="justify-self-start text-menu font-semibold tabular-nums text-foreground" role="status">
-        {taskCount}
+        <HeaderNumber value={taskCount} />
       </span>
     );
   }
 
   return <span aria-hidden="true" />;
+}
+
+function HeaderNumber({ prefix, suffix, value }: { prefix?: string; suffix?: string; value: number }) {
+  return (
+    <NumberFlow
+      aria-hidden="true"
+      className="tabular-nums"
+      opacityTiming={headerNumberOpacityTiming}
+      prefix={prefix}
+      respectMotionPreference
+      suffix={suffix}
+      transformTiming={headerNumberTransformTiming}
+      value={value}
+    />
+  );
 }
 
 function TodayCapacityProgress({ planner, windowMode }: { planner: PlannerSnapshot | undefined; windowMode: WindowMode }) {
