@@ -35,7 +35,7 @@ try {
     }
   }
 } catch {
-  throw new Error(`Sidecar binary is missing or stale for ${targetTriple}. Run npm run build:sidecar first.`);
+  throw new Error(`Sidecar binary is missing or stale for ${targetTriple}. Run npm --prefix sidecar ci, then npm run build:sidecar.`);
 }
 
 console.log(`Using existing ${binary}`);

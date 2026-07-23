@@ -35,15 +35,19 @@ The full window provides more room for the same workflow. It is not an unlock ga
 
 ```bash
 npm install
+npm --prefix sidecar ci
+npm run build:sidecar
 npm run dev:desktop
 ```
 
 `npm run dev:desktop` starts Vite on port 1420 and launches the native Slate tray app. The popover opens from the macOS menu bar; the full app is available through Open Full App.
+The sidecar is an independently locked package, so install and build it once before desktop development; `npm run ensure:sidecar` then rejects a missing or stale binary.
 
 ## Validation and release builds
 
 ```bash
 npm run build
+npm --prefix sidecar ci
 npm --prefix sidecar test
 npm run build:sidecar
 npm run tauri -- build

@@ -18,6 +18,7 @@ use crate::credentials;
 
 const DATABASE_FILE_NAME: &str = "slate.sqlite";
 const MAX_AI_CONTEXT_TASKS: usize = 50;
+const MAX_AI_CONTEXT_TITLE_CHARS: usize = 240;
 const MIGRATION_1_PREFIX: &str = r#"
 CREATE TABLE tasks (
   id TEXT PRIMARY KEY NOT NULL,
@@ -985,7 +986,7 @@ fn ordered_ai_context(
         .into_iter()
         .map(|task| AiAssistTaskContext {
             id: task.id.clone(),
-            title: task.title.clone(),
+            title: ai_context_title(&task.title),
             estimate_minutes: task.estimate_minutes,
             scheduled_date: task.scheduled_date.clone(),
         })
@@ -1004,7 +1005,7 @@ fn ordered_plan_context(
         .filter_map(|(position, task)| {
             Some(AiPlanTaskContext {
                 id: task.id.clone(),
-                title: task.title.clone(),
+                title: ai_context_title(&task.title),
                 estimate_minutes: task.estimate_minutes?,
                 scheduled_date: task.scheduled_date.clone(),
                 source_scope: scope.to_string(),
@@ -1012,6 +1013,10 @@ fn ordered_plan_context(
             })
         })
         .collect()
+}
+
+fn ai_context_title(title: &str) -> String {
+    title.chars().take(MAX_AI_CONTEXT_TITLE_CHARS).collect()
 }
 
 fn ordered_tasks<'a>(
@@ -1564,6 +1569,77 @@ mod tests {
         assert_eq!(context.today, today);
         assert_eq!(context.provider, credentials::default_provider());
         assert_eq!(context.model, credentials::default_model());
+    }
+
+    #[test]
+    fn ai_plan_context_bounds_long_today_titles_without_changing_stored_data() {
+        let mut database = TestDatabase::new();
+        let today = local_today();
+        let long_title = "a".repeat(MAX_AI_CONTEXT_TITLE_CHARS + 1);
+        database
+            .repository
+            .create_task(TaskInput {
+                title: long_title.clone(),
+                estimate_minutes: Some(30),
+                scheduled_date: Some(today),
+            })
+            .expect("create today task");
+
+        let context = database.repository.ai_plan_context().expect("plan context");
+        let today_task = context
+            .today_tasks
+            .iter()
+            .find(|task| task.title.len() == MAX_AI_CONTEXT_TITLE_CHARS)
+            .expect("bounded today task");
+        assert_eq!(today_task.title.chars().count(), MAX_AI_CONTEXT_TITLE_CHARS);
+        assert_eq!(
+            database
+                .repository
+                .tasks()
+                .expect("load tasks")
+                .into_iter()
+                .find(|task| task.title == long_title)
+                .expect("stored today task")
+                .title
+                .chars()
+                .count(),
+            MAX_AI_CONTEXT_TITLE_CHARS + 1
+        );
+    }
+
+    #[test]
+    fn ai_plan_context_bounds_long_backlog_titles_without_changing_stored_data() {
+        let mut database = TestDatabase::new();
+        let long_title = "a".repeat(MAX_AI_CONTEXT_TITLE_CHARS + 1);
+        database
+            .repository
+            .create_task(TaskInput {
+                title: long_title.clone(),
+                estimate_minutes: Some(30),
+                scheduled_date: None,
+            })
+            .expect("create backlog task");
+
+        let context = database.repository.ai_plan_context().expect("plan context");
+        let candidate = context
+            .candidates
+            .iter()
+            .find(|task| task.title.len() == MAX_AI_CONTEXT_TITLE_CHARS)
+            .expect("bounded backlog candidate");
+        assert_eq!(candidate.title.chars().count(), MAX_AI_CONTEXT_TITLE_CHARS);
+        assert_eq!(
+            database
+                .repository
+                .tasks()
+                .expect("load tasks")
+                .into_iter()
+                .find(|task| task.title == long_title)
+                .expect("stored backlog task")
+                .title
+                .chars()
+                .count(),
+            MAX_AI_CONTEXT_TITLE_CHARS + 1
+        );
     }
 
     #[test]
