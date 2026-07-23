@@ -77,6 +77,7 @@ Make the capture-to-commit-to-completion loop reliable and demonstrable without 
 - Make Today and Backlog understandable when empty, active, completed, overdue, and over capacity.
 - Keep unsized tasks out of Today and AI-generated plans while allowing them to remain in Backlog.
 - Preserve explicit Today commitments when planning again.
+- Treat existing Today commitments as fixed planning context; only accepted eligible Backlog tasks receive today’s date and enter Today.
 - Make Plan My Day additive and capacity-aware; it may fill available capacity but never removes or reorders existing commitments.
 - Add AI Assist for rough capture: title cleanup, positive whole-minute estimate, and an optional date only when the user has not already supplied one.
 - Put both AI actions in a footer-adjacent review tray. Nothing is persisted until the user accepts it.

@@ -81,14 +81,14 @@ After decoding, reject invalid values. If input `scheduledDate` is non-null, rep
 
 The renderer invokes Plan My Day with no task IDs. The native command reads a fresh snapshot and computes:
 
-- Today and its active commitments.
+- Today and its active commitments, which are fixed context and never move candidates.
 - Daily capacity and remaining capacity.
 - Eligible Backlog tasks: incomplete, positive estimated minutes, not already Today, and either unscheduled or overdue. Exclude future-dated and title-only tasks.
 - Current Backlog ordering as a soft priority signal and the saved planning instruction.
 
 Give the model stable eligible task IDs, titles, estimates, date context, current order, remaining minutes, and the instruction. Ask it to return an ordered list of selected task IDs plus optional short rationale; it must not return dates, scopes, or positions.
 
-Validate the selection after decoding: no unknown IDs, duplicates, completed tasks, invalid estimates, future-dated tasks, existing Today tasks, or total beyond remaining capacity. Convert the valid ordered IDs into final Today assignments by assigning Today’s date and positions after the last existing Today task. Return those final items, total minutes, remaining capacity after the proposal, and an explicit empty-state reason when nothing can be added.
+Validate the selection after decoding: no unknown IDs, duplicates, completed tasks, invalid estimates, future-dated tasks, existing Today tasks, or total beyond remaining capacity. Convert the valid ordered Backlog IDs into final Today assignments by assigning the current local Today date and positions after the last existing Today task. Return those final items, total minutes, remaining capacity after the proposal, and an explicit empty-state reason when nothing can be added. Existing Today tasks are not returned as assignments.
 
 Use deterministic validation as the final authority. The model ranks eligible work; it never determines persistence fields or bypasses capacity.
 

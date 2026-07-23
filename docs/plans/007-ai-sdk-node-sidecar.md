@@ -8,6 +8,9 @@ The React renderer continues to call typed Tauri commands. Rust remains responsi
 
 This plan is an alternative transport plan to the native HTTP adapter in [006-ai-assist-plan-my-day-review-tray.md](006-ai-assist-plan-my-day-review-tray.md). The product behavior, review tray, persistence rules, and acceptance matrix in plan 006 remain authoritative unless this plan explicitly changes the transport boundary.
 
+For the detailed Plan My Day request and acceptance contract, [012-plan-my-day-sidecar-vertical-slice.md](012-plan-my-day-sidecar-vertical-slice.md) is now authoritative.
+For the implemented Assist request and renderer flow, [011-ai-assist-sidecar-vertical-slice.md](011-ai-assist-sidecar-vertical-slice.md) is authoritative.
+
 ## Decision summary
 
 Use a short-lived sidecar process per AI request. Communicate over newline-delimited JSON through stdin/stdout. Do not create a localhost HTTP server, pass credentials through command-line arguments, or expose the Tauri shell API to the renderer.
@@ -93,8 +96,9 @@ type SidecarRequest =
       apiKey: string;
       input: {
         capture: string;
+        today: string;
         scheduledDate: string | null;
-        context: TaskContext[];
+        todayTasks: TaskContext[];
       };
     }
   | {
@@ -105,8 +109,10 @@ type SidecarRequest =
       apiKey: string;
       input: {
         today: string;
+        dailyCapacityMinutes: number;
         remainingMinutes: number;
-        tasks: TaskContext[];
+        todayTasks: TaskContext[];
+        candidates: TaskContext[];
         planningInstruction: string;
       };
     };

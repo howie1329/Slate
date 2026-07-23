@@ -70,6 +70,7 @@ The 1.0 loop is:
 - Active Today tasks count against the daily capacity. Completed tasks remain visible as history but do not count toward active remaining capacity.
 - Slate may allow a user to keep an over-capacity Today plan. The meter and affected task make the overage visible, and recovery actions help the user return work to Backlog or revise the plan.
 - Plan My Day considers only eligible estimated Backlog tasks and the current remaining capacity. It preserves existing uncompleted Today commitments, proposes an additive plan, and never silently removes or reorders existing commitments.
+- Existing Today tasks are planning constraints, not move candidates. Accepted Backlog selections receive the current local Today date and Today scope only after user approval.
 - Every AI result is transient until the user accepts it. Dismiss and Redo do not write task or plan changes.
 - Accepted Plan My Day assignments are validated again at the native SQLite boundary and applied atomically. A stale or invalid proposal must make no partial writes.
 - Manual capture, editing, scheduling, completion, deletion, and persistence work without an AI provider, API key, or network connection.

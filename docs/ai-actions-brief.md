@@ -85,7 +85,7 @@ The same footer AI button triggers Plan My Day when the composer is empty.
 
 The planner receives:
 
-- Existing uncompleted Today tasks.
+- Existing uncompleted Today tasks as fixed planning context, not candidates for movement.
 - Remaining capacity.
 - Log tasks with valid positive estimates.
 - Explicit dates and overdue state.
@@ -102,7 +102,9 @@ Plan My Day returns an additive list of task assignments for Today. Each propose
 - Task title.
 - Estimate.
 - Source Log section or date context when useful.
-- The resulting position in Today.
+- The resulting Today date and native-derived position.
+
+Existing Today tasks are not returned as assignments. They stay on Today with their current date and order. Selected Backlog tasks receive the current local Today date and Today scope only when the user accepts the plan.
 
 The plan should fill remaining capacity where possible. It may leave capacity unused when no eligible task fits or when the planning instruction suggests restraint.
 
@@ -113,7 +115,7 @@ The plan should fill remaining capacity where possible. It may leave capacity un
 3. Plan My Day evaluates the current local planner state.
 4. A larger review panel opens above the footer with the proposed task list.
 5. The user chooses one of:
-   - **Accept plan** — apply all assignments atomically.
+   - **Accept plan** — move all selected Backlog assignments to Today atomically, updating their dates and order together.
    - **Redo** — generate a new plan using the current state.
    - **Dismiss** — close the panel without changing tasks.
 
@@ -155,7 +157,7 @@ Only one AI review should be active at a time. Opening a new AI action should re
 
 - AI suggestions are never committed automatically.
 - AI Assist acceptance creates one task through the existing persistence boundary.
-- Plan My Day acceptance applies all assignments in one atomic persistence operation.
+- Plan My Day acceptance applies all selected Backlog assignments in one atomic persistence operation; existing Today tasks remain unchanged.
 - API keys remain in macOS Keychain and never appear in planner snapshots, SQLite, review state, or change events.
 - Manual Save remains available regardless of AI configuration or network access.
 

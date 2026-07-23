@@ -43,6 +43,8 @@ Plan My Day does use Backlog context because selecting existing Backlog work is 
 - The empty composer invokes Plan My Day.
 - The plan is additive: it can add eligible Backlog tasks to Today, but cannot remove or reorder existing Today tasks.
 - Existing uncompleted Today commitments are preserved exactly.
+- Today commitments are planning context only. They remain on Today with their existing date and are never returned as move candidates.
+- Selected Backlog tasks remain unchanged while the proposal is being reviewed. On acceptance, native code assigns them the current local Today date and Today scope.
 - Only incomplete, positively estimated, non-Today tasks are candidates.
 - Unscheduled and overdue candidates are eligible.
 - Future-dated, title-only, completed, and already-Today tasks are excluded.
@@ -62,7 +64,7 @@ The context contains:
 
 - Current local date.
 - Daily capacity in minutes.
-- Active Today commitments, ordered by the persisted Today order.
+- Active Today commitments, ordered by the persisted Today order, as fixed constraints rather than selectable work.
 - Current committed minutes and remaining capacity.
 - Up to 50 eligible Backlog candidates.
 - Candidate stable ID, title, positive estimate, scheduled date, source section, and current Backlog order position.
@@ -113,6 +115,7 @@ The native layer converts selected IDs into safe proposal items containing:
 - Current estimate.
 - Current source date/section.
 - Today’s resulting date.
+- Native-derived resulting Today position.
 - Total proposed minutes.
 - Remaining capacity after the proposal.
 - Optional rationale.
@@ -156,9 +159,10 @@ The native transaction must:
 5. Confirm the current Today commitments and persisted order are unchanged in the relevant acceptance dimensions.
 6. Recalculate remaining capacity from the current database state.
 7. Reject the entire proposal if the total no longer fits.
-8. Assign today’s date and append selected tasks after the existing Today order.
-9. Commit all task-date and order writes in one SQLite transaction.
-10. Emit exactly one planner change event after a successful commit.
+8. Assign the current local Today date and Today scope to each selected Backlog task.
+9. Append selected tasks after the existing Today order without changing existing positions.
+10. Commit all task-date and order writes in one SQLite transaction.
+11. Emit exactly one planner change event after a successful commit.
 
 If any validation fails, roll back the transaction and return a stable stale-plan error. The renderer should retain the proposal and offer Redo; it must not try to apply a subset.
 
@@ -189,6 +193,7 @@ When Plan My Day starts:
 The review tray shows:
 
 - A concise explanation of the plan.
+- A clear distinction between fixed Today commitments and proposed Backlog additions when space permits.
 - Proposed task titles and estimates.
 - Total proposed minutes.
 - Remaining capacity after acceptance.
@@ -308,7 +313,7 @@ Manual acceptance:
 2. No-capacity and no-eligible states appear without a provider request.
 3. A configured provider proposes only unscheduled/overdue estimated Backlog tasks.
 4. Existing Today tasks remain unchanged and proposed tasks fit remaining capacity.
-5. Accept plan moves every selected task together into Today and preserves existing order.
+5. Accept plan moves every selected Backlog task together into Today, updates each selected task to today’s date, and preserves existing order.
 6. Dismiss and Redo do not mutate tasks; Redo reads fresh state.
 7. Change a candidate or Today commitment before acceptance; acceptance fails atomically and offers Redo.
 8. Remove the key or network; manual Save still works and the tray gives a concise retry/Settings path.
@@ -329,6 +334,8 @@ Manual acceptance:
 - [ ] Plan My Day never changes SQLite during generation, retry, redo, empty-state display, or dismissal.
 - [ ] The result is a reviewable additive plan with task summaries, totals, and capacity impact.
 - [ ] Existing Today commitments remain unchanged.
+- [ ] Accepted Backlog candidates receive the current local Today date and Today scope only after user approval.
+- [ ] Native-derived Today positions are append-only and never supplied as renderer authority.
 - [ ] Acceptance is native-authoritative, atomic, append-only, and stale-safe.
 - [ ] Invalid provider output cannot create partial writes.
 - [ ] Loading, empty, unavailable, error, retry, result, and dismiss states work in the compact window.
