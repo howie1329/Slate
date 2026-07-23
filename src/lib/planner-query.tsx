@@ -130,41 +130,34 @@ export function useReorderTasks() {
 
 export function useSaveSettings() {
   const queryClient = useQueryClient();
-  const inputRef = useRef<SaveSettingsInput | null>(null);
-
-  const mutation = useMutation({
-    mutationFn: () => {
-      if (!inputRef.current) {
-        return Promise.reject(new Error("Settings save input is unavailable."));
-      }
-      return saveSettings(inputRef.current);
-    },
-    onSuccess: (snapshot) => {
-      queryClient.setQueryData<PlannerSnapshot>(plannerStateQueryKey, snapshot);
-    },
-  });
+  const pendingRef = useRef(false);
+  const [isPending, setIsPending] = useState(false);
 
   return {
-    ...mutation,
+    isPending,
     mutate: (
       input: SaveSettingsInput,
       options?: {
         onSuccess?: (snapshot: PlannerSnapshot) => void;
-        onError?: (error: Error) => void;
+        onError?: (error: unknown) => void;
       },
     ) => {
-      if (mutation.isPending) {
+      if (pendingRef.current) {
         return;
       }
 
-      inputRef.current = input;
-      mutation.mutate(undefined, {
-        onSuccess: (snapshot) => options?.onSuccess?.(snapshot),
-        onError: (error) => options?.onError?.(error),
-        onSettled: () => {
-          inputRef.current = null;
-        },
-      });
+      pendingRef.current = true;
+      setIsPending(true);
+      void saveSettings(input)
+        .then((snapshot) => {
+          queryClient.setQueryData<PlannerSnapshot>(plannerStateQueryKey, snapshot);
+          options?.onSuccess?.(snapshot);
+        })
+        .catch((error: unknown) => options?.onError?.(error))
+        .finally(() => {
+          pendingRef.current = false;
+          setIsPending(false);
+        });
     },
   };
 }

@@ -55,6 +55,16 @@ pub(crate) fn remove_api_key(provider: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::{Entry, SERVICE_NAME};
+    use keyring::{credential::CredentialPersistence, default};
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn uses_a_persistent_macos_credential_store() {
+        assert!(matches!(
+            default::default_credential_builder().persistence(),
+            CredentialPersistence::UntilDelete
+        ));
+    }
 
     #[test]
     #[ignore = "accesses the developer macOS Keychain"]
