@@ -40,6 +40,33 @@ export type AiAssistProposal = {
   scheduledDate: LocalDate | null;
 };
 
+export type AiPlanItem = {
+  id: string;
+  title: string;
+  estimateMinutes: number;
+  sourceScheduledDate: LocalDate | null;
+  scheduledDate: LocalDate;
+  position: number;
+};
+
+export type AiPlanProposal = {
+  items: AiPlanItem[];
+  totalMinutes: number;
+  remainingMinutes: number;
+  rationale: string | null;
+  emptyReason: "no-capacity" | "no-eligible-tasks" | "no-fitting-plan" | null;
+  todayTaskIds: string[];
+  expectedDailyCapacityMinutes: number;
+  expectedRemainingMinutes: number;
+};
+
+export type AiPlanAcceptanceInput = {
+  items: Array<Pick<AiPlanItem, "id" | "title" | "estimateMinutes" | "sourceScheduledDate">>;
+  todayTaskIds: string[];
+  expectedDailyCapacityMinutes: number;
+  expectedRemainingMinutes: number;
+};
+
 export type TaskInput = {
   title: string;
   estimateMinutes: number | null;
@@ -119,4 +146,12 @@ export function deleteApiKey(provider: AiProvider) {
 
 export function generateAiAssist(input: AiAssistInput) {
   return plannerInvoke<AiAssistProposal>("generate_ai_assist", { input });
+}
+
+export function generateDailyPlan() {
+  return plannerInvoke<AiPlanProposal>("generate_daily_plan");
+}
+
+export function acceptDailyPlan(input: AiPlanAcceptanceInput) {
+  return plannerInvoke<void>("accept_daily_plan", { input });
 }

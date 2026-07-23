@@ -86,4 +86,85 @@ describe("sidecar protocol", () => {
       },
     })));
   });
+
+  it("accepts a bounded Plan request", () => {
+    assert.deepEqual(parseRequest(JSON.stringify({
+      version: 1,
+      operation: "plan",
+      provider: "openrouter",
+      model: "openai/gpt-5-mini",
+      apiKey: "test-key",
+      input: {
+        today: "2026-07-23",
+        dailyCapacityMinutes: 240,
+        remainingMinutes: 120,
+        todayTasks: [{
+          id: "today-1",
+          title: "Existing commitment",
+          estimateMinutes: 60,
+          scheduledDate: "2026-07-23",
+        }],
+        candidates: [{
+          id: "backlog-1",
+          title: "Prepare launch notes",
+          estimateMinutes: 45,
+          scheduledDate: null,
+          sourceScope: "log:unscheduled",
+          backlogPosition: 0,
+        }],
+        planningInstruction: "Prefer a focused, realistic plan.",
+      },
+    })), {
+      version: 1,
+      operation: "plan",
+      provider: "openrouter",
+      model: "openai/gpt-5-mini",
+      apiKey: "test-key",
+      input: {
+        today: "2026-07-23",
+        dailyCapacityMinutes: 240,
+        remainingMinutes: 120,
+        todayTasks: [{
+          id: "today-1",
+          title: "Existing commitment",
+          estimateMinutes: 60,
+          scheduledDate: "2026-07-23",
+        }],
+        candidates: [{
+          id: "backlog-1",
+          title: "Prepare launch notes",
+          estimateMinutes: 45,
+          scheduledDate: null,
+          sourceScope: "log:unscheduled",
+          backlogPosition: 0,
+        }],
+        planningInstruction: "Prefer a focused, realistic plan.",
+      },
+    });
+  });
+
+  it("rejects a Plan request with an invalid candidate scope", () => {
+    assert.throws(() => parseRequest(JSON.stringify({
+      version: 1,
+      operation: "plan",
+      provider: "openrouter",
+      model: "openai/gpt-5-mini",
+      apiKey: "test-key",
+      input: {
+        today: "2026-07-23",
+        dailyCapacityMinutes: 240,
+        remainingMinutes: 120,
+        todayTasks: [],
+        candidates: [{
+          id: "backlog-1",
+          title: "Prepare launch notes",
+          estimateMinutes: 45,
+          scheduledDate: "2026-07-23",
+          sourceScope: "today",
+          backlogPosition: 0,
+        }],
+        planningInstruction: "",
+      },
+    })));
+  });
 });

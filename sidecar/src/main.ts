@@ -1,10 +1,13 @@
 import { runAssist, normalizeAssistError } from "./assist.js";
+import { runPlan } from "./plan.js";
+import { normalizeProviderError } from "./provider.js";
 import { runSdkLoadProbe } from "./sdk-load.js";
 import {
   assistResponse,
   errorResponse,
   MAX_REQUEST_BYTES,
   parseRequest,
+  planResponse,
   readyResponse,
   type SpikeResponse,
 } from "./protocol.js";
@@ -58,6 +61,15 @@ async function main() {
       writeResponse(assistResponse(await runAssist(request)));
     } catch (error) {
       writeResponse(errorResponse(normalizeAssistError(error)));
+    }
+    return;
+  }
+
+  if (request.operation === "plan") {
+    try {
+      writeResponse(planResponse(await runPlan(request)));
+    } catch (error) {
+      writeResponse(errorResponse(normalizeProviderError(error)));
     }
     return;
   }

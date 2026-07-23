@@ -29,18 +29,18 @@ The current application is a pre-1.0 local planning foundation. It already provi
 
 The following are deliberately not presented as shipped yet:
 
-- Plan My Day provider requests and atomic review acceptance.
+- Final packaged/manual acceptance of the Plan My Day provider and atomic review flow.
 - A finished drag-and-drop ordering experience.
 - Global quick capture, end-of-day review, Spaces, integrations, sync, mobile, or MCP.
 
-AI Assist is implemented on the current branch as a reviewable Keychain-backed sidecar flow. Plan My Day remains unavailable until its own provider, review, and atomic acceptance slice is implemented and validated. The manual workflow remains the product’s source of truth.
+AI Assist and the Plan My Day vertical slices are implemented on the current branch as reviewable Keychain-backed sidecar flows. Final packaged/manual acceptance remains before calling Plan My Day broadly shipped. The manual workflow remains the product’s source of truth.
 
 ## Product surfaces
 
 - **Today** is the default workspace. It shows dated tasks for today, active committed minutes, remaining capacity, over-capacity state, and completed work at the bottom.
 - **Backlog** is the current task record. It groups captured work into Needs estimate, Unscheduled, Overdue / needs reschedule, Upcoming, and Completed.
 - **Settings** contains daily capacity, AI provider/model/key configuration, and the persistent planning instruction.
-- **Persistent footer** is always available in the workspace. It supports quick manual capture, Save, the context-sensitive AI action, and Settings access. Text invokes the shipped AI Assist flow; empty input exposes Plan My Day as unavailable until its own slice is shipped.
+- **Persistent footer** is always available in the workspace. It supports quick manual capture, Save, the context-sensitive AI action, and Settings access. Text invokes AI Assist; empty input invokes the Plan My Day review flow.
 - **Menu-bar popover** is the primary surface. It dismisses when focus leaves it and must support the essential daily loop within the compact window.
 - **Full window** provides more room for the same workflow. It may later support configuration, comparison, history, and review surfaces, but it must not be required for ordinary daily planning.
 

@@ -44,6 +44,8 @@ pub fn run() {
             credentials::set_api_key,
             credentials::delete_api_key,
             ai::generate_ai_assist,
+            ai::generate_daily_plan,
+            ai::accept_daily_plan,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

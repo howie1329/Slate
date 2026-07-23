@@ -41,7 +41,7 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
       setTitle("");
       aiReview.startAssist(capture, scheduledDate);
     } else {
-      aiReview.showPlanUnavailable();
+      aiReview.startPlan();
     }
   }
 
@@ -99,7 +99,8 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
               setRouteTransition("animate");
               void navigate({ to: "/settings" });
             }}
-            onRedo={aiReview.redoAssist}
+            onAcceptPlan={aiReview.acceptPlan}
+            onRedo={isPlanReviewState(aiReview.state) ? aiReview.redoPlan : aiReview.redoAssist}
             state={aiReview.state}
             windowMode={windowMode}
           />
@@ -140,17 +141,17 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
           />
         </Button>
         <Button
-          aria-label={aiReview.state.kind === "assist-loading" ? "Generating AI Assist proposal" : hasTitle ? "Use AI Assist" : "Plan my day with AI"}
+          aria-label={aiReview.state.kind === "assist-loading" ? "Generating AI Assist proposal" : aiReview.state.kind === "plan-loading" ? "Generating Plan My Day proposal" : hasTitle ? "Use AI Assist" : "Plan my day with AI"}
           className="size-8 rounded-md"
-          disabled={aiReview.state.kind === "assist-loading"}
+          disabled={aiReview.state.kind === "assist-loading" || aiReview.state.kind === "plan-loading" || aiReview.state.kind === "plan-accepting"}
           onClick={handleAiAction}
           size="icon"
-          title={aiReview.state.kind === "assist-loading" ? "Generating AI Assist proposal" : hasTitle ? "Use AI Assist" : "Plan My Day"}
+          title={aiReview.state.kind === "assist-loading" ? "Generating AI Assist proposal" : aiReview.state.kind === "plan-loading" ? "Generating Plan My Day proposal" : hasTitle ? "Use AI Assist" : "Plan My Day"}
           type="button"
           variant="outline"
         >
           <HugeiconsIcon
-            className={aiReview.state.kind === "assist-loading" ? "animate-pulse motion-reduce:animate-none" : undefined}
+            className={aiReview.state.kind === "assist-loading" || aiReview.state.kind === "plan-loading" || aiReview.state.kind === "plan-accepting" ? "animate-pulse motion-reduce:animate-none" : undefined}
             icon={SparklesIcon}
             strokeWidth={1.8}
           />
@@ -169,4 +170,8 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
       </form>
     </footer>
   );
+}
+
+function isPlanReviewState(state: ReturnType<typeof useAiReview>["state"]) {
+  return state.kind.startsWith("plan") || (state.kind === "unavailable" && state.mode === "plan");
 }

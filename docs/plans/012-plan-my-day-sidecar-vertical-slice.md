@@ -21,7 +21,7 @@ Plan My Day must not edit, delete, complete, reorder, or silently reschedule exi
 - Risk: High — the main risks are stale acceptance, capacity correctness, and explaining why work was or was not selected.
 - Prerequisite: AI Assist sidecar vertical slice in 011 is complete.
 - Prerequisite: The packaged Node sidecar, native Keychain boundary, review-state owner, and shared footer tray already exist.
-- Plan My Day remains unavailable in the UI until this slice is implemented and accepted.
+- Implementation is complete on the current branch; packaged/manual acceptance remains before broad shipment.
 
 ## Source-of-truth decisions
 

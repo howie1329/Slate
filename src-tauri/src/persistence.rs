@@ -91,6 +91,7 @@ pub struct PlannerSnapshot {
     today: String,
 }
 
+#[derive(Clone)]
 pub(crate) struct AiAssistTaskContext {
     pub(crate) id: String,
     pub(crate) title: String,
@@ -103,6 +104,27 @@ pub(crate) struct AiAssistContext {
     pub(crate) model: String,
     pub(crate) today: String,
     pub(crate) today_tasks: Vec<AiAssistTaskContext>,
+}
+
+pub(crate) struct AiPlanTaskContext {
+    pub(crate) id: String,
+    pub(crate) title: String,
+    pub(crate) estimate_minutes: i64,
+    pub(crate) scheduled_date: Option<String>,
+    pub(crate) source_scope: String,
+    pub(crate) backlog_position: usize,
+}
+
+pub(crate) struct AiPlanContext {
+    pub(crate) provider: String,
+    pub(crate) model: String,
+    pub(crate) today: String,
+    pub(crate) daily_capacity_minutes: i64,
+    pub(crate) remaining_minutes: i64,
+    pub(crate) today_tasks: Vec<AiAssistTaskContext>,
+    pub(crate) today_task_ids: Vec<String>,
+    pub(crate) candidates: Vec<AiPlanTaskContext>,
+    pub(crate) planning_instruction: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -166,6 +188,55 @@ impl Repository {
             model: settings.ai_model,
             today,
             today_tasks,
+        })
+    }
+
+    fn ai_plan_context(&self) -> Result<AiPlanContext, String> {
+        let settings = self.settings()?;
+        let tasks = self.tasks()?;
+        let order_by_scope = self.orders()?;
+        let today = local_today();
+        let today_scope = format!("today:{today}");
+        let all_today_tasks = ordered_ai_context(&tasks, &order_by_scope, &today_scope, &today);
+        let today_task_ids = all_today_tasks
+            .iter()
+            .map(|task| task.id.clone())
+            .collect::<Vec<_>>();
+        let committed_minutes = tasks
+            .iter()
+            .filter(|task| {
+                task.completed_at.is_none()
+                    && active_scope(
+                        task.estimate_minutes,
+                        task.scheduled_date.as_deref(),
+                        &today,
+                    ) == today_scope
+            })
+            .filter_map(|task| task.estimate_minutes)
+            .fold(0_i64, i64::saturating_add);
+        let remaining_minutes = settings
+            .daily_capacity_minutes
+            .saturating_sub(committed_minutes)
+            .max(0);
+        let candidates = ["log:unscheduled", "log:overdue"]
+            .into_iter()
+            .flat_map(|scope| ordered_plan_context(&tasks, &order_by_scope, scope, &today))
+            .take(MAX_AI_CONTEXT_TASKS)
+            .collect();
+
+        Ok(AiPlanContext {
+            provider: settings.ai_provider,
+            model: settings.ai_model,
+            today,
+            daily_capacity_minutes: settings.daily_capacity_minutes,
+            remaining_minutes,
+            today_tasks: all_today_tasks
+                .into_iter()
+                .take(MAX_AI_CONTEXT_TASKS)
+                .collect(),
+            today_task_ids,
+            candidates,
+            planning_instruction: settings.planning_instruction.chars().take(2_000).collect(),
         })
     }
 
@@ -430,6 +501,138 @@ impl Repository {
         }
         transaction.commit().map_err(database_error)
     }
+
+    fn accept_daily_plan(&mut self, input: DailyPlanAcceptanceInput) -> Result<(), String> {
+        if input.items.is_empty()
+            || input.items.len() > MAX_AI_CONTEXT_TASKS
+            || input.expected_daily_capacity_minutes <= 0
+            || input.expected_remaining_minutes < 0
+        {
+            return Err("invalid-request".into());
+        }
+        ensure_unique_ids(
+            &input
+                .items
+                .iter()
+                .map(|item| item.id.clone())
+                .collect::<Vec<_>>(),
+        )?;
+
+        let today = local_today();
+        let today_scope = format!("today:{today}");
+        let transaction = self.connection.transaction().map_err(database_error)?;
+        let current_capacity = transaction
+            .query_row(
+                "SELECT daily_capacity_minutes FROM settings WHERE id = 1",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .map_err(database_error)?;
+        let current_today_ids = transaction
+            .prepare(
+                "SELECT t.id
+                 FROM tasks t
+                 LEFT JOIN task_orders o ON o.task_id = t.id AND o.scope = ?1
+                 WHERE t.completed_at IS NULL
+                   AND t.estimate_minutes IS NOT NULL
+                   AND t.scheduled_date = ?2
+                 ORDER BY CASE WHEN o.position IS NULL THEN 1 ELSE 0 END,
+                          o.position ASC, t.created_at ASC, t.id ASC",
+            )
+            .map_err(database_error)?
+            .query_map(params![today_scope, today], |row| row.get::<_, String>(0))
+            .map_err(database_error)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(database_error)?;
+        let committed_minutes = transaction
+            .query_row(
+                "SELECT COALESCE(SUM(estimate_minutes), 0)
+                 FROM tasks
+                 WHERE completed_at IS NULL
+                   AND estimate_minutes IS NOT NULL
+                   AND scheduled_date = ?1",
+                [&today],
+                |row| row.get::<_, i64>(0),
+            )
+            .map_err(database_error)?;
+        let current_remaining = current_capacity.saturating_sub(committed_minutes).max(0);
+
+        if current_capacity != input.expected_daily_capacity_minutes
+            || current_remaining != input.expected_remaining_minutes
+            || current_today_ids != input.today_task_ids
+        {
+            return Err("stale-plan".into());
+        }
+
+        let mut total_minutes = 0_i64;
+        for item in &input.items {
+            let current = transaction
+                .query_row(
+                    "SELECT title, estimate_minutes, scheduled_date, completed_at
+                     FROM tasks WHERE id = ?1",
+                    [&item.id],
+                    |row| {
+                        Ok((
+                            row.get::<_, String>(0)?,
+                            row.get::<_, Option<i64>>(1)?,
+                            row.get::<_, Option<String>>(2)?,
+                            row.get::<_, Option<String>>(3)?,
+                        ))
+                    },
+                )
+                .optional()
+                .map_err(database_error)?
+                .ok_or_else(|| "stale-plan".to_string())?;
+
+            if current.0 != item.title
+                || current.1 != Some(item.estimate_minutes)
+                || current.2 != item.source_scheduled_date
+                || current.3.is_some()
+                || current
+                    .2
+                    .as_deref()
+                    .is_some_and(|date| date >= today.as_str())
+                || item.estimate_minutes <= 0
+            {
+                return Err("stale-plan".into());
+            }
+            total_minutes = total_minutes
+                .checked_add(item.estimate_minutes)
+                .ok_or_else(|| "stale-plan".to_string())?;
+        }
+
+        if total_minutes > current_remaining {
+            return Err("stale-plan".into());
+        }
+
+        for item in &input.items {
+            transaction
+                .execute("DELETE FROM task_orders WHERE task_id = ?1", [&item.id])
+                .map_err(database_error)?;
+            transaction
+                .execute(
+                    "UPDATE tasks SET scheduled_date = ?1 WHERE id = ?2",
+                    params![today, item.id],
+                )
+                .map_err(database_error)?;
+        }
+        transaction
+            .execute("DELETE FROM task_orders WHERE scope = ?1", [&today_scope])
+            .map_err(database_error)?;
+        for (position, task_id) in current_today_ids
+            .iter()
+            .chain(input.items.iter().map(|item| &item.id))
+            .enumerate()
+        {
+            transaction
+                .execute(
+                    "INSERT INTO task_orders (scope, task_id, position) VALUES (?1, ?2, ?3)",
+                    params![today_scope, task_id, position as i64],
+                )
+                .map_err(database_error)?;
+        }
+        transaction.commit().map_err(database_error)
+    }
 }
 
 pub fn setup(app: &AppHandle) -> tauri::Result<()> {
@@ -503,6 +706,20 @@ pub struct ApplyPlannerPlanInput {
     assignments: Vec<PlannerPlanAssignment>,
 }
 
+pub(crate) struct DailyPlanAcceptanceItem {
+    pub(crate) id: String,
+    pub(crate) title: String,
+    pub(crate) estimate_minutes: i64,
+    pub(crate) source_scheduled_date: Option<String>,
+}
+
+pub(crate) struct DailyPlanAcceptanceInput {
+    pub(crate) items: Vec<DailyPlanAcceptanceItem>,
+    pub(crate) today_task_ids: Vec<String>,
+    pub(crate) expected_daily_capacity_minutes: i64,
+    pub(crate) expected_remaining_minutes: i64,
+}
+
 #[tauri::command]
 pub fn get_planner_snapshot(state: State<PersistenceState>) -> Result<PlannerSnapshot, String> {
     with_repository(&state, |repository| repository.snapshot())
@@ -510,6 +727,17 @@ pub fn get_planner_snapshot(state: State<PersistenceState>) -> Result<PlannerSna
 
 pub(crate) fn read_ai_assist_context(state: &PersistenceState) -> Result<AiAssistContext, String> {
     with_repository(state, |repository| repository.ai_assist_context())
+}
+
+pub(crate) fn read_ai_plan_context(state: &PersistenceState) -> Result<AiPlanContext, String> {
+    with_repository(state, |repository| repository.ai_plan_context())
+}
+
+pub(crate) fn accept_daily_plan(
+    state: &PersistenceState,
+    input: DailyPlanAcceptanceInput,
+) -> Result<(), String> {
+    with_repository(state, |repository| repository.accept_daily_plan(input))
 }
 
 #[tauri::command]
@@ -697,6 +925,45 @@ fn ordered_ai_context(
     scope: &str,
     today: &str,
 ) -> Vec<AiAssistTaskContext> {
+    ordered_tasks(tasks, order_by_scope, scope, today)
+        .into_iter()
+        .map(|task| AiAssistTaskContext {
+            id: task.id.clone(),
+            title: task.title.clone(),
+            estimate_minutes: task.estimate_minutes,
+            scheduled_date: task.scheduled_date.clone(),
+        })
+        .collect()
+}
+
+fn ordered_plan_context(
+    tasks: &[Task],
+    order_by_scope: &HashMap<String, Vec<String>>,
+    scope: &str,
+    today: &str,
+) -> Vec<AiPlanTaskContext> {
+    ordered_tasks(tasks, order_by_scope, scope, today)
+        .into_iter()
+        .enumerate()
+        .filter_map(|(position, task)| {
+            Some(AiPlanTaskContext {
+                id: task.id.clone(),
+                title: task.title.clone(),
+                estimate_minutes: task.estimate_minutes?,
+                scheduled_date: task.scheduled_date.clone(),
+                source_scope: scope.to_string(),
+                backlog_position: position,
+            })
+        })
+        .collect()
+}
+
+fn ordered_tasks<'a>(
+    tasks: &'a [Task],
+    order_by_scope: &HashMap<String, Vec<String>>,
+    scope: &str,
+    today: &str,
+) -> Vec<&'a Task> {
     let positions = order_by_scope
         .get(scope)
         .into_iter()
@@ -729,14 +996,6 @@ fn ordered_ai_context(
     });
 
     scoped_tasks
-        .into_iter()
-        .map(|task| AiAssistTaskContext {
-            id: task.id.clone(),
-            title: task.title.clone(),
-            estimate_minutes: task.estimate_minutes,
-            scheduled_date: task.scheduled_date.clone(),
-        })
-        .collect()
 }
 
 fn move_task_to_scope_start(
@@ -1132,5 +1391,114 @@ mod tests {
         let context = database.repository.ai_assist_context().expect("AI context");
         assert_eq!(context.today, today);
         assert_eq!(context.today_tasks[0].id, today_task.id);
+    }
+
+    #[test]
+    fn daily_plan_acceptance_appends_backlog_tasks_to_today() {
+        let mut database = TestDatabase::new();
+        let today = local_today();
+        let today_task = {
+            database
+                .repository
+                .create_task(TaskInput {
+                    title: "Already committed".into(),
+                    estimate_minutes: Some(30),
+                    scheduled_date: Some(today.clone()),
+                })
+                .expect("create today task");
+            database
+                .repository
+                .tasks()
+                .expect("load today task")
+                .into_iter()
+                .find(|task| task.title == "Already committed")
+                .expect("today task")
+        };
+        let candidate = create_task(&mut database.repository, "Plan this");
+        let context = database.repository.ai_plan_context().expect("plan context");
+        let planned = context
+            .candidates
+            .iter()
+            .find(|task| task.id == candidate.id)
+            .expect("candidate");
+
+        database
+            .repository
+            .accept_daily_plan(DailyPlanAcceptanceInput {
+                items: vec![DailyPlanAcceptanceItem {
+                    id: planned.id.clone(),
+                    title: planned.title.clone(),
+                    estimate_minutes: planned.estimate_minutes,
+                    source_scheduled_date: planned.scheduled_date.clone(),
+                }],
+                today_task_ids: context.today_task_ids,
+                expected_daily_capacity_minutes: context.daily_capacity_minutes,
+                expected_remaining_minutes: context.remaining_minutes,
+            })
+            .expect("accept daily plan");
+
+        let snapshot = database.repository.snapshot().expect("snapshot");
+        assert_eq!(
+            snapshot
+                .tasks
+                .iter()
+                .find(|task| task.id == candidate.id)
+                .expect("planned task")
+                .scheduled_date
+                .as_deref(),
+            Some(today.as_str())
+        );
+        assert_eq!(
+            snapshot.order_by_scope.get(&format!("today:{today}")),
+            Some(&vec![today_task.id, candidate.id]),
+        );
+    }
+
+    #[test]
+    fn daily_plan_acceptance_rejects_stale_task_without_writing() {
+        let mut database = TestDatabase::new();
+        let candidate = create_task(&mut database.repository, "Original title");
+        let context = database.repository.ai_plan_context().expect("plan context");
+        let planned = context
+            .candidates
+            .iter()
+            .find(|task| task.id == candidate.id)
+            .expect("candidate");
+        database
+            .repository
+            .update_task(UpdateTaskInput {
+                id: candidate.id.clone(),
+                title: "Changed title".into(),
+                estimate_minutes: Some(30),
+                scheduled_date: None,
+            })
+            .expect("change task");
+
+        let result = database
+            .repository
+            .accept_daily_plan(DailyPlanAcceptanceInput {
+                items: vec![DailyPlanAcceptanceItem {
+                    id: planned.id.clone(),
+                    title: planned.title.clone(),
+                    estimate_minutes: planned.estimate_minutes,
+                    source_scheduled_date: planned.scheduled_date.clone(),
+                }],
+                today_task_ids: context.today_task_ids,
+                expected_daily_capacity_minutes: context.daily_capacity_minutes,
+                expected_remaining_minutes: context.remaining_minutes,
+            });
+
+        assert_eq!(result, Err("stale-plan".into()));
+        assert_eq!(
+            database
+                .repository
+                .tasks()
+                .expect("tasks")
+                .into_iter()
+                .find(|task| task.id == candidate.id)
+                .expect("candidate")
+                .scheduled_date,
+            None
+        );
     }
 }

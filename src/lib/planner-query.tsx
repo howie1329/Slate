@@ -12,7 +12,9 @@ import {
   createTask,
   deleteApiKey,
   deleteTask,
+  acceptDailyPlan,
   generateAiAssist,
+  generateDailyPlan,
   getPlannerSnapshot,
   isTauriWindow,
   reorderTasks,
@@ -23,6 +25,7 @@ import {
   updateTask,
   type PlannerPlanAssignment,
   type AiAssistInput,
+  type AiPlanAcceptanceInput,
   type ReorderTasksInput,
   type SetTaskCompletedInput,
   type SetTaskScheduledDateInput,
@@ -155,4 +158,14 @@ export function useGenerateAiAssist() {
   return useMutation({
     mutationFn: (input: AiAssistInput) => generateAiAssist(input),
   });
+}
+
+export function useGenerateDailyPlan() {
+  return useMutation({
+    mutationFn: () => generateDailyPlan(),
+  });
+}
+
+export function useAcceptDailyPlan() {
+  return usePlannerMutation<AiPlanAcceptanceInput>(acceptDailyPlan);
 }
