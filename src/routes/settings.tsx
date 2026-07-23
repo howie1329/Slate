@@ -5,17 +5,25 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import appPackage from "../../package.json";
 import { Button } from "@/components/ui/button";
-import { useRouteMotion } from "@/components/route-motion";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { useRouteMotion } from "@/components/route-motion";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { Settings } from "@/lib/planner";
 import {
-  usePlannerState,
-  useSetApiKey,
-  useUpdateSettings,
-} from "@/lib/planner-query";
+  blurApiKey,
+  buildSaveSettingsInput,
+  changeApiKey,
+  changeSettings,
+  createSettingsDraft,
+  focusApiKey,
+  markApiKeyForRemoval,
+  resetApiKeyChange,
+  settingsDraftView,
+  type SettingsDraft,
+} from "@/lib/settings-draft";
+import { usePlannerState, useSaveSettings } from "@/lib/planner-query";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -30,90 +38,61 @@ const APP_VERSION = appPackage.version;
 
 function SettingsPage() {
   const planner = usePlannerState();
-  const updateSettings = useUpdateSettings();
-  const setApiKey = useSetApiKey();
+  const saveSettings = useSaveSettings();
   const { setRouteTransition } = useRouteMotion();
-  const [draft, setDraft] = useState<Settings | null>(null);
-  const [draftDirty, setDraftDirty] = useState(false);
-  const [apiKey, setApiKeyValue] = useState("");
+  const [draft, setDraft] = useState<SettingsDraft | null>(null);
 
   useEffect(() => {
-    if (planner.data && !draftDirty) {
-      setDraft(planner.data.settings);
+    if (!planner.data) {
+      return;
     }
-  }, [draftDirty, planner.data]);
+
+    setDraft((current) =>
+      current && settingsDraftView(current).isDirty
+        ? current
+        : createSettingsDraft(planner.data),
+    );
+  }, [planner.data]);
 
   if (!draft || !planner.data) {
     return null;
   }
 
-  const keyConfigured = planner.data.aiAvailabilityByProvider[draft.aiProvider] === "configured";
+  const view = settingsDraftView(draft);
+  const keyConfigured =
+    draft.availabilityByProvider[draft.values.aiProvider] === "configured";
+  const keyRequired = !keyConfigured && draft.key.kind !== "remove";
+  const keyRemovalPending = draft.key.kind === "remove";
 
   function updateDraft(patch: Partial<Settings>) {
-    setDraftDirty(true);
-    setDraft((current) => (current ? { ...current, ...patch } : current));
+    setDraft((current) => (current ? changeSettings(current, patch) : current));
   }
 
   function handleSaveSettings() {
-    if (!draft) {
+    if (!draft || !view.canSave) {
       return;
     }
 
-    updateSettings.mutate(draft, {
-      onSuccess: () => {
-        setDraftDirty(false);
+    saveSettings.mutate(buildSaveSettingsInput(draft), {
+      onSuccess: (snapshot) => {
+        setDraft(createSettingsDraft(snapshot));
         toast.success("Settings saved.");
       },
-      onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save settings."),
+      onError: (error) => {
+        const message =
+          typeof error === "string"
+            ? error
+            : error instanceof Error
+              ? error.message
+              : "Could not save settings.";
+        toast.error(message);
+      },
     });
-  }
-
-  function handleSaveApiKey() {
-    if (!draft || !apiKey.trim()) {
-      return;
-    }
-
-    const saveKey = () => {
-      setApiKey.mutate(
-        { provider: draft.aiProvider, apiKey: apiKey.trim() },
-        {
-          onSuccess: () => {
-            setApiKeyValue("");
-            toast.success("AI connection saved.");
-          },
-          onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save API key."),
-        },
-      );
-    };
-
-    const persistedSettings = planner.data?.settings;
-    if (!persistedSettings) {
-      return;
-    }
-    const connectionChanged = draft.aiProvider !== persistedSettings.aiProvider || draft.aiModel !== persistedSettings.aiModel;
-    if (connectionChanged) {
-      updateSettings.mutate(
-        {
-          ...persistedSettings,
-          aiProvider: draft.aiProvider,
-          aiModel: draft.aiModel,
-        },
-        {
-          onSuccess: saveKey,
-          onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save AI connection settings."),
-        },
-      );
-      return;
-    }
-
-    saveKey();
   }
 
   function handleBackToToday(event: MouseEvent<HTMLAnchorElement>) {
     setRouteTransition(event.detail > 0 ? "animate" : "instant");
   }
-
-  const isSaving = updateSettings.isPending || setApiKey.isPending;
 
   return (
     <section aria-labelledby="settings-heading" className="flex h-full min-h-0 flex-col">
@@ -143,7 +122,7 @@ function SettingsPage() {
                   min="1"
                   onChange={(event) => updateDraft({ dailyCapacityMinutes: Number(event.target.value) })}
                   type="number"
-                  value={draft.dailyCapacityMinutes}
+                  value={draft.values.dailyCapacityMinutes}
                 />
                 <InputGroupAddon>minutes</InputGroupAddon>
               </InputGroup>
@@ -155,7 +134,7 @@ function SettingsPage() {
               <span>Provider</span>
               <Select
                 onValueChange={(value) => updateDraft({ aiProvider: value as Settings["aiProvider"] })}
-                value={draft.aiProvider}
+                value={draft.values.aiProvider}
               >
                 <SelectTrigger aria-label="AI provider" className="w-40 text-xs font-normal" id="ai-provider">
                   <SelectValue />
@@ -170,7 +149,10 @@ function SettingsPage() {
             </label>
             <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor="ai-model">
               <span>Model</span>
-              <Select onValueChange={(value) => updateDraft({ aiModel: value ?? "" })} value={draft.aiModel}>
+              <Select
+                onValueChange={(value) => updateDraft({ aiModel: value ?? "" })}
+                value={draft.values.aiModel}
+              >
                 <SelectTrigger aria-label="AI model" className="w-40 text-xs font-normal" id="ai-model">
                   <SelectValue />
                 </SelectTrigger>
@@ -185,41 +167,67 @@ function SettingsPage() {
                 </SelectContent>
               </Select>
             </label>
-            <label
-              className={`flex items-center justify-between gap-4 text-menu font-medium ${keyConfigured ? "" : "border-b border-destructive/60 pb-1"}`}
-              htmlFor="api-key"
+            <div
+              className={`flex items-center justify-between gap-4 text-menu font-medium ${
+                keyRequired || keyRemovalPending ? "border-b border-destructive/60 pb-1" : ""
+              }`}
             >
-              <span className={keyConfigured ? undefined : "text-destructive"}>API key</span>
-              <span className="flex items-center gap-1.5">
-                <Input
-                  aria-label={keyConfigured ? "API key configured. Enter a new key to replace it." : "API key"}
-                  className="h-8 w-36 tracking-[0.08em] placeholder:text-foreground/55"
-                  id="api-key"
-                  onChange={(event) => setApiKeyValue(event.target.value)}
-                  placeholder={keyConfigured ? "••••••••••••" : "Paste key"}
-                  type="password"
-                  value={apiKey}
-                />
+              <label
+                className={keyRequired || keyRemovalPending ? "text-destructive" : undefined}
+                htmlFor="api-key"
+              >
+                API key
+              </label>
+              <Input
+                aria-invalid={keyRequired || keyRemovalPending}
+                aria-label={keyConfigured ? "API key configured. Enter a new key to replace it." : "API key"}
+                autoComplete="off"
+                className="h-8 w-40 tracking-[0.08em]"
+                id="api-key"
+                onBlur={() => setDraft((current) => (current ? blurApiKey(current) : current))}
+                onChange={(event) => {
+                  const value = event.currentTarget.value;
+                  setDraft((current) =>
+                    current ? changeApiKey(current, value) : current,
+                  );
+                }}
+                onFocus={() => setDraft((current) => (current ? focusApiKey(current) : current))}
+                placeholder={keyConfigured ? undefined : "Paste key"}
+                type="password"
+                value={view.keyDisplayValue}
+              />
+            </div>
+            <div className="flex min-h-6 items-center justify-between gap-3">
+              <KeyStatus
+                configured={keyConfigured}
+                removalPending={keyRemovalPending}
+              />
+              {keyRemovalPending ? (
                 <Button
-                  aria-label={setApiKey.isPending ? "Saving API key" : "Save API key"}
-                  disabled={!apiKey.trim() || isSaving}
-                  onClick={handleSaveApiKey}
-                  size="icon"
-                  title={setApiKey.isPending ? "Saving API key" : "Save API key"}
+                  onClick={() =>
+                    setDraft((current) => (current ? resetApiKeyChange(current) : current))
+                  }
+                  size="xs"
                   type="button"
-                  variant="default"
+                  variant="ghost"
                 >
-                  <HugeiconsIcon
-                    aria-hidden="true"
-                    className={setApiKey.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
-                    data-icon="inline-start"
-                    icon={setApiKey.isPending ? Loading03Icon : Tick02Icon}
-                    strokeWidth={2.5}
-                  />
+                  Keep key
                 </Button>
-              </span>
-            </label>
-            <ConfiguredState configured={keyConfigured} />
+              ) : keyConfigured ? (
+                <Button
+                  onClick={() =>
+                    setDraft((current) =>
+                      current ? markApiKeyForRemoval(current) : current,
+                    )
+                  }
+                  size="xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  Remove key
+                </Button>
+              ) : null}
+            </div>
           </SettingsGroup>
 
           <SettingsGroup description="Guides how Slate plans your day." title="Planning instruction">
@@ -229,8 +237,9 @@ function SettingsPage() {
             <Textarea
               className="min-h-20 resize-none text-menu leading-5"
               id="planning-instruction"
+              maxLength={2000}
               onChange={(event) => updateDraft({ planningInstruction: event.target.value })}
-              value={draft.planningInstruction}
+              value={draft.values.planningInstruction}
             />
           </SettingsGroup>
         </div>
@@ -242,13 +251,13 @@ function SettingsPage() {
             Stored locally on this Mac. <span aria-label={`Slate version ${APP_VERSION}`}>Slate v{APP_VERSION}</span>
           </p>
           <Button
-            aria-label={updateSettings.isPending ? "Saving settings" : "Save changes"}
-            disabled={isSaving}
+            aria-label={saveSettings.isPending ? "Saving settings" : "Save changes"}
+            disabled={!view.canSave || saveSettings.isPending}
             onClick={handleSaveSettings}
             size="sm"
             type="button"
           >
-            {updateSettings.isPending ? (
+            {saveSettings.isPending ? (
               <HugeiconsIcon
                 aria-hidden="true"
                 className="animate-spin motion-reduce:animate-none"
@@ -257,7 +266,7 @@ function SettingsPage() {
                 strokeWidth={2}
               />
             ) : null}
-            Save changes
+            {saveSettings.isPending ? "Saving…" : "Save changes"}
           </Button>
         </div>
       </footer>
@@ -285,7 +294,21 @@ function SettingsGroup({ children, description, title }: SettingsGroupProps) {
   );
 }
 
-function ConfiguredState({ configured }: { configured: boolean }) {
+function KeyStatus({
+  configured,
+  removalPending,
+}: {
+  configured: boolean;
+  removalPending: boolean;
+}) {
+  if (removalPending) {
+    return (
+      <span className="text-xs font-medium text-destructive">
+        Key will be removed when you save
+      </span>
+    );
+  }
+
   return configured ? (
     <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
       <HugeiconsIcon aria-hidden="true" icon={Tick02Icon} size={14} strokeWidth={2.5} />

@@ -41,6 +41,16 @@ export type AiAssistProposal = {
   scheduledDate: LocalDate | null;
 };
 
+export type ApiKeyChange =
+  | { kind: "unchanged" }
+  | { kind: "replace"; apiKey: string }
+  | { kind: "remove" };
+
+export type SaveSettingsInput = {
+  settings: Settings;
+  apiKeyChange: ApiKeyChange;
+};
+
 export type AiPlanItem = {
   id: string;
   title: string;
@@ -129,20 +139,12 @@ export function reorderTasks(input: ReorderTasksInput) {
   return plannerInvoke<void>("reorder_tasks", { input });
 }
 
-export function updateSettings(input: Settings) {
-  return plannerInvoke<void>("update_settings", { input });
+export function saveSettings(input: SaveSettingsInput) {
+  return plannerInvoke<PlannerSnapshot>("save_settings", { input });
 }
 
 export function applyPlannerPlan(assignments: PlannerPlanAssignment[]) {
   return plannerInvoke<void>("apply_planner_plan", { input: { assignments } });
-}
-
-export function setApiKey(provider: AiProvider, apiKey: string) {
-  return plannerInvoke<void>("set_api_key", { input: { provider, apiKey } });
-}
-
-export function deleteApiKey(provider: AiProvider) {
-  return plannerInvoke<void>("delete_api_key", { input: { provider } });
 }
 
 export function generateAiAssist(input: AiAssistInput) {

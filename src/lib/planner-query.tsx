@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
 import {
   QueryClient,
@@ -10,7 +10,6 @@ import {
 import {
   applyPlannerPlan,
   createTask,
-  deleteApiKey,
   deleteTask,
   acceptDailyPlan,
   generateAiAssist,
@@ -18,19 +17,18 @@ import {
   getPlannerSnapshot,
   isTauriWindow,
   reorderTasks,
-  setApiKey,
+  saveSettings,
   setTaskCompleted,
   setTaskScheduledDate,
-  updateSettings,
   updateTask,
   type PlannerPlanAssignment,
   type PlannerSnapshot,
   type AiAssistInput,
   type AiPlanAcceptanceInput,
   type ReorderTasksInput,
+  type SaveSettingsInput,
   type SetTaskCompletedInput,
   type SetTaskScheduledDateInput,
-  type Settings,
   type TaskInput,
   type UpdateTaskInput,
 } from "@/lib/planner";
@@ -130,78 +128,49 @@ export function useReorderTasks() {
   return usePlannerMutation<ReorderTasksInput>(reorderTasks);
 }
 
-export function useUpdateSettings() {
+export function useSaveSettings() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: updateSettings,
-    onSuccess: (_, settings) => {
-      queryClient.setQueryData<PlannerSnapshot>(plannerStateQueryKey, (snapshot) => {
-        if (!snapshot) {
-          return snapshot;
-        }
+  const inputRef = useRef<SaveSettingsInput | null>(null);
 
-        return {
-          ...snapshot,
-          settings,
-          aiAvailability: snapshot.aiAvailabilityByProvider[settings.aiProvider],
-        };
-      });
-      return queryClient.refetchQueries({ queryKey: plannerStateQueryKey, type: "active" });
+  const mutation = useMutation({
+    mutationFn: () => {
+      if (!inputRef.current) {
+        return Promise.reject(new Error("Settings save input is unavailable."));
+      }
+      return saveSettings(inputRef.current);
+    },
+    onSuccess: (snapshot) => {
+      queryClient.setQueryData<PlannerSnapshot>(plannerStateQueryKey, snapshot);
     },
   });
+
+  return {
+    ...mutation,
+    mutate: (
+      input: SaveSettingsInput,
+      options?: {
+        onSuccess?: (snapshot: PlannerSnapshot) => void;
+        onError?: (error: Error) => void;
+      },
+    ) => {
+      if (mutation.isPending) {
+        return;
+      }
+
+      inputRef.current = input;
+      mutation.mutate(undefined, {
+        onSuccess: (snapshot) => options?.onSuccess?.(snapshot),
+        onError: (error) => options?.onError?.(error),
+        onSettled: () => {
+          inputRef.current = null;
+        },
+      });
+    },
+  };
 }
 
 export function useApplyPlannerPlan() {
   return usePlannerMutation<PlannerPlanAssignment[]>(applyPlannerPlan);
-}
-
-export function useSetApiKey() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ provider, apiKey }: { provider: Settings["aiProvider"]; apiKey: string }) =>
-      setApiKey(provider, apiKey),
-    onSuccess: (_, { provider }) => {
-      queryClient.setQueryData<PlannerSnapshot>(plannerStateQueryKey, (snapshot) => {
-        if (!snapshot) {
-          return snapshot;
-        }
-
-        return {
-          ...snapshot,
-          aiAvailability: snapshot.settings.aiProvider === provider ? "configured" : snapshot.aiAvailability,
-          aiAvailabilityByProvider: {
-            ...snapshot.aiAvailabilityByProvider,
-            [provider]: "configured",
-          },
-        };
-      });
-      return queryClient.refetchQueries({ queryKey: plannerStateQueryKey, type: "active" });
-    },
-  });
-}
-
-export function useDeleteApiKey() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (provider: Settings["aiProvider"]) => deleteApiKey(provider),
-    onSuccess: (_, provider) => {
-      queryClient.setQueryData<PlannerSnapshot>(plannerStateQueryKey, (snapshot) => {
-        if (!snapshot) {
-          return snapshot;
-        }
-
-        return {
-          ...snapshot,
-          aiAvailability: snapshot.settings.aiProvider === provider ? "unconfigured" : snapshot.aiAvailability,
-          aiAvailabilityByProvider: {
-            ...snapshot.aiAvailabilityByProvider,
-            [provider]: "unconfigured",
-          },
-        };
-      });
-      return queryClient.refetchQueries({ queryKey: plannerStateQueryKey, type: "active" });
-    },
-  });
 }
 
 export function useGenerateAiAssist() {

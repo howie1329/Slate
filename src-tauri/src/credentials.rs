@@ -1,8 +1,4 @@
-use keyring::Entry;
-use serde::Deserialize;
-use tauri::{AppHandle, State};
-
-use crate::persistence::{emit_change, PersistenceState};
+use keyring::{Entry, Error};
 
 const SERVICE_NAME: &str = "com.howardthomas.slate";
 
@@ -37,45 +33,45 @@ pub(crate) fn read_api_key(provider: &str) -> Result<String, String> {
     Ok(key)
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ApiKeyInput {
-    provider: String,
-    api_key: String,
-}
-
-#[tauri::command]
-pub fn set_api_key(
-    app: AppHandle,
-    state: State<PersistenceState>,
-    input: ApiKeyInput,
-) -> Result<(), String> {
-    if input.api_key.trim().is_empty() {
+pub(crate) fn write_api_key(provider: &str, api_key: &str) -> Result<(), String> {
+    if api_key.trim().is_empty() {
         return Err("API key cannot be empty.".into());
     }
 
-    entry(&input.provider)?
-        .set_password(&input.api_key)
-        .map_err(|error| format!("Could not save the API key in the macOS Keychain: {error}"))?;
-    emit_change(&app, &state)
+    entry(provider)?
+        .set_password(api_key.trim())
+        .map_err(|error| format!("Could not save the API key in the macOS Keychain: {error}"))
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ProviderInput {
-    provider: String,
+pub(crate) fn remove_api_key(provider: &str) -> Result<(), String> {
+    match entry(provider)?.delete_credential() {
+        Ok(()) | Err(Error::NoEntry) => Ok(()),
+        Err(error) => Err(format!(
+            "Could not remove the API key from the macOS Keychain: {error}"
+        )),
+    }
 }
 
-#[tauri::command]
-pub fn delete_api_key(
-    app: AppHandle,
-    state: State<PersistenceState>,
-    input: ProviderInput,
-) -> Result<(), String> {
-    entry(&input.provider)?
-        .delete_credential()
-        .map_err(|error| {
-            format!("Could not remove the API key from the macOS Keychain: {error}")
-        })?;
-    emit_change(&app, &state)
+#[cfg(test)]
+mod tests {
+    use super::{Entry, SERVICE_NAME};
+
+    #[test]
+    #[ignore = "accesses the developer macOS Keychain"]
+    fn keyring_round_trip_works_for_slate_service() {
+        let entry =
+            Entry::new(SERVICE_NAME, "codex-keychain-probe").expect("create diagnostic entry");
+        let _ = entry.delete_credential();
+
+        entry
+            .set_password("not-a-real-secret")
+            .expect("write diagnostic credential");
+        assert_eq!(
+            entry.get_password().expect("read diagnostic credential"),
+            "not-a-real-secret"
+        );
+        entry
+            .delete_credential()
+            .expect("remove diagnostic credential");
+    }
 }

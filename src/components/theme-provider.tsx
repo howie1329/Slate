@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, type ReactNode } from "react";
-import { usePlannerState, useUpdateSettings } from "@/lib/planner-query";
+import { usePlannerState, useSaveSettings } from "@/lib/planner-query";
 import type { Theme } from "@/lib/planner";
 
 type ThemeProviderProps = { children: ReactNode };
@@ -13,7 +13,7 @@ const ThemeProviderContext = createContext<ThemeProviderState | undefined>(undef
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const planner = usePlannerState();
-  const updateSettings = useUpdateSettings();
+  const saveSettings = useSaveSettings();
   const theme = planner.data?.settings.theme ?? "light";
 
   useEffect(() => {
@@ -25,7 +25,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       return;
     }
 
-    updateSettings.mutate({ ...planner.data.settings, theme: nextTheme });
+    saveSettings.mutate({
+      settings: { ...planner.data.settings, theme: nextTheme },
+      apiKeyChange: { kind: "unchanged" },
+    });
   }
 
   return (

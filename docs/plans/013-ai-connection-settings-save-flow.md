@@ -442,17 +442,19 @@ git diff --check
 
 ## Done criteria
 
-- [ ] API-key checkmark button is removed.
-- [ ] Settings footer Save is the only settings/credential save action.
-- [ ] Save accurately reflects clean, dirty, pending, success, and failure states.
-- [ ] Saved keys always render as a fixed non-secret mask.
-- [ ] Focus-without-edit restores the mask and does not dirty the form.
-- [ ] Provider/model persist across route remount and app restart.
-- [ ] Provider keys remain independent.
-- [ ] Model selection remains global.
-- [ ] Key replacement and deferred removal work through the same save command.
-- [ ] Required highlighting follows the selected provider and clears immediately after success.
-- [ ] Footer AI availability updates immediately after success.
-- [ ] Other open Slate windows refresh through the native change event.
-- [ ] Secrets never enter snapshots, SQLite, query cache, logs, or change events.
+- [x] API-key checkmark button is removed.
+- [x] Settings footer Save is the only settings/credential save action.
+- [x] Save accurately reflects clean, dirty, pending, success, and failure states.
+- [x] Saved keys always render as a fixed non-secret mask.
+- [x] Focus-without-edit restores the mask and does not dirty the form.
+- [x] Provider/model persist across route remount and app restart.
+- [x] Provider keys remain independent.
+- [x] Model selection remains global.
+- [x] Key replacement and deferred removal work through the same save command.
+- [x] Required highlighting follows the selected provider and clears immediately after success.
+- [x] Footer AI availability updates immediately after success.
+- [x] Other open Slate windows refresh through the native change event.
+- [x] Secrets never enter snapshots, SQLite, query-cache data, logs, or change events.
 - [ ] Automated tests and the complete manual acceptance matrix pass.
+
+Implementation completed on 2026-07-23. Pure draft-state tests, the native test suite, the production renderer build/type-check, and diff whitespace validation pass. The complete packaged desktop manual acceptance matrix remains open.

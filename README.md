@@ -26,7 +26,7 @@ Slate is designed around a compact menu-bar popover that can perform the essenti
 
 - **Today:** committed tasks, remaining capacity, over-capacity state, and completed work.
 - **Backlog:** captured work grouped by estimate and date state.
-- **Settings:** daily capacity, AI provider/model configuration, API key state, and planning instruction.
+- **Settings:** daily capacity, AI provider/model configuration, provider-specific Keychain credentials, and planning instruction through one explicit Save action.
 - **Persistent footer:** quick capture, Save, context-sensitive AI Assist or Plan My Day, and Settings access.
 
 The full window provides more room for the same workflow. It is not an unlock gate for essential planning behavior.

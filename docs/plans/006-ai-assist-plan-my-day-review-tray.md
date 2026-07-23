@@ -136,7 +136,7 @@ Files:
 2. Keep only transient data in this state: original Assist capture text, immutable route date, current editable Assist draft, current plan proposal, and retry metadata. Never store API keys or raw provider responses.
 3. `startAssist` clears task selection, stores the original capture and route date, switches to loading, calls the native command, and replaces loading with the proposal or error. `redoAssist` uses the retained original capture, not the cleared composer value.
 4. `startPlan` uses a fresh native plan request each time. `redoPlan` repeats it from the current local persistence state, not a cached snapshot.
-5. When AI is unconfigured, open the unavailable tray state with an **Open Settings** action instead of silently disabling the Sparkles button. Manual Save remains independent and usable.
+5. Superseded by plan 013 for known preflight state: when the active provider has no saved key, disable the AI button and direct the user to Settings with a tooltip. Preserve this unavailable tray with **Open Settings** for runtime `unavailable-key` failures, such as an external Keychain change after the last snapshot. Manual Save remains independent and usable.
 6. Starting an AI action replaces any prior AI review. Starting an AI action clears a selected task; clicking a task row while a review is open dismisses the review before opening the task detail panel.
 7. Extend root outside-click and Escape handling to recognize `[data-ai-review]`. Escape or an outside click dismisses the review first; the popover only hides after no task detail or review surface remains open.
 

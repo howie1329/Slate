@@ -29,7 +29,9 @@ The AI button should treat whitespace-only input as empty. Its label, tooltip, a
 - Input present: `Use AI Assist`.
 - Input empty: `Plan My Day`.
 
-If AI is unavailable, the button should communicate that state and direct the user to Settings. It must not prevent regular Save from working.
+When the active provider has no saved key, the AI button is disabled and its tooltip directs the user to Settings. An `unavailable-key` response still opens the unavailable review state when a key is removed outside Slate after the last native snapshot. Neither state prevents regular Save from working.
+
+Settings uses one footer Save action for provider, global model, planning preferences, and the selected provider's Keychain credential. A saved credential appears only as a fixed non-secret mask. OpenRouter and AI Gateway keys are stored independently; secrets never enter planner snapshots, SQLite, query-cache data, logs, or change events.
 
 ## AI Assist
 

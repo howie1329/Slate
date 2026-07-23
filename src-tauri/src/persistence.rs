@@ -703,6 +703,24 @@ pub struct UpdateSettingsInput {
     theme: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum ApiKeyChange {
+    Unchanged,
+    Replace {
+        #[serde(rename = "apiKey")]
+        api_key: String,
+    },
+    Remove,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveSettingsInput {
+    settings: UpdateSettingsInput,
+    api_key_change: ApiKeyChange,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlannerPlanAssignment {
@@ -815,13 +833,29 @@ pub fn reorder_tasks(
 }
 
 #[tauri::command]
-pub fn update_settings(
+pub fn save_settings(
     app: AppHandle,
     state: State<PersistenceState>,
-    input: UpdateSettingsInput,
-) -> Result<(), String> {
-    with_repository(&state, |repository| repository.update_settings(input))?;
-    emit_change(&app, &state)
+    input: SaveSettingsInput,
+) -> Result<PlannerSnapshot, String> {
+    validate_save_settings_input(&input)?;
+
+    match &input.api_key_change {
+        ApiKeyChange::Unchanged => {}
+        ApiKeyChange::Replace { api_key } => {
+            credentials::write_api_key(&input.settings.ai_provider, api_key)?;
+        }
+        ApiKeyChange::Remove => {
+            credentials::remove_api_key(&input.settings.ai_provider)?;
+        }
+    }
+
+    let snapshot = with_repository(&state, |repository| {
+        repository.update_settings(input.settings)?;
+        repository.snapshot()
+    })?;
+    emit_change(&app, &state)?;
+    Ok(snapshot)
 }
 
 #[tauri::command]
@@ -1072,14 +1106,31 @@ fn validate_settings(input: &UpdateSettingsInput) -> Result<(), String> {
     if input.daily_capacity_minutes <= 0 {
         return Err("Daily capacity must be a positive number of minutes.".into());
     }
+    if input.planning_instruction.chars().count() > 2_000 {
+        return Err("Planning instruction must be 2,000 characters or fewer.".into());
+    }
     if !matches!(input.ai_provider.as_str(), "vercel-gateway" | "openrouter") {
         return Err("AI provider is invalid.".into());
     }
-    if input.ai_model.trim().is_empty() {
-        return Err("AI model is required.".into());
+    if !matches!(
+        input.ai_model.as_str(),
+        "openai/gpt-5-mini" | "anthropic/claude-sonnet-4.5" | "google/gemini-2.5-flash"
+    ) {
+        return Err("AI model is invalid.".into());
     }
     if !matches!(input.theme.as_str(), "light" | "dark") {
         return Err("Theme is invalid.".into());
+    }
+    Ok(())
+}
+
+fn validate_save_settings_input(input: &SaveSettingsInput) -> Result<(), String> {
+    validate_settings(&input.settings)?;
+    if matches!(
+        &input.api_key_change,
+        ApiKeyChange::Replace { api_key } if api_key.trim().is_empty()
+    ) {
+        return Err("API key cannot be empty.".into());
     }
     Ok(())
 }
@@ -1187,6 +1238,85 @@ mod tests {
         assert_eq!(settings.planning_instruction, "Protect focus time.");
         drop(reopened);
         fs::remove_dir_all(directory).expect("remove temporary test directory");
+    }
+
+    #[test]
+    fn validates_the_complete_settings_save_before_writing() {
+        let valid_settings = || UpdateSettingsInput {
+            daily_capacity_minutes: 240,
+            planning_instruction: String::new(),
+            ai_provider: "openrouter".into(),
+            ai_model: "openai/gpt-5-mini".into(),
+            theme: "light".into(),
+        };
+
+        assert!(validate_save_settings_input(&SaveSettingsInput {
+            settings: valid_settings(),
+            api_key_change: ApiKeyChange::Unchanged,
+        })
+        .is_ok());
+        assert_eq!(
+            validate_save_settings_input(&SaveSettingsInput {
+                settings: valid_settings(),
+                api_key_change: ApiKeyChange::Replace {
+                    api_key: "   ".into(),
+                },
+            }),
+            Err("API key cannot be empty.".into())
+        );
+
+        let mut invalid_provider = valid_settings();
+        invalid_provider.ai_provider = "unknown".into();
+        assert_eq!(
+            validate_save_settings_input(&SaveSettingsInput {
+                settings: invalid_provider,
+                api_key_change: ApiKeyChange::Remove,
+            }),
+            Err("AI provider is invalid.".into())
+        );
+
+        let mut invalid_model = valid_settings();
+        invalid_model.ai_model = "custom/model".into();
+        assert_eq!(
+            validate_save_settings_input(&SaveSettingsInput {
+                settings: invalid_model,
+                api_key_change: ApiKeyChange::Unchanged,
+            }),
+            Err("AI model is invalid.".into())
+        );
+
+        let mut long_instruction = valid_settings();
+        long_instruction.planning_instruction = "a".repeat(2_001);
+        assert_eq!(
+            validate_save_settings_input(&SaveSettingsInput {
+                settings: long_instruction,
+                api_key_change: ApiKeyChange::Unchanged,
+            }),
+            Err("Planning instruction must be 2,000 characters or fewer.".into())
+        );
+    }
+
+    #[test]
+    fn deserializes_a_renderer_key_replacement_request() {
+        let input: SaveSettingsInput = serde_json::from_value(serde_json::json!({
+            "settings": {
+                "dailyCapacityMinutes": 240,
+                "planningInstruction": "",
+                "aiProvider": "openrouter",
+                "aiModel": "openai/gpt-5-mini",
+                "theme": "light"
+            },
+            "apiKeyChange": {
+                "kind": "replace",
+                "apiKey": "not-a-real-secret"
+            }
+        }))
+        .expect("deserialize settings save");
+
+        assert!(matches!(
+            input.api_key_change,
+            ApiKeyChange::Replace { api_key } if api_key == "not-a-real-secret"
+        ));
     }
 
     #[test]
