@@ -4,6 +4,10 @@
 
 Ship the first production AI feature end to end: turn non-empty footer capture text into one editable task proposal using the existing Keychain settings and packaged Node sidecar.
 
+## Status
+
+Completed on the current branch. Plan My Day remains a separate follow-up slice documented in [012-plan-my-day-sidecar-vertical-slice.md](012-plan-my-day-sidecar-vertical-slice.md).
+
 This slice validates the real product path before Plan My Day:
 
 ```text
@@ -12,7 +16,7 @@ Footer input → native Tauri command → Keychain and planner context
 → editable review tray → existing create-task command
 ```
 
-Plan My Day remains explicitly unavailable until this slice is complete.
+Plan My Day remains explicitly unavailable until its own follow-up slice is complete.
 
 ## Product contract
 

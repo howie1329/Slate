@@ -1,5 +1,7 @@
 # Implementation plan: AI Assist, Plan My Day, and review tray
 
+> Status: Product behavior reference only. The native HTTP transport in this historical plan is superseded by the packaged Node sidecar in plan 007. AI Assist is implemented in plan 011; Plan My Day is planned in plan 012.
+
 ## Objective
 
 Ship the two AI actions defined in [the AI actions brief](../ai-actions-brief.md) through one footer button:
