@@ -154,8 +154,11 @@ function SettingsPage() {
                 </SelectContent>
               </Select>
             </label>
-            <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor="api-key">
-              <span>API key</span>
+            <label
+              className={`flex items-center justify-between gap-4 text-menu font-medium ${planner.data.aiAvailability === "unconfigured" ? "border-b border-destructive/60 pb-1" : ""}`}
+              htmlFor="api-key"
+            >
+              <span className={planner.data.aiAvailability === "unconfigured" ? "text-destructive" : undefined}>API key</span>
               <span className="flex items-center gap-1.5">
                 <Input
                   className="h-8 w-36 tracking-[0.08em]"
@@ -257,6 +260,6 @@ function ConfiguredState({ configured }: { configured: boolean }) {
       Configured
     </span>
   ) : (
-    <span className="text-xs text-muted-foreground">Not set</span>
+    <span className="text-xs font-medium text-destructive">Required for AI</span>
   );
 }

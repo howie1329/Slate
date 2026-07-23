@@ -8,6 +8,7 @@ import { AiReviewTray } from "@/components/ai-review-tray";
 import { useAiReview } from "@/components/ai-review";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { TaskDetailPanel } from "@/components/task-detail-panel";
 import { useRouteMotion } from "@/components/route-motion";
 import { useTaskMotion, type TaskMotionTransition } from "@/components/task-motion";
@@ -15,7 +16,7 @@ import { useTaskSelection } from "@/components/task-selection";
 import { taskComposerInputId } from "@/lib/task-composer";
 import type { LocalDate } from "@/lib/planner";
 import type { WindowMode } from "@/lib/window-mode";
-import { useCreateTask } from "@/lib/planner-query";
+import { useCreateTask, usePlannerState } from "@/lib/planner-query";
 
 type TaskComposerFooterProps = {
   scheduledDate: LocalDate | null;
@@ -25,6 +26,7 @@ type TaskComposerFooterProps = {
 export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFooterProps) {
   const navigate = useNavigate();
   const createTask = useCreateTask();
+  const planner = usePlannerState();
   const { clearTaskMutation, recordTaskMutation, taskMutation } = useTaskMotion();
   const { setRouteTransition } = useRouteMotion();
   const { clearSelection, selectedTaskId, selectedTaskTransition } = useTaskSelection();
@@ -32,6 +34,8 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
   const [title, setTitle] = useState("");
   const createTransitionRef = useRef<TaskMotionTransition>("instant");
   const hasTitle = title.trim().length > 0;
+  const aiUnavailable = planner.data?.aiAvailability === "unconfigured";
+  const aiButtonDisabled = aiUnavailable || aiReview.state.kind === "assist-loading" || aiReview.state.kind === "plan-loading" || aiReview.state.kind === "plan-accepting";
 
   function handleAiAction() {
     clearSelection("instant");
@@ -140,22 +144,49 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
             strokeWidth={1.8}
           />
         </Button>
-        <Button
-          aria-label={aiReview.state.kind === "assist-loading" ? "Generating AI Assist proposal" : aiReview.state.kind === "plan-loading" ? "Generating Plan My Day proposal" : hasTitle ? "Use AI Assist" : "Plan my day with AI"}
-          className="size-8 rounded-md"
-          disabled={aiReview.state.kind === "assist-loading" || aiReview.state.kind === "plan-loading" || aiReview.state.kind === "plan-accepting"}
-          onClick={handleAiAction}
-          size="icon"
-          title={aiReview.state.kind === "assist-loading" ? "Generating AI Assist proposal" : aiReview.state.kind === "plan-loading" ? "Generating Plan My Day proposal" : hasTitle ? "Use AI Assist" : "Plan My Day"}
-          type="button"
-          variant="outline"
-        >
-          <HugeiconsIcon
-            className={aiReview.state.kind === "assist-loading" || aiReview.state.kind === "plan-loading" || aiReview.state.kind === "plan-accepting" ? "animate-pulse motion-reduce:animate-none" : undefined}
-            icon={SparklesIcon}
-            strokeWidth={1.8}
-          />
-        </Button>
+        {aiUnavailable ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span
+                  aria-label="AI features unavailable; add a provider key in Settings"
+                  className="inline-flex"
+                  tabIndex={0}
+                />
+              }
+            >
+              <Button
+                aria-label="AI features unavailable; add a provider key in Settings"
+                className="size-8 rounded-md"
+                disabled
+                size="icon"
+                title="Add a provider key in Settings to use AI"
+                type="button"
+                variant="outline"
+              >
+                <HugeiconsIcon icon={SparklesIcon} strokeWidth={1.8} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Add a provider key in Settings to use AI</TooltipContent>
+          </Tooltip>
+        ) : (
+          <Button
+            aria-label={aiReview.state.kind === "assist-loading" ? "Generating AI Assist proposal" : aiReview.state.kind === "plan-loading" ? "Generating Plan My Day proposal" : hasTitle ? "Use AI Assist" : "Plan my day with AI"}
+            className="size-8 rounded-md"
+            disabled={aiButtonDisabled}
+            onClick={handleAiAction}
+            size="icon"
+            title={aiReview.state.kind === "assist-loading" ? "Generating AI Assist proposal" : aiReview.state.kind === "plan-loading" ? "Generating Plan My Day proposal" : hasTitle ? "Use AI Assist" : "Plan My Day"}
+            type="button"
+            variant="outline"
+          >
+            <HugeiconsIcon
+              className={aiReview.state.kind === "assist-loading" || aiReview.state.kind === "plan-loading" || aiReview.state.kind === "plan-accepting" ? "animate-pulse motion-reduce:animate-none" : undefined}
+              icon={SparklesIcon}
+              strokeWidth={1.8}
+            />
+          </Button>
+        )}
         <Button
           aria-label="Open settings"
           className="size-8 rounded-md"
