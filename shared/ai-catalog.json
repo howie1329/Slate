@@ -1,0 +1,15 @@
+{
+  "providers": [
+    { "id": "vercel-gateway", "label": "Vercel AI Gateway" },
+    { "id": "openrouter", "label": "OpenRouter" }
+  ],
+  "models": [
+    { "id": "openai/gpt-5-mini", "label": "GPT-5 mini" },
+    { "id": "anthropic/claude-sonnet-4.5", "label": "Claude Sonnet 4.5" },
+    { "id": "google/gemini-2.5-flash", "label": "Gemini 2.5 Flash" }
+  ],
+  "default": {
+    "provider": "vercel-gateway",
+    "model": "openai/gpt-5-mini"
+  }
+}

@@ -28,7 +28,7 @@ Both results remain transient until the user accepts them in a review tray above
 
 ## Fixed transport decision
 
-This plan selects the native Rust HTTP transport. If Slate chooses to use the Vercel AI SDK in a bundled Node process instead, follow [007-ai-sdk-node-sidecar.md](007-ai-sdk-node-sidecar.md) for the transport, packaging, and IPC changes while retaining this plan's product behavior and persistence requirements.
+This plan selects the native Rust HTTP transport. The shipped implementation uses a bundled Node sidecar while retaining this plan's product behavior and persistence requirements.
 
 Make the native Rust host, not the React webview, the AI client. The host reads the selected provider key from Keychain just in time, makes the provider request, validates the result, and returns only a safe proposal. This is required by the credential boundary and aligns with Vercel AI Gateway’s instruction not to expose its credential to browser clients.
 

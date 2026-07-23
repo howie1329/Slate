@@ -72,16 +72,6 @@ struct AssistRequestInput {
     capture: String,
     today: String,
     scheduled_date: Option<String>,
-    today_tasks: Vec<AssistTaskContext>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct AssistTaskContext {
-    id: String,
-    title: String,
-    estimate_minutes: Option<i64>,
-    scheduled_date: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -101,9 +91,18 @@ struct PlanRequestInput {
     today: String,
     daily_capacity_minutes: i64,
     remaining_minutes: i64,
-    today_tasks: Vec<AssistTaskContext>,
+    today_tasks: Vec<PlanTaskContext>,
     candidates: Vec<PlanCandidate>,
     planning_instruction: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PlanTaskContext {
+    id: String,
+    title: String,
+    estimate_minutes: Option<i64>,
+    scheduled_date: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -198,8 +197,7 @@ pub async fn generate_ai_assist(
 
     let context =
         persistence::read_ai_assist_context(&state).map_err(|_| "internal".to_string())?;
-    let api_key =
-        credentials::read_api_key(&context.provider).map_err(|_| "unavailable-key".to_string())?;
+    let api_key = read_api_key(&context.provider)?;
     let request = AssistRequest {
         version: 1,
         operation: "assist",
@@ -210,23 +208,12 @@ pub async fn generate_ai_assist(
             capture: input.capture.trim().to_string(),
             today: context.today,
             scheduled_date: input.scheduled_date.clone(),
-            today_tasks: context
-                .today_tasks
-                .into_iter()
-                .map(AssistTaskContext::from)
-                .collect(),
         },
     };
     let serialized = serde_json::to_string(&request).map_err(|_| "internal".to_string())?;
-    let response = sidecar::run_sidecar_request(&app, &serialized)
+    let response = sidecar::run_sidecar_request(&app, &serialized, sidecar::AI_REQUEST_TIMEOUT)
         .await
-        .map_err(|error| {
-            if error.contains("timed out") {
-                "timeout".to_string()
-            } else {
-                "internal".to_string()
-            }
-        })?;
+        .map_err(|error| map_sidecar_failure(error).to_string())?;
 
     parse_response(&response, input.scheduled_date.as_deref())
 }
@@ -244,8 +231,7 @@ pub async fn generate_daily_plan(
         return Ok(empty_plan_proposal(&context, "no-eligible-tasks"));
     }
 
-    let api_key =
-        credentials::read_api_key(&context.provider).map_err(|_| "unavailable-key".to_string())?;
+    let api_key = read_api_key(&context.provider)?;
     let request = PlanRequest {
         version: 1,
         operation: "plan",
@@ -260,7 +246,7 @@ pub async fn generate_daily_plan(
                 .today_tasks
                 .iter()
                 .cloned()
-                .map(AssistTaskContext::from)
+                .map(PlanTaskContext::from)
                 .collect(),
             candidates: context
                 .candidates
@@ -278,15 +264,9 @@ pub async fn generate_daily_plan(
         },
     };
     let serialized = serde_json::to_string(&request).map_err(|_| "internal".to_string())?;
-    let response = sidecar::run_sidecar_request(&app, &serialized)
+    let response = sidecar::run_sidecar_request(&app, &serialized, sidecar::AI_REQUEST_TIMEOUT)
         .await
-        .map_err(|error| {
-            if error.contains("timed out") {
-                "timeout".to_string()
-            } else {
-                "internal".to_string()
-            }
-        })?;
+        .map_err(|error| map_sidecar_failure(error).to_string())?;
 
     parse_plan_response(&response, &context)
 }
@@ -316,7 +296,7 @@ pub fn accept_daily_plan(
     persistence::emit_change(&app, &state)
 }
 
-impl From<AiAssistTaskContext> for AssistTaskContext {
+impl From<AiAssistTaskContext> for PlanTaskContext {
     fn from(context: AiAssistTaskContext) -> Self {
         Self {
             id: context.id,
@@ -324,6 +304,21 @@ impl From<AiAssistTaskContext> for AssistTaskContext {
             estimate_minutes: context.estimate_minutes,
             scheduled_date: context.scheduled_date,
         }
+    }
+}
+
+fn read_api_key(provider: &str) -> Result<String, String> {
+    match credentials::read_api_key(provider) {
+        Ok(key) => Ok(key),
+        Err(credentials::ReadApiKeyError::Missing) => Err("unavailable-key".into()),
+        Err(credentials::ReadApiKeyError::Unavailable) => Err("credentials-unavailable".into()),
+    }
+}
+
+fn map_sidecar_failure(error: sidecar::SidecarFailure) -> &'static str {
+    match error {
+        sidecar::SidecarFailure::Timeout => "timeout",
+        _ => "internal",
     }
 }
 
@@ -481,6 +476,7 @@ fn validate_date(date: Option<&str>) -> Result<(), String> {
 fn normalize_error_category(category: &str) -> &'static str {
     match category {
         "unavailable-key" => "unavailable-key",
+        "credentials-unavailable" => "credentials-unavailable",
         "timeout" => "timeout",
         "network" => "network",
         "provider-rejected" => "provider-rejected",
@@ -547,6 +543,34 @@ mod tests {
     #[test]
     fn maps_unknown_sidecar_errors_to_internal() {
         assert_eq!(normalize_error_category("provider-secret"), "internal");
+    }
+
+    #[test]
+    fn serializes_assist_without_planner_context() {
+        let request = AssistRequest {
+            version: 1,
+            operation: "assist",
+            provider: "openrouter".into(),
+            model: "openai/gpt-5-mini".into(),
+            api_key: "not-a-real-secret".into(),
+            input: AssistRequestInput {
+                capture: "Prepare launch notes".into(),
+                today: "2026-07-23".into(),
+                scheduled_date: None,
+            },
+        };
+        let serialized = serde_json::to_value(request).expect("Assist request JSON");
+        let input = serialized.get("input").expect("Assist input");
+        assert!(input.get("todayTasks").is_none());
+        assert!(input.get("planningInstruction").is_none());
+        assert_eq!(input.get("capture").and_then(|value| value.as_str()), Some("Prepare launch notes"));
+    }
+
+    #[test]
+    fn maps_only_native_deadlines_to_retryable_timeout() {
+        assert_eq!(map_sidecar_failure(sidecar::SidecarFailure::Timeout), "timeout");
+        assert_eq!(map_sidecar_failure(sidecar::SidecarFailure::NonZeroExit), "internal");
+        assert_eq!(map_sidecar_failure(sidecar::SidecarFailure::MalformedOutput), "internal");
     }
 
     #[test]

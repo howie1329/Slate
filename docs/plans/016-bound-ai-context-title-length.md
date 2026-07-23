@@ -102,7 +102,7 @@ Do not trim, mutate, or persist the original task title. The helper exists only 
 
 In `ordered_ai_context`, replace the direct `task.title.clone()` assignment with the helper. In `ordered_plan_context`, do the same replacement. Do not change task IDs, estimates, scheduled dates, source scopes, ordering positions, candidate eligibility, or the original title carried later through `AiPlanItem` and stale-plan acceptance.
 
-This makes every task title placed in an Assist `todayTasks` payload or a Plan `todayTasks`/`candidates` payload conform to the sidecar's 240-character contract while preserving original local data for acceptance.
+This makes every task title placed in a Plan `todayTasks`/`candidates` payload conform to the sidecar's 240-character contract while preserving original local data for acceptance. AI Assist is capture-first and no longer copies task titles across the boundary.
 
 **Verify**: `rg -n "title: task\.title\.clone\(\)" src-tauri/src/persistence.rs` → returns no context-builder assignments; inspect the two context builders to confirm both use the helper.
 

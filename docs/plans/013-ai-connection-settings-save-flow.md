@@ -148,7 +148,7 @@ Keep private credential helpers in `credentials.rs`:
 
 - `write_api_key(provider, key)`
 - `remove_api_key(provider)`
-- `has_api_key(provider)`
+- `credential_availability(provider)` with safe configured, unconfigured, and unavailable states
 
 Remove the old credential commands from the renderer invoke surface after all callers move to `save_settings`.
 

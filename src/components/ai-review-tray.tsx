@@ -347,6 +347,8 @@ function UnavailableState({ mode, onDismiss, onOpenSettings }: { mode: "assist" 
 
 function errorMessage(category: AiErrorCategory) {
   switch (category) {
+    case "credentials-unavailable":
+      return "Slate could not access the macOS Keychain. Retry access, then try again.";
     case "timeout":
       return "The provider took too long to respond.";
     case "network":

@@ -2,7 +2,7 @@ import { generateText, Output } from "ai";
 import { planProposalSchema, type PlanProposal, type PlanRequest } from "./protocol.ts";
 import { createModel } from "./provider.ts";
 
-const PROVIDER_TIMEOUT_MS = 8_000;
+export const PROVIDER_TIMEOUT_MS = 12_000;
 
 function taskLines(tasks: PlanRequest["input"]["todayTasks"] | PlanRequest["input"]["candidates"]) {
   return tasks.length === 0

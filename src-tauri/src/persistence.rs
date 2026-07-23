@@ -18,7 +18,7 @@ use crate::credentials;
 
 const DATABASE_FILE_NAME: &str = "slate.sqlite";
 const MAX_AI_CONTEXT_TASKS: usize = 50;
-const MIGRATION_1: &str = r#"
+const MIGRATION_1_PREFIX: &str = r#"
 CREATE TABLE tasks (
   id TEXT PRIMARY KEY NOT NULL,
   title TEXT NOT NULL CHECK (length(trim(title)) > 0),
@@ -57,8 +57,20 @@ INSERT INTO settings (
   ai_provider,
   ai_model,
   theme
-) VALUES (1, 240, '', 'vercel-gateway', 'openai/gpt-5-mini', 'light');
+)
+VALUES (1, 240, '', '"#;
+const MIGRATION_1_SUFFIX: &str = r#"', 'light');
 "#;
+
+fn migration_1() -> String {
+    format!(
+        "{}{}','{}{}",
+        MIGRATION_1_PREFIX,
+        credentials::default_provider(),
+        credentials::default_model(),
+        MIGRATION_1_SUFFIX
+    )
+}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -104,7 +116,6 @@ pub(crate) struct AiAssistContext {
     pub(crate) provider: String,
     pub(crate) model: String,
     pub(crate) today: String,
-    pub(crate) today_tasks: Vec<AiAssistTaskContext>,
 }
 
 pub(crate) struct AiPlanTaskContext {
@@ -157,13 +168,12 @@ impl Repository {
         let settings = self.settings()?;
         let tasks = self.tasks()?;
         let order_by_scope = self.orders()?;
-        let ai_availability_by_provider = ["vercel-gateway", "openrouter"]
-            .into_iter()
+        let ai_availability_by_provider = credentials::supported_providers()
             .map(|provider| {
-                let availability = if credentials::has_api_key(provider) {
-                    "configured"
-                } else {
-                    "unconfigured"
+                let availability = match credentials::credential_availability(provider) {
+                    credentials::CredentialAvailability::Configured(_) => "configured",
+                    credentials::CredentialAvailability::Unconfigured => "unconfigured",
+                    credentials::CredentialAvailability::Unavailable => "unavailable",
                 };
                 (provider.to_string(), availability.to_string())
             })
@@ -185,21 +195,12 @@ impl Repository {
 
     fn ai_assist_context(&self) -> Result<AiAssistContext, String> {
         let settings = self.settings()?;
-        let tasks = self.tasks()?;
-        let order_by_scope = self.orders()?;
         let today = local_today();
-        let today_scope = format!("today:{today}");
-
-        let today_tasks = ordered_ai_context(&tasks, &order_by_scope, &today_scope, &today)
-            .into_iter()
-            .take(MAX_AI_CONTEXT_TASKS)
-            .collect();
 
         Ok(AiAssistContext {
             provider: settings.ai_provider,
             model: settings.ai_model,
             today,
-            today_tasks,
         })
     }
 
@@ -291,7 +292,7 @@ impl Repository {
     }
 
     fn settings(&self) -> Result<Settings, String> {
-        self.connection
+        let settings = self.connection
             .query_row(
                 "SELECT daily_capacity_minutes, planning_instruction, ai_provider, ai_model, theme
                  FROM settings WHERE id = 1",
@@ -306,7 +307,15 @@ impl Repository {
                     })
                 },
             )
-            .map_err(database_error)
+            .map_err(database_error)?;
+        validate_settings_values(
+            settings.daily_capacity_minutes,
+            &settings.planning_instruction,
+            &settings.ai_provider,
+            &settings.ai_model,
+            &settings.theme,
+        )?;
+        Ok(settings)
     }
 
     fn create_task(&mut self, input: TaskInput) -> Result<(), String> {
@@ -897,7 +906,8 @@ fn apply_migrations(connection: &Connection) -> Result<(), String> {
     if version < 1 {
         connection
             .execute_batch(&format!(
-                "BEGIN IMMEDIATE; {MIGRATION_1} PRAGMA user_version = 1; COMMIT;"
+                "BEGIN IMMEDIATE; {} PRAGMA user_version = 1; COMMIT;",
+                migration_1()
             ))
             .map_err(database_error)?;
     }
@@ -1103,22 +1113,35 @@ fn validate_scope(scope: &str) -> Result<(), String> {
 }
 
 fn validate_settings(input: &UpdateSettingsInput) -> Result<(), String> {
-    if input.daily_capacity_minutes <= 0 {
+    validate_settings_values(
+        input.daily_capacity_minutes,
+        &input.planning_instruction,
+        &input.ai_provider,
+        &input.ai_model,
+        &input.theme,
+    )
+}
+
+fn validate_settings_values(
+    daily_capacity_minutes: i64,
+    planning_instruction: &str,
+    ai_provider: &str,
+    ai_model: &str,
+    theme: &str,
+) -> Result<(), String> {
+    if daily_capacity_minutes <= 0 {
         return Err("Daily capacity must be a positive number of minutes.".into());
     }
-    if input.planning_instruction.chars().count() > 2_000 {
+    if planning_instruction.chars().count() > 2_000 {
         return Err("Planning instruction must be 2,000 characters or fewer.".into());
     }
-    if !matches!(input.ai_provider.as_str(), "vercel-gateway" | "openrouter") {
+    if !credentials::is_supported_provider(ai_provider) {
         return Err("AI provider is invalid.".into());
     }
-    if !matches!(
-        input.ai_model.as_str(),
-        "openai/gpt-5-mini" | "anthropic/claude-sonnet-4.5" | "google/gemini-2.5-flash"
-    ) {
+    if !credentials::is_supported_model(ai_model) {
         return Err("AI model is invalid.".into());
     }
-    if !matches!(input.theme.as_str(), "light" | "dark") {
+    if !matches!(theme, "light" | "dark") {
         return Err("Theme is invalid.".into());
     }
     Ok(())
@@ -1255,6 +1278,18 @@ mod tests {
             api_key_change: ApiKeyChange::Unchanged,
         })
         .is_ok());
+        for provider in credentials::supported_providers() {
+            for model in credentials::supported_models() {
+                let mut settings = valid_settings();
+                settings.ai_provider = provider.into();
+                settings.ai_model = model.into();
+                assert!(validate_save_settings_input(&SaveSettingsInput {
+                    settings,
+                    api_key_change: ApiKeyChange::Unchanged,
+                })
+                .is_ok());
+            }
+        }
         assert_eq!(
             validate_save_settings_input(&SaveSettingsInput {
                 settings: valid_settings(),
@@ -1522,29 +1557,13 @@ mod tests {
     }
 
     #[test]
-    fn ai_assist_context_includes_active_today_commitments() {
-        let mut database = TestDatabase::new();
+    fn ai_assist_context_contains_only_provider_settings_and_today() {
+        let database = TestDatabase::new();
         let today = local_today();
-        let today_task = {
-            database
-                .repository
-                .create_task(TaskInput {
-                    title: "Today task".into(),
-                    estimate_minutes: Some(30),
-                    scheduled_date: Some(today.clone()),
-                })
-                .expect("create today task");
-            database
-                .repository
-                .tasks()
-                .expect("load today task")
-                .into_iter()
-                .find(|task| task.title == "Today task")
-                .expect("today task")
-        };
         let context = database.repository.ai_assist_context().expect("AI context");
         assert_eq!(context.today, today);
-        assert_eq!(context.today_tasks[0].id, today_task.id);
+        assert_eq!(context.provider, credentials::default_provider());
+        assert_eq!(context.model, credentials::default_model());
     }
 
     #[test]

@@ -1,37 +1,32 @@
 import { z } from "zod";
+import catalog from "../../shared/ai-catalog.json" with { type: "json" };
 
-const providerSchema = z.enum(["vercel-gateway", "openrouter"]);
+const providerSchema = z.enum(
+  catalog.providers.map((provider) => provider.id) as [string, ...string[]],
+);
+const modelSchema = z.enum(
+  catalog.models.map((model) => model.id) as [string, ...string[]],
+);
 const localDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-
-const healthRequestSchema = z.object({
-  version: z.literal(1),
-  operation: z.literal("health"),
-}).strict();
-
-const sdkLoadRequestSchema = z.object({
-  version: z.literal(1),
-  operation: z.literal("sdk-load"),
-}).strict();
-
-const assistTaskContextSchema = z.object({
-  id: z.string().trim().min(1).max(100),
-  title: z.string().trim().min(1).max(240),
-  estimateMinutes: z.number().int().positive().max(1440).nullable(),
-  scheduledDate: localDateSchema.nullable(),
-}).strict();
 
 const assistRequestSchema = z.object({
   version: z.literal(1),
   operation: z.literal("assist"),
   provider: providerSchema,
-  model: z.string().trim().min(1).max(240),
+  model: modelSchema,
   apiKey: z.string().min(1).max(512),
   input: z.object({
     capture: z.string().trim().min(1).max(2000),
-    today: z.string(),
+    today: localDateSchema,
     scheduledDate: localDateSchema.nullable(),
-    todayTasks: z.array(assistTaskContextSchema).max(50),
   }).strict(),
+}).strict();
+
+const planTaskContextSchema = z.object({
+  id: z.string().trim().min(1).max(100),
+  title: z.string().trim().min(1).max(240),
+  estimateMinutes: z.number().int().positive().max(1440).nullable(),
+  scheduledDate: localDateSchema.nullable(),
 }).strict();
 
 const planCandidateSchema = z.object({
@@ -47,26 +42,24 @@ const planRequestSchema = z.object({
   version: z.literal(1),
   operation: z.literal("plan"),
   provider: providerSchema,
-  model: z.string().trim().min(1).max(240),
+  model: modelSchema,
   apiKey: z.string().min(1).max(512),
   input: z.object({
     today: localDateSchema,
     dailyCapacityMinutes: z.number().int().positive().max(10080),
     remainingMinutes: z.number().int().nonnegative().max(10080),
-    todayTasks: z.array(assistTaskContextSchema).max(50),
+    todayTasks: z.array(planTaskContextSchema).max(50),
     candidates: z.array(planCandidateSchema).max(50),
     planningInstruction: z.string().trim().max(2000),
   }).strict(),
 }).strict();
 
-export const spikeRequestSchema = z.discriminatedUnion("operation", [
-  healthRequestSchema,
-  sdkLoadRequestSchema,
+export const sidecarRequestSchema = z.discriminatedUnion("operation", [
   assistRequestSchema,
   planRequestSchema,
 ]);
 
-export type SpikeRequest = z.infer<typeof spikeRequestSchema>;
+export type SidecarRequest = z.infer<typeof sidecarRequestSchema>;
 export type AssistRequest = z.infer<typeof assistRequestSchema>;
 export type PlanRequest = z.infer<typeof planRequestSchema>;
 
@@ -96,6 +89,7 @@ export type PlanProposal = z.infer<typeof planProposalSchema>;
 export type SidecarErrorCategory =
   | "invalid-request"
   | "unavailable-key"
+  | "credentials-unavailable"
   | "timeout"
   | "network"
   | "provider-rejected"
@@ -103,14 +97,7 @@ export type SidecarErrorCategory =
   | "no-proposal"
   | "internal";
 
-export type SpikeResponse =
-  | {
-      ok: true;
-      result: {
-        operation: "health" | "sdk-load";
-        status: "ready";
-      };
-    }
+export type SidecarResponse =
   | {
       ok: true;
       result: {
@@ -134,39 +121,28 @@ export type SpikeResponse =
 
 export const MAX_REQUEST_BYTES = 64 * 1024;
 
-export function parseRequest(line: string): SpikeRequest {
+export function parseRequest(line: string): SidecarRequest {
   if (Buffer.byteLength(line, "utf8") > MAX_REQUEST_BYTES) {
     throw new Error("Request is too large.");
   }
 
-  return spikeRequestSchema.parse(JSON.parse(line));
+  return sidecarRequestSchema.parse(JSON.parse(line));
 }
 
-export function readyResponse(operation: SpikeRequest["operation"]): SpikeResponse {
-  if (operation === "assist" || operation === "plan") {
-    throw new Error("AI operation responses require a proposal.");
-  }
-
-  return {
-    ok: true,
-    result: { operation, status: "ready" },
-  };
-}
-
-export function assistResponse(proposal: AssistProposal): SpikeResponse {
+export function assistResponse(proposal: AssistProposal): SidecarResponse {
   return {
     ok: true,
     result: { operation: "assist", proposal },
   };
 }
 
-export function planResponse(proposal: PlanProposal): SpikeResponse {
+export function planResponse(proposal: PlanProposal): SidecarResponse {
   return {
     ok: true,
     result: { operation: "plan", proposal },
   };
 }
 
-export function errorResponse(category: SidecarErrorCategory): SpikeResponse {
+export function errorResponse(category: SidecarErrorCategory): SidecarResponse {
   return { ok: false, error: { category } };
 }

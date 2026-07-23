@@ -45,7 +45,7 @@ Rust owns the following sequence:
 1. Validate the capture and date.
 2. Read the selected provider and model from Settings.
 3. Read the selected provider's non-empty API key from macOS Keychain.
-4. Read bounded active Today context from the local planner.
+4. Read the local Today date from the local planner.
 5. Build a versioned sidecar request.
 6. Start the packaged sidecar and write one request through stdin.
 7. Validate the single response, timeout, exit status, and output limits.
@@ -64,7 +64,6 @@ type AssistRequest = {
     capture: string;
     today: LocalDate;
     scheduledDate: LocalDate | null;
-    todayTasks: AssistTaskContext[];
   };
 };
 ```
@@ -72,16 +71,14 @@ type AssistRequest = {
 Request bounds:
 
 - Capture: maximum 2,000 characters.
-- Task titles: maximum 240 characters.
-- Today context: first 50 active Today commitments in current order.
-- Context fields: stable task ID, title, estimate, and scheduled date only.
+- Local today: a validated calendar date used only for cautious relative-date interpretation.
 - The saved planning instruction is not sent to Assist; it remains Plan My Day-only.
 
 The API key travels only from Keychain to native memory to the sidecar stdin request. It must never enter renderer state, SQLite, URLs, command-line arguments, change events, or logs.
 
 ## Sidecar operation
 
-Add the `assist` operation to the existing sidecar protocol while preserving the current health and SDK-load probes.
+Add the `assist` operation to the sidecar protocol. Packaging probes are historical spike tooling and are not part of the product runtime.
 
 Use the installed AI SDK version's structured-output API: `generateText` with `Output.object(...)` and a Zod schema equivalent to:
 
@@ -235,8 +232,7 @@ npm run tauri -- build
 - [AI actions brief](../ai-actions-brief.md)
 - [Product brief](../product-brief.md)
 - [AI Assist and Plan My Day review tray plan](006-ai-assist-plan-my-day-review-tray.md)
-- [AI SDK Node sidecar plan](007-ai-sdk-node-sidecar.md)
-- [Sidecar packaging spike](010-ai-sidecar-packaging-spike.md)
+- The native sidecar boundary owns credentials, process lifecycle, and safe response validation.
 - [Slate design system](../../DESIGN.md)
 
 ## Planned at

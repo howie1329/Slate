@@ -11,6 +11,7 @@ import { useRouteMotion } from "@/components/route-motion";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { Settings } from "@/lib/planner";
+import { AI_MODELS, AI_PROVIDERS, isAiModel, isAiProvider } from "@/lib/ai-catalog";
 import {
   blurApiKey,
   buildSaveSettingsInput,
@@ -29,11 +30,6 @@ export const Route = createFileRoute("/settings")({
   component: SettingsPage,
 });
 
-const MODEL_OPTIONS = [
-  { label: "GPT-5 mini", value: "openai/gpt-5-mini" },
-  { label: "Claude Sonnet 4.5", value: "anthropic/claude-sonnet-4.5" },
-  { label: "Gemini 2.5 Flash", value: "google/gemini-2.5-flash" },
-] as const;
 const APP_VERSION = appPackage.version;
 
 function SettingsPage() {
@@ -61,7 +57,9 @@ function SettingsPage() {
   const view = settingsDraftView(draft);
   const keyConfigured =
     draft.availabilityByProvider[draft.values.aiProvider] === "configured";
-  const keyRequired = !keyConfigured && draft.key.kind !== "remove";
+  const keyUnavailable =
+    draft.availabilityByProvider[draft.values.aiProvider] === "unavailable";
+  const keyRequired = !keyConfigured && !keyUnavailable && draft.key.kind !== "remove";
   const keyRemovalPending = draft.key.kind === "remove";
 
   function updateDraft(patch: Partial<Settings>) {
@@ -133,7 +131,11 @@ function SettingsPage() {
             <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor="ai-provider">
               <span>Provider</span>
               <Select
-                onValueChange={(value) => updateDraft({ aiProvider: value as Settings["aiProvider"] })}
+                onValueChange={(value) => {
+                  if (value && isAiProvider(value)) {
+                    updateDraft({ aiProvider: value });
+                  }
+                }}
                 value={draft.values.aiProvider}
               >
                 <SelectTrigger aria-label="AI provider" className="w-40 text-xs font-normal" id="ai-provider">
@@ -141,8 +143,11 @@ function SettingsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="vercel-gateway">Vercel AI Gateway</SelectItem>
-                    <SelectItem value="openrouter">OpenRouter</SelectItem>
+                    {AI_PROVIDERS.map((provider) => (
+                      <SelectItem key={provider.id} value={provider.id}>
+                        {provider.label}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -150,7 +155,11 @@ function SettingsPage() {
             <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor="ai-model">
               <span>Model</span>
               <Select
-                onValueChange={(value) => updateDraft({ aiModel: value ?? "" })}
+                onValueChange={(value) => {
+                  if (value && isAiModel(value)) {
+                    updateDraft({ aiModel: value });
+                  }
+                }}
                 value={draft.values.aiModel}
               >
                 <SelectTrigger aria-label="AI model" className="w-40 text-xs font-normal" id="ai-model">
@@ -158,8 +167,8 @@ function SettingsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    {MODEL_OPTIONS.map((model) => (
-                      <SelectItem key={model.value} value={model.value}>
+                    {AI_MODELS.map((model) => (
+                      <SelectItem key={model.id} value={model.id}>
                         {model.label}
                       </SelectItem>
                     ))}
@@ -200,6 +209,7 @@ function SettingsPage() {
             <div className="flex min-h-6 items-center justify-between gap-3">
               <KeyStatus
                 configured={keyConfigured}
+                unavailable={keyUnavailable}
                 removalPending={keyRemovalPending}
               />
               {keyRemovalPending ? (
@@ -296,15 +306,25 @@ function SettingsGroup({ children, description, title }: SettingsGroupProps) {
 
 function KeyStatus({
   configured,
+  unavailable,
   removalPending,
 }: {
   configured: boolean;
+  unavailable: boolean;
   removalPending: boolean;
 }) {
   if (removalPending) {
     return (
       <span className="text-xs font-medium text-destructive">
         Key will be removed when you save
+      </span>
+    );
+  }
+
+  if (unavailable) {
+    return (
+      <span className="text-xs font-medium text-capacity-caution">
+        Keychain unavailable — retry access
       </span>
     );
   }

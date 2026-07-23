@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { planProposalSchema } from "./protocol.ts";
+import { PROVIDER_TIMEOUT_MS } from "./plan.ts";
 
 describe("Plan My Day", () => {
   it("accepts an ordered candidate selection with rationale", () => {
@@ -22,5 +23,9 @@ describe("Plan My Day", () => {
       taskIds: Array.from({ length: 51 }, (_, index) => "task-" + index),
       rationale: null,
     }));
+  });
+
+  it("uses the shared provider deadline", () => {
+    assert.equal(PROVIDER_TIMEOUT_MS, 12_000);
   });
 });

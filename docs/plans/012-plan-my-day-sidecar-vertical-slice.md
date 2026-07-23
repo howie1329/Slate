@@ -30,7 +30,7 @@ This plan cross-references:
 - Product behavior in the product brief.
 - Shared AI behavior and review rules in the AI actions brief.
 - Review-tray and atomic-plan requirements in 006-ai-assist-plan-my-day-review-tray.md.
-- The current JavaScript SDK transport and packaged sidecar in 007-ai-sdk-node-sidecar.md.
+- The current JavaScript SDK transport and packaged sidecar implementation.
 - The completed Assist implementation and current sidecar protocol in 011-ai-assist-sidecar-vertical-slice.md.
 - Capacity and staged product guardrails in the roadmap.
 
@@ -235,7 +235,7 @@ Files:
 - sidecar/src/plan.ts
 - sidecar/src/main.ts
 
-Add a bounded planning-context reader that returns only the deterministic fields above. Add the plan request schema, candidate schema, selected-ID output schema, and stable error mapping. Preserve Assist, health, and SDK-load behavior.
+Add a bounded planning-context reader that returns only the deterministic fields above. Add the plan request schema, candidate schema, selected-ID output schema, and stable error mapping. Preserve the capture-first Assist path; packaging probes are historical tooling.
 
 ### 2. Implement structured Plan My Day generation
 
@@ -351,12 +351,10 @@ The implementation and automated native/sidecar checks are complete. Unchecked i
 - [Product brief](../product-brief.md)
 - [AI actions brief](../ai-actions-brief.md)
 - [AI Assist and Plan My Day review tray plan](006-ai-assist-plan-my-day-review-tray.md)
-- [AI SDK Node sidecar plan](007-ai-sdk-node-sidecar.md)
 - [Completed AI Assist sidecar vertical slice](011-ai-assist-sidecar-vertical-slice.md)
-- [Sidecar packaging spike](010-ai-sidecar-packaging-spike.md)
 - [Slate design system](../../DESIGN.md)
 - [Code quality guide](../../CODE-QUALITY.md)
 
 ## Planned at
 
-Branch codex/ai-sidecar-packaging-spike, 2026-07-23.
+Branch codex/ai-sidecar-packaging-spike, 2026-07-23. Packaging probe details are historical and no longer describe runtime requirements.

@@ -1,4 +1,4 @@
-import { useRef, useState, type MouseEvent } from "react";
+import { useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon, SentIcon, Settings01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
 import { useNavigate } from "@tanstack/react-router";
@@ -34,7 +34,8 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
   const [title, setTitle] = useState("");
   const createTransitionRef = useRef<TaskMotionTransition>("instant");
   const hasTitle = title.trim().length > 0;
-  const aiUnavailable = planner.data?.aiAvailability === "unconfigured";
+  const aiUnavailable = planner.data?.aiAvailability !== "configured";
+  const aiKeyMissing = planner.data?.aiAvailability === "unconfigured";
   const aiButtonDisabled = aiUnavailable || aiReview.state.kind === "assist-loading" || aiReview.state.kind === "plan-loading" || aiReview.state.kind === "plan-accepting";
 
   function handleAiAction() {
@@ -67,8 +68,8 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
     );
   }
 
-  function handleOpenSettings(event: MouseEvent<HTMLButtonElement>) {
-    setRouteTransition(event.detail > 0 ? "animate" : "instant");
+  function handleOpenSettings(event?: { detail?: number }) {
+    setRouteTransition(event?.detail ? "animate" : "instant");
     void navigate({ to: "/settings" });
   }
 
@@ -149,25 +150,35 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
             <TooltipTrigger
               render={
                 <span
-                  aria-label="AI features unavailable; add a provider key in Settings"
+                  aria-label={aiKeyMissing ? "AI features unavailable; add a provider key in Settings" : "AI features unavailable; retry Keychain access"}
                   className="inline-flex"
+                  onClick={handleOpenSettings}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleOpenSettings();
+                    }
+                  }}
+                  role="button"
                   tabIndex={0}
                 />
               }
             >
               <Button
-                aria-label="AI features unavailable; add a provider key in Settings"
+                aria-label={aiKeyMissing ? "AI features unavailable; add a provider key in Settings" : "AI features unavailable; retry Keychain access"}
                 className="size-8 rounded-md"
                 disabled
                 size="icon"
-                title="Add a provider key in Settings to use AI"
+                title={aiKeyMissing ? "Add a provider key in Settings to use AI" : "Retry Keychain access to use AI"}
                 type="button"
                 variant="outline"
               >
                 <HugeiconsIcon icon={SparklesIcon} strokeWidth={1.8} />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="top">Add a provider key in Settings to use AI</TooltipContent>
+            <TooltipContent side="top">
+              {aiKeyMissing ? "Add a provider key in Settings to use AI" : "Retry Keychain access to use AI"}
+            </TooltipContent>
           </Tooltip>
         ) : (
           <Button

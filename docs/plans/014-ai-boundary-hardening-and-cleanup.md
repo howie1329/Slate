@@ -25,7 +25,7 @@ This plan follows:
 - AGENTS.md: API keys remain in Keychain and never enter SQLite, snapshots, renderer state, logs, or change events.
 - docs/product-brief.md: AI is optional and reviewable; Plan My Day alone uses planner context to make planning decisions.
 - docs/ai-actions-brief.md: AI Assist improves a capture; Plan My Day uses existing commitments and eligible Backlog tasks.
-- docs/plans/007-ai-sdk-node-sidecar.md: Rust owns credentials, process lifecycle, and safe response validation; the renderer never knows about the sidecar.
+- The native sidecar boundary owns credentials, process lifecycle, and safe response validation; the renderer never knows about the sidecar.
 - docs/plans/011-ai-assist-sidecar-vertical-slice.md: explicit dates remain authoritative and Assist results remain transient until accepted.
 - CODE-QUALITY.md: preserve strict typed boundaries, explicit domain ownership, and the smallest native surface that solves the problem.
 
@@ -59,7 +59,7 @@ Provider IDs and model IDs are repeated in the renderer dropdown, TypeScript typ
 
 ### Spike code remains in the product path
 
-The sidecar still exposes health and sdk-load; Tauri can launch both through SLATE_SIDECAR_PROBE on application startup. Those paths were useful for the packaging spike but are not part of a user-facing AI request.
+The sidecar previously exposed health and sdk-load, and Tauri could launch them through SLATE_SIDECAR_PROBE on application startup. Those paths were packaging-spike scaffolding and have now been removed from the product runtime.
 
 ## Implementation plan
 
@@ -184,8 +184,7 @@ Files to simplify:
 - sidecar/src/protocol.test.ts.
 - src-tauri/src/sidecar.rs.
 - src-tauri/src/lib.rs.
-- docs/plans/007-ai-sdk-node-sidecar.md.
-- docs/plans/010-ai-sidecar-packaging-spike.md.
+- the historical sidecar plans 007 and 010.
 
 Remove:
 
@@ -210,8 +209,7 @@ Files:
 
 - Update docs/ai-actions-brief.md.
 - Update docs/product-brief.md only if its Assist-context wording requires it.
-- Update docs/plans/007-ai-sdk-node-sidecar.md.
-- Update docs/plans/010-ai-sidecar-packaging-spike.md.
+- Remove the historical packaging-spike plans after the branch-only reference audit.
 - Update docs/plans/011-ai-assist-sidecar-vertical-slice.md.
 - Update README.md if its configuration or verification wording changes.
 
@@ -257,13 +255,13 @@ Manual packaged-app acceptance:
 
 ## Done criteria
 
-- [ ] AI Assist sends no task-list or planning-instruction context.
-- [ ] Plan My Day context and acceptance behavior are unchanged.
-- [ ] Missing credentials and inaccessible Keychain states are distinct, safe, and recoverable.
-- [ ] Provider SDK and native process timeouts are explicitly named, ordered, and tested.
-- [ ] The curated provider/model catalog has no renderer/native/sidecar drift.
-- [ ] Spike-only health, sdk-load, and environment startup-probe code is removed.
-- [ ] No other branch-added code is removed without proving it has no caller.
+- [x] AI Assist sends no task-list or planning-instruction context.
+- [x] Plan My Day context and acceptance behavior are unchanged.
+- [x] Missing credentials and inaccessible Keychain states are distinct, safe, and recoverable.
+- [x] Provider SDK and native process timeouts are explicitly named, ordered, and tested.
+- [x] The curated provider/model catalog has no renderer/native/sidecar drift.
+- [x] Spike-only health, sdk-load, and environment startup-probe code is removed.
+- [x] No other branch-added code is removed without proving it has no caller.
 - [ ] Automated checks, packaged build, and the manual acceptance matrix pass.
 
 ## Planned at

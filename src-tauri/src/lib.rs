@@ -24,7 +24,6 @@ pub fn run() {
     builder
         .setup(|app| {
             persistence::setup(app.handle())?;
-            sidecar::start_probe_if_requested(app.handle());
             Ok(window_controller::setup(app.handle())?)
         })
         .on_window_event(window_controller::handle_window_event)

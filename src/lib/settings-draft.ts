@@ -19,7 +19,7 @@ export type SettingsDraftView = {
   canSave: boolean;
   isDirty: boolean;
   keyDisplayValue: string;
-  keyStatus: "configured" | "required" | "replacement" | "remove-pending";
+  keyStatus: "configured" | "required" | "unavailable" | "replacement" | "remove-pending";
 };
 
 export function createSettingsDraft(snapshot: PlannerSnapshot): SettingsDraft {
@@ -113,10 +113,12 @@ export function settingsDraftView(draft: SettingsDraft): SettingsDraftView {
       draft.key.kind === "remove"
         ? "remove-pending"
         : draft.key.kind === "replace"
-          ? "replacement"
-          : configured
-            ? "configured"
-            : "required",
+            ? "replacement"
+            : configured
+              ? "configured"
+              : draft.availabilityByProvider[draft.values.aiProvider] === "unavailable"
+                ? "unavailable"
+                : "required",
   };
 }
 

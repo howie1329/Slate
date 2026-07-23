@@ -5,6 +5,7 @@ import type { AiAssistProposal, AiPlanProposal, LocalDate } from "@/lib/planner"
 
 export type AiErrorCategory =
   | "unavailable-key"
+  | "credentials-unavailable"
   | "timeout"
   | "network"
   | "provider-rejected"
@@ -210,6 +211,7 @@ function errorCategory(error: unknown): AiErrorCategory {
   const message = typeof error === "string" ? error : error instanceof Error ? error.message : "";
   if (
     message === "unavailable-key"
+    || message === "credentials-unavailable"
     || message === "timeout"
     || message === "network"
     || message === "provider-rejected"

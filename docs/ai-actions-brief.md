@@ -29,9 +29,11 @@ The AI button should treat whitespace-only input as empty. Its label, tooltip, a
 - Input present: `Use AI Assist`.
 - Input empty: `Plan My Day`.
 
-When the active provider has no saved key, the AI button is disabled and its tooltip directs the user to Settings. An `unavailable-key` response still opens the unavailable review state when a key is removed outside Slate after the last native snapshot. Neither state prevents regular Save from working.
+When the active provider has no saved key, the AI button is disabled and its tooltip directs the user to Settings. An inaccessible macOS Keychain is a separate unavailable state with retry guidance; it is never presented as a missing key. An `unavailable-key` response still opens the unavailable review state when a key is removed outside Slate after the last native snapshot. Neither state prevents regular Save from working.
 
 Settings uses one footer Save action for provider, global model, planning preferences, and the selected provider's Keychain credential. A saved credential appears only as a fixed non-secret mask. OpenRouter and AI Gateway keys are stored independently; secrets never enter planner snapshots, SQLite, query-cache data, logs, or change events.
+
+Provider and model choices come from Slate's checked-in curated catalog. There is no model discovery or custom model field. Provider SDK calls are bounded at 12 seconds; the native sidecar request deadline is 16 seconds so process startup and cleanup have room to complete.
 
 ## AI Assist
 
@@ -44,8 +46,10 @@ AI Assist turns rough capture text into a cleaner, more actionable task without 
 AI Assist receives:
 
 - The text currently in the composer.
-- The active Today commitments, when useful for local context.
+- The local Today date, so relative dates can be interpreted cautiously.
 - The current scheduled date, if one already exists.
+
+Assist is capture-first. It does not receive Today tasks, Backlog tasks, planning instructions, or other planner context. Plan My Day is the only AI action that receives planner context.
 
 ### Suggested result
 

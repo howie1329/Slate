@@ -96,6 +96,21 @@ describe("Settings draft", () => {
     });
   });
 
+  it("keeps an inaccessible Keychain separate from a missing key", () => {
+    const draft = createSettingsDraft({
+      ...snapshot,
+      aiAvailability: "unavailable",
+      aiAvailabilityByProvider: {
+        ...snapshot.aiAvailabilityByProvider,
+        openrouter: "unavailable",
+      },
+    });
+
+    assert.equal(settingsDraftView(draft).keyStatus, "unavailable");
+    assert.equal(settingsDraftView(draft).keyDisplayValue, "");
+    assert.equal(settingsDraftView(draft).isDirty, false);
+  });
+
   it("tracks ordinary settings changes and resets from a successful snapshot", () => {
     const changed = changeSettings(createSettingsDraft(snapshot), {
       aiModel: "google/gemini-2.5-flash",

@@ -1,20 +1,18 @@
 import { runAssist, normalizeAssistError } from "./assist.js";
 import { runPlan } from "./plan.js";
 import { normalizeProviderError } from "./provider.js";
-import { runSdkLoadProbe } from "./sdk-load.js";
 import {
   assistResponse,
   errorResponse,
   MAX_REQUEST_BYTES,
   parseRequest,
   planResponse,
-  readyResponse,
-  type SpikeResponse,
+  type SidecarResponse,
 } from "./protocol.js";
 
 const MAX_STDOUT_BYTES = 64 * 1024;
 
-function writeResponse(response: SpikeResponse) {
+function writeResponse(response: SidecarResponse) {
   const serialized = `${JSON.stringify(response)}\n`;
   if (Buffer.byteLength(serialized, "utf8") > MAX_STDOUT_BYTES) {
     process.exitCode = 1;
@@ -74,15 +72,6 @@ async function main() {
     return;
   }
 
-  try {
-    if (request.operation === "sdk-load") {
-      runSdkLoadProbe();
-    }
-
-    writeResponse(readyResponse(request.operation));
-  } catch {
-    writeResponse(errorResponse("internal"));
-  }
 }
 
 void main();

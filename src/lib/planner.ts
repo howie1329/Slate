@@ -1,8 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { AiModel, AiProvider } from "./ai-catalog";
 
 export type LocalDate = `${number}-${number}-${number}`;
 export type Theme = "dark" | "light";
-export type AiProvider = "vercel-gateway" | "openrouter";
+export type { AiModel, AiProvider } from "./ai-catalog";
+export type AiAvailability = "configured" | "unconfigured" | "unavailable";
 
 export type Task = {
   id: string;
@@ -17,7 +19,7 @@ export type Settings = {
   dailyCapacityMinutes: number;
   planningInstruction: string;
   aiProvider: AiProvider;
-  aiModel: string;
+  aiModel: AiModel;
   theme: Theme;
 };
 
@@ -25,8 +27,8 @@ export type PlannerSnapshot = {
   tasks: Task[];
   orderByScope: Record<string, string[]>;
   settings: Settings;
-  aiAvailability: "configured" | "unconfigured";
-  aiAvailabilityByProvider: Record<AiProvider, "configured" | "unconfigured">;
+  aiAvailability: AiAvailability;
+  aiAvailabilityByProvider: Record<AiProvider, AiAvailability>;
   today: LocalDate;
 };
 

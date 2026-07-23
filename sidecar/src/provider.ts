@@ -1,15 +1,26 @@
 import { createGateway } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import catalog from "../../shared/ai-catalog.json" with { type: "json" };
 import type { AssistRequest, PlanRequest, SidecarErrorCategory } from "./protocol.ts";
 
 type ProviderRequest = AssistRequest | PlanRequest;
 
 export function createModel(request: ProviderRequest) {
-  if (request.provider === "openrouter") {
-    return createOpenRouter({ apiKey: request.apiKey })(request.model);
+  if (!catalog.providers.some((provider) => provider.id === request.provider)) {
+    throw new Error("Unsupported AI provider.");
+  }
+  if (!catalog.models.some((model) => model.id === request.model)) {
+    throw new Error("Unsupported AI model.");
   }
 
-  return createGateway({ apiKey: request.apiKey })(request.model);
+  switch (request.provider) {
+    case "openrouter":
+      return createOpenRouter({ apiKey: request.apiKey })(request.model);
+    case "vercel-gateway":
+      return createGateway({ apiKey: request.apiKey })(request.model);
+    default:
+      throw new Error("Unsupported AI provider.");
+  }
 }
 
 export function normalizeProviderError(error: unknown): SidecarErrorCategory {
