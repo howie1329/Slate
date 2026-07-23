@@ -11,6 +11,10 @@ This plan is an alternative transport plan to the native HTTP adapter in [006-ai
 For the detailed Plan My Day request and acceptance contract, [012-plan-my-day-sidecar-vertical-slice.md](012-plan-my-day-sidecar-vertical-slice.md) is now authoritative.
 For the implemented Assist request and renderer flow, [011-ai-assist-sidecar-vertical-slice.md](011-ai-assist-sidecar-vertical-slice.md) is authoritative.
 
+## Status
+
+The sidecar transport and provider boundary are implemented for both AI Assist and Plan My Day. Automated sidecar tests, TypeScript checks, the JavaScript bundle, and the architecture-matched sidecar binary have passed. Full packaged-app and live-provider acceptance remain release gates.
+
 ## Decision summary
 
 Use a short-lived sidecar process per AI request. Communicate over newline-delimited JSON through stdin/stdout. Do not create a localhost HTTP server, pass credentials through command-line arguments, or expose the Tauri shell API to the renderer.

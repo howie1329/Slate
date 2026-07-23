@@ -1,6 +1,6 @@
 # Implementation plan: AI Assist, Plan My Day, and review tray
 
-> Status: Product behavior reference only. The native HTTP transport in this historical plan is superseded by the packaged Node sidecar in plan 007. AI Assist is implemented in plan 011; Plan My Day is planned in plan 012.
+> Status: Product behavior reference only. The native HTTP transport in this historical plan is superseded by the packaged Node sidecar in plan 007. AI Assist is implemented in plan 011 and Plan My Day is implemented in plan 012; final packaged/manual acceptance remains.
 
 ## Objective
 
@@ -16,7 +16,7 @@ Both results remain transient until the user accepts them in a review tray above
 - **Priority:** P1
 - **Effort:** Large
 - **Risk:** Medium — credentials, provider responses, and stale plan acceptance need deliberate handling.
-- **Prerequisites:** `004-today-capacity-state` and `005-persistence-recovery-screen` are implemented. The existing `apply_planner_plan` command provides the atomic write path that this feature will harden and reuse.
+- **Prerequisites:** `004-today-capacity-state` and `005-persistence-recovery-screen` are implemented. Plan My Day uses the dedicated native acceptance command defined in plan 012 rather than treating the older generic `apply_planner_plan` command as an AI boundary.
 
 ## Current architecture and constraints
 

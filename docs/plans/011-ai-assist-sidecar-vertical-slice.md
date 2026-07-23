@@ -6,7 +6,7 @@ Ship the first production AI feature end to end: turn non-empty footer capture t
 
 ## Status
 
-Completed on the current branch. Plan My Day remains a separate follow-up slice documented in [012-plan-my-day-sidecar-vertical-slice.md](012-plan-my-day-sidecar-vertical-slice.md).
+Completed on the current branch. Plan My Day was intentionally separate and is now implemented in [012-plan-my-day-sidecar-vertical-slice.md](012-plan-my-day-sidecar-vertical-slice.md).
 
 This slice validates the real product path before Plan My Day:
 
@@ -16,7 +16,7 @@ Footer input → native Tauri command → Keychain and planner context
 → editable review tray → existing create-task command
 ```
 
-Plan My Day remains explicitly unavailable until its own follow-up slice is complete.
+This document covers the Assist-only incremental slice. Current empty-composer behavior is owned by the completed Plan My Day slice in 012.
 
 ## Product contract
 
@@ -27,7 +27,7 @@ Plan My Day remains explicitly unavailable until its own follow-up slice is comp
 - A Backlog capture without a date may receive a cautious valid local-date suggestion; otherwise the date remains `null`.
 - Nothing is written before the user accepts the reviewed result.
 - Manual Save remains available without an AI key or network access.
-- AI Assist is the only production AI action in this slice. Empty composer input shows Plan My Day as unavailable and does not start a request.
+- AI Assist is the only production AI action in this slice. Empty composer behavior is outside this slice and is implemented by Plan My Day in 012.
 
 ## Native and sidecar boundary
 
@@ -164,7 +164,7 @@ After implementation and acceptance:
 
 - Update the README to mark AI Assist, review-before-commit, and Keychain-backed provider configuration as implemented.
 - Update the AI Actions Brief status/implementation notes.
-- Keep Plan My Day documented as designed but not shipped until its own vertical slice passes.
+- Keep Plan My Day’s current implementation and remaining manual acceptance documented in 012.
 - Preserve the product brief as the behavior authority.
 - Correct the sidecar plan's provider reference to match the verified dependency set: Gateway support is imported from `ai` via `createGateway` for the pinned sidecar version; do not add the stale `@ai-sdk/gateway` package unless a future SDK upgrade requires it.
 
@@ -200,7 +200,7 @@ Manual acceptance:
 5. Confirm Dismiss creates no task and Redo uses the original capture with fresh context.
 6. Confirm late results cannot replace a newer request or a dismissed review.
 7. Confirm missing key, timeout, network, provider rejection, malformed output, and no-proposal states are concise and retryable where appropriate.
-8. Confirm empty input reports Plan My Day as unavailable without starting a sidecar request.
+8. Confirm empty input is handled by the separate Plan My Day slice and does not start an Assist request.
 9. Confirm manual Save works without a key or network.
 10. Verify Escape, outside click, route changes, popover hide/reopen, keyboard focus, themes, and the 360 × 520 popover.
 11. Verify both configured providers in the packaged macOS application.
@@ -225,7 +225,7 @@ npm run tauri -- build
 - [x] Keys remain native and never enter renderer state, storage, logs, or change events.
 - [ ] Both configured providers work through the packaged sidecar; live provider verification remains a manual acceptance step requiring each key.
 - [x] Loading, unavailable, error, retry, result, and dismissal states work in the compact window.
-- [x] Empty composer clearly reports Plan My Day as unavailable during this incremental slice.
+- [x] Empty composer is outside the Assist slice and is routed to the separate Plan My Day slice.
 - [x] README and AI brief accurately describe the shipped Assist state.
 - [x] The stale Gateway dependency reference is corrected.
 - [ ] Native, sidecar, and packaged acceptance checks pass; automated checks pass, while live provider and macOS UI acceptance remain manual.

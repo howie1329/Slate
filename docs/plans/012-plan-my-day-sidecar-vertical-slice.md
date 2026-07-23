@@ -267,7 +267,7 @@ Files:
 - src/components/task-composer-footer.tsx
 - src/routes/__root.tsx
 
-Replace the current Plan My Day unavailable-only state with loading, result, empty, error, retry, and acceptance states. Preserve all AI Assist behavior and route/focus dismissal rules.
+The former Plan My Day unavailable-only state is now replaced with loading, result, empty, error, retry, stale, and acceptance states. Preserve all AI Assist behavior and route/focus dismissal rules.
 
 ### 5. Document and manually accept the slice
 
@@ -278,7 +278,7 @@ Files:
 - docs/ai-actions-brief.md
 - docs/roadmap.md
 
-Update status only after implementation and manual acceptance. Keep Plan My Day’s non-goals visible: no automatic commits, no future-task rescheduling, no freeform plan editor, no chat, and no backlog mutation outside accepted Today assignments.
+Keep Plan My Day’s non-goals visible: no automatic commits, no future-task rescheduling, no freeform plan editor, no chat, and no backlog mutation outside accepted Today assignments. Final shipment status still depends on packaged/manual acceptance.
 
 ## Test plan
 
@@ -329,15 +329,17 @@ Manual acceptance:
 
 ## Done criteria
 
-- [ ] Empty composer invokes Plan My Day through the native sidecar boundary.
-- [ ] Candidate context is deterministic, bounded, and excludes ineligible tasks.
-- [ ] Plan My Day never changes SQLite during generation, retry, redo, empty-state display, or dismissal.
+The implementation and automated native/sidecar checks are complete. Unchecked items below are the remaining hands-on desktop, live-provider, and packaged-release acceptance gates.
+
+- [x] Empty composer invokes Plan My Day through the native sidecar boundary.
+- [x] Candidate context is deterministic, bounded, and excludes ineligible tasks.
+- [x] Plan My Day never changes SQLite during generation, retry, redo, empty-state display, or dismissal.
 - [ ] The result is a reviewable additive plan with task summaries, totals, and capacity impact.
-- [ ] Existing Today commitments remain unchanged.
-- [ ] Accepted Backlog candidates receive the current local Today date and Today scope only after user approval.
-- [ ] Native-derived Today positions are append-only and never supplied as renderer authority.
-- [ ] Acceptance is native-authoritative, atomic, append-only, and stale-safe.
-- [ ] Invalid provider output cannot create partial writes.
+- [x] Existing Today commitments remain unchanged.
+- [x] Accepted Backlog candidates receive the current local Today date and Today scope only after user approval.
+- [x] Native-derived Today positions are append-only and never supplied as renderer authority.
+- [x] Acceptance is native-authoritative, atomic, append-only, and stale-safe.
+- [x] Invalid provider output cannot create partial writes.
 - [ ] Loading, empty, unavailable, error, retry, result, and dismiss states work in the compact window.
 - [ ] Manual Save and ordinary task management work without AI.
 - [ ] Both configured providers work through the packaged sidecar.

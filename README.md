@@ -12,10 +12,11 @@ The repository contains a working local planning foundation:
 - Native task creation, editing, completion, deletion, and date scheduling.
 - Today capacity and over-capacity state.
 - macOS Keychain storage for provider API keys.
+- Settings-based provider and fixed model selection for AI features.
 - Shared local state between the popover and full window through native change events and TanStack Query invalidation.
 - Light and dark themes and compact task-detail editing above the persistent footer.
 
-The current product is still pre-1.0. AI Assist is implemented as a reviewable vertical slice: provider requests cross the native Keychain boundary through the packaged Node sidecar, and accepted proposals use the existing task-creation path. Plan My Day remains visibly unavailable until its own atomic planning slice is shipped.
+The current product is still pre-1.0. AI Assist and Plan My Day are implemented as reviewable vertical slices: provider requests cross the native Keychain boundary through the packaged Node sidecar, Assist creates tasks only after review, and Plan My Day moves selected backlog tasks to Today only after atomic native acceptance. Final packaged/manual acceptance remains before broad 1.0 shipment.
 
 The product direction and staged expansion plan live in [the product brief](docs/product-brief.md) and [the roadmap](docs/roadmap.md).
 
@@ -25,8 +26,8 @@ Slate is designed around a compact menu-bar popover that can perform the essenti
 
 - **Today:** committed tasks, remaining capacity, over-capacity state, and completed work.
 - **Backlog:** captured work grouped by estimate and date state.
-- **Settings:** daily capacity, AI provider configuration, API key state, and planning instruction.
-- **Persistent footer:** quick capture, Save, AI action, and Settings access.
+- **Settings:** daily capacity, AI provider/model configuration, API key state, and planning instruction.
+- **Persistent footer:** quick capture, Save, context-sensitive AI Assist or Plan My Day, and Settings access.
 
 The full window provides more room for the same workflow. It is not an unlock gate for essential planning behavior.
 
@@ -43,6 +44,8 @@ npm run dev:desktop
 
 ```bash
 npm run build
+npm --prefix sidecar test
+npm run build:sidecar
 npm run tauri -- build
 ```
 
