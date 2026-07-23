@@ -24,6 +24,7 @@ import {
   updateSettings,
   updateTask,
   type PlannerPlanAssignment,
+  type PlannerSnapshot,
   type AiAssistInput,
   type AiPlanAcceptanceInput,
   type ReorderTasksInput,
@@ -130,7 +131,24 @@ export function useReorderTasks() {
 }
 
 export function useUpdateSettings() {
-  return usePlannerMutation<Settings>(updateSettings);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateSettings,
+    onSuccess: (_, settings) => {
+      queryClient.setQueryData<PlannerSnapshot>(plannerStateQueryKey, (snapshot) => {
+        if (!snapshot) {
+          return snapshot;
+        }
+
+        return {
+          ...snapshot,
+          settings,
+          aiAvailability: snapshot.aiAvailabilityByProvider[settings.aiProvider],
+        };
+      });
+      return queryClient.refetchQueries({ queryKey: plannerStateQueryKey, type: "active" });
+    },
+  });
 }
 
 export function useApplyPlannerPlan() {
@@ -142,7 +160,23 @@ export function useSetApiKey() {
   return useMutation({
     mutationFn: ({ provider, apiKey }: { provider: Settings["aiProvider"]; apiKey: string }) =>
       setApiKey(provider, apiKey),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: plannerStateQueryKey }),
+    onSuccess: (_, { provider }) => {
+      queryClient.setQueryData<PlannerSnapshot>(plannerStateQueryKey, (snapshot) => {
+        if (!snapshot) {
+          return snapshot;
+        }
+
+        return {
+          ...snapshot,
+          aiAvailability: snapshot.settings.aiProvider === provider ? "configured" : snapshot.aiAvailability,
+          aiAvailabilityByProvider: {
+            ...snapshot.aiAvailabilityByProvider,
+            [provider]: "configured",
+          },
+        };
+      });
+      return queryClient.refetchQueries({ queryKey: plannerStateQueryKey, type: "active" });
+    },
   });
 }
 
@@ -150,7 +184,23 @@ export function useDeleteApiKey() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (provider: Settings["aiProvider"]) => deleteApiKey(provider),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: plannerStateQueryKey }),
+    onSuccess: (_, provider) => {
+      queryClient.setQueryData<PlannerSnapshot>(plannerStateQueryKey, (snapshot) => {
+        if (!snapshot) {
+          return snapshot;
+        }
+
+        return {
+          ...snapshot,
+          aiAvailability: snapshot.settings.aiProvider === provider ? "unconfigured" : snapshot.aiAvailability,
+          aiAvailabilityByProvider: {
+            ...snapshot.aiAvailabilityByProvider,
+            [provider]: "unconfigured",
+          },
+        };
+      });
+      return queryClient.refetchQueries({ queryKey: plannerStateQueryKey, type: "active" });
+    },
   });
 }
 

@@ -88,6 +88,7 @@ pub struct PlannerSnapshot {
     order_by_scope: HashMap<String, Vec<String>>,
     settings: Settings,
     ai_availability: String,
+    ai_availability_by_provider: HashMap<String, String>,
     today: String,
 }
 
@@ -156,17 +157,28 @@ impl Repository {
         let settings = self.settings()?;
         let tasks = self.tasks()?;
         let order_by_scope = self.orders()?;
-        let ai_availability = if credentials::has_api_key(&settings.ai_provider) {
-            "configured"
-        } else {
-            "unconfigured"
-        };
+        let ai_availability_by_provider = ["vercel-gateway", "openrouter"]
+            .into_iter()
+            .map(|provider| {
+                let availability = if credentials::has_api_key(provider) {
+                    "configured"
+                } else {
+                    "unconfigured"
+                };
+                (provider.to_string(), availability.to_string())
+            })
+            .collect::<HashMap<_, _>>();
+        let ai_availability = ai_availability_by_provider
+            .get(&settings.ai_provider)
+            .cloned()
+            .unwrap_or_else(|| "unconfigured".into());
 
         Ok(PlannerSnapshot {
             tasks,
             order_by_scope,
             settings,
-            ai_availability: ai_availability.into(),
+            ai_availability,
+            ai_availability_by_provider,
             today: local_today(),
         })
     }
@@ -1149,7 +1161,7 @@ mod tests {
         fs::create_dir_all(&directory).expect("create temporary test directory");
         let path = directory.join(DATABASE_FILE_NAME);
 
-        let repository = Repository::open(path.clone()).expect("open database");
+        let mut repository = Repository::open(path.clone()).expect("open database");
         assert_eq!(
             repository
                 .settings()
@@ -1157,10 +1169,22 @@ mod tests {
                 .daily_capacity_minutes,
             240
         );
+        repository
+            .update_settings(UpdateSettingsInput {
+                daily_capacity_minutes: 240,
+                planning_instruction: "Protect focus time.".into(),
+                ai_provider: "openrouter".into(),
+                ai_model: "anthropic/claude-sonnet-4.5".into(),
+                theme: "light".into(),
+            })
+            .expect("update settings");
         drop(repository);
 
         let reopened = Repository::open(path).expect("reopen database");
-        assert_eq!(reopened.settings().expect("settings").theme, "light");
+        let settings = reopened.settings().expect("settings");
+        assert_eq!(settings.ai_provider, "openrouter");
+        assert_eq!(settings.ai_model, "anthropic/claude-sonnet-4.5");
+        assert_eq!(settings.planning_instruction, "Protect focus time.");
         drop(reopened);
         fs::remove_dir_all(directory).expect("remove temporary test directory");
     }

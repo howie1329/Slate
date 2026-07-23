@@ -34,19 +34,23 @@ function SettingsPage() {
   const setApiKey = useSetApiKey();
   const { setRouteTransition } = useRouteMotion();
   const [draft, setDraft] = useState<Settings | null>(null);
+  const [draftDirty, setDraftDirty] = useState(false);
   const [apiKey, setApiKeyValue] = useState("");
 
   useEffect(() => {
-    if (planner.data) {
+    if (planner.data && !draftDirty) {
       setDraft(planner.data.settings);
     }
-  }, [planner.data]);
+  }, [draftDirty, planner.data]);
 
   if (!draft || !planner.data) {
     return null;
   }
 
+  const keyConfigured = planner.data.aiAvailabilityByProvider[draft.aiProvider] === "configured";
+
   function updateDraft(patch: Partial<Settings>) {
+    setDraftDirty(true);
     setDraft((current) => (current ? { ...current, ...patch } : current));
   }
 
@@ -56,7 +60,10 @@ function SettingsPage() {
     }
 
     updateSettings.mutate(draft, {
-      onSuccess: () => toast.success("Settings saved."),
+      onSuccess: () => {
+        setDraftDirty(false);
+        toast.success("Settings saved.");
+      },
       onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save settings."),
     });
   }
@@ -66,16 +73,40 @@ function SettingsPage() {
       return;
     }
 
-    setApiKey.mutate(
-      { provider: draft.aiProvider, apiKey: apiKey.trim() },
-      {
-        onSuccess: () => {
-          setApiKeyValue("");
-          toast.success("API key saved in macOS Keychain.");
+    const saveKey = () => {
+      setApiKey.mutate(
+        { provider: draft.aiProvider, apiKey: apiKey.trim() },
+        {
+          onSuccess: () => {
+            setApiKeyValue("");
+            toast.success("AI connection saved.");
+          },
+          onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save API key."),
         },
-        onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save API key."),
-      },
-    );
+      );
+    };
+
+    const persistedSettings = planner.data?.settings;
+    if (!persistedSettings) {
+      return;
+    }
+    const connectionChanged = draft.aiProvider !== persistedSettings.aiProvider || draft.aiModel !== persistedSettings.aiModel;
+    if (connectionChanged) {
+      updateSettings.mutate(
+        {
+          ...persistedSettings,
+          aiProvider: draft.aiProvider,
+          aiModel: draft.aiModel,
+        },
+        {
+          onSuccess: saveKey,
+          onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save AI connection settings."),
+        },
+      );
+      return;
+    }
+
+    saveKey();
   }
 
   function handleBackToToday(event: MouseEvent<HTMLAnchorElement>) {
@@ -155,16 +186,17 @@ function SettingsPage() {
               </Select>
             </label>
             <label
-              className={`flex items-center justify-between gap-4 text-menu font-medium ${planner.data.aiAvailability === "unconfigured" ? "border-b border-destructive/60 pb-1" : ""}`}
+              className={`flex items-center justify-between gap-4 text-menu font-medium ${keyConfigured ? "" : "border-b border-destructive/60 pb-1"}`}
               htmlFor="api-key"
             >
-              <span className={planner.data.aiAvailability === "unconfigured" ? "text-destructive" : undefined}>API key</span>
+              <span className={keyConfigured ? undefined : "text-destructive"}>API key</span>
               <span className="flex items-center gap-1.5">
                 <Input
-                  className="h-8 w-36 tracking-[0.08em]"
+                  aria-label={keyConfigured ? "API key configured. Enter a new key to replace it." : "API key"}
+                  className="h-8 w-36 tracking-[0.08em] placeholder:text-foreground/55"
                   id="api-key"
                   onChange={(event) => setApiKeyValue(event.target.value)}
-                  placeholder="Paste key"
+                  placeholder={keyConfigured ? "••••••••••••" : "Paste key"}
                   type="password"
                   value={apiKey}
                 />
@@ -187,7 +219,7 @@ function SettingsPage() {
                 </Button>
               </span>
             </label>
-            <ConfiguredState configured={planner.data.aiAvailability === "configured"} />
+            <ConfiguredState configured={keyConfigured} />
           </SettingsGroup>
 
           <SettingsGroup description="Guides how Slate plans your day." title="Planning instruction">

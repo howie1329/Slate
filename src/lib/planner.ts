@@ -26,6 +26,7 @@ export type PlannerSnapshot = {
   orderByScope: Record<string, string[]>;
   settings: Settings;
   aiAvailability: "configured" | "unconfigured";
+  aiAvailabilityByProvider: Record<AiProvider, "configured" | "unconfigured">;
   today: LocalDate;
 };
 
