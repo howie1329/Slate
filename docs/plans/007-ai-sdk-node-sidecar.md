@@ -14,10 +14,11 @@ Use a short-lived sidecar process per AI request. Communicate over newline-delim
 
 The sidecar uses:
 
-- `ai` for structured generation.
+- `ai` for structured generation and Vercel AI Gateway support through `createGateway`.
 - `zod` for sidecar-side output schemas.
-- `@ai-sdk/gateway` for Vercel AI Gateway.
 - `@openrouter/ai-sdk-provider` for OpenRouter.
+
+The pinned packaging-spike dependency set does not use a separate `@ai-sdk/gateway` package. Revisit that choice only if a future AI SDK upgrade requires it.
 
 The sidecar is packaged as a self-contained executable and bundled through Tauri's `externalBin` configuration. Tauri's Node sidecar guidance uses a packaged Node binary and target-specific sidecar files; see the [Tauri Node sidecar guide](https://v2.tauri.app/learn/sidecar-nodejs/) and [external binary guide](https://v2.tauri.app/develop/sidecar/).
 
@@ -166,7 +167,6 @@ Add:
 
 - `ai`
 - `zod`
-- `@ai-sdk/gateway`
 - `@openrouter/ai-sdk-provider`
 - A TypeScript bundler suitable for producing one deterministic entry file.
 - `@yao-pkg/pkg` or the selected equivalent for creating the self-contained executable.
