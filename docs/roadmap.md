@@ -2,7 +2,7 @@
 
 > **Status:** Directional roadmap
 >
-> **Updated:** 2026-07-21
+> **Updated:** 2026-07-23
 >
 > This document describes the order in which Slate should earn new capabilities. It is not a fixed release schedule. Each stage should be validated against the product thesis before the next stage expands the model.
 
@@ -57,8 +57,8 @@ Slate currently has the foundation for the first usable daily planning loop:
 
 The immediate product is not finished yet:
 
-- AI Assist and Plan My Day are designed but not shipped; the footer AI control is currently disabled.
-- The review tray and safe plan-application flow still need implementation and testing.
+- AI Assist and the atomic Plan My Day review flow are implemented as reviewable vertical slices; final packaged/manual acceptance remains.
+- Native, sidecar, and renderer tests cover the Plan My Day contract, candidate bounds, and stale-safe acceptance.
 - The daily loop needs final empty, error, completed, and overloaded states.
 - Compact-window behavior, reduced motion, documentation, and packaged-build quality need a final pass.
 - The distinction between the current Backlog view and a future richer Log view should remain deliberate rather than being expanded prematurely.
@@ -77,6 +77,7 @@ Make the capture-to-commit-to-completion loop reliable and demonstrable without 
 - Make Today and Backlog understandable when empty, active, completed, overdue, and over capacity.
 - Keep unsized tasks out of Today and AI-generated plans while allowing them to remain in Backlog.
 - Preserve explicit Today commitments when planning again.
+- Treat existing Today commitments as fixed planning context; only accepted eligible Backlog tasks receive today’s date and enter Today.
 - Make Plan My Day additive and capacity-aware; it may fill available capacity but never removes or reorders existing commitments.
 - Add AI Assist for rough capture: title cleanup, positive whole-minute estimate, and an optional date only when the user has not already supplied one.
 - Put both AI actions in a footer-adjacent review tray. Nothing is persisted until the user accepts it.

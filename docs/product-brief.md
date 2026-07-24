@@ -29,19 +29,18 @@ The current application is a pre-1.0 local planning foundation. It already provi
 
 The following are deliberately not presented as shipped yet:
 
-- AI Assist and Plan My Day provider requests.
-- The review tray for accepting or dismissing AI proposals.
+- Final packaged/manual acceptance of the Plan My Day provider and atomic review flow.
 - A finished drag-and-drop ordering experience.
 - Global quick capture, end-of-day review, Spaces, integrations, sync, mobile, or MCP.
 
-The current interface may expose preparation for these capabilities, but the manual workflow remains the product’s source of truth until each capability is implemented and validated.
+AI Assist and the Plan My Day vertical slices are implemented on the current branch as reviewable Keychain-backed sidecar flows. Final packaged/manual acceptance remains before calling Plan My Day broadly shipped. The manual workflow remains the product’s source of truth.
 
 ## Product surfaces
 
 - **Today** is the default workspace. It shows dated tasks for today, active committed minutes, remaining capacity, over-capacity state, and completed work at the bottom.
 - **Backlog** is the current task record. It groups captured work into Needs estimate, Unscheduled, Overdue / needs reschedule, Upcoming, and Completed.
 - **Settings** contains daily capacity, AI provider/model/key configuration, and the persistent planning instruction.
-- **Persistent footer** is always available in the workspace. It supports quick manual capture, Save, the AI action placeholder, and Settings access. The AI action becomes useful only after the 1.0 provider and review flow is shipped.
+- **Persistent footer** is always available in the workspace. It supports quick manual capture, Save, the context-sensitive AI action, and Settings access. Text invokes AI Assist; empty input invokes the Plan My Day review flow.
 - **Menu-bar popover** is the primary surface. It dismisses when focus leaves it and must support the essential daily loop within the compact window.
 - **Full window** provides more room for the same workflow. It may later support configuration, comparison, history, and review surfaces, but it must not be required for ordinary daily planning.
 
@@ -71,6 +70,7 @@ The 1.0 loop is:
 - Active Today tasks count against the daily capacity. Completed tasks remain visible as history but do not count toward active remaining capacity.
 - Slate may allow a user to keep an over-capacity Today plan. The meter and affected task make the overage visible, and recovery actions help the user return work to Backlog or revise the plan.
 - Plan My Day considers only eligible estimated Backlog tasks and the current remaining capacity. It preserves existing uncompleted Today commitments, proposes an additive plan, and never silently removes or reorders existing commitments.
+- Existing Today tasks are planning constraints, not move candidates. Accepted Backlog selections receive the current local Today date and Today scope only after user approval.
 - Every AI result is transient until the user accepts it. Dismiss and Redo do not write task or plan changes.
 - Accepted Plan My Day assignments are validated again at the native SQLite boundary and applied atomically. A stale or invalid proposal must make no partial writes.
 - Manual capture, editing, scheduling, completion, deletion, and persistence work without an AI provider, API key, or network connection.

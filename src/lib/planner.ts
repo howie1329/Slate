@@ -1,8 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { AiModel, AiProvider } from "./ai-catalog";
 
 export type LocalDate = `${number}-${number}-${number}`;
 export type Theme = "dark" | "light";
-export type AiProvider = "vercel-gateway" | "openrouter";
+export type { AiModel, AiProvider } from "./ai-catalog";
+export type AiAvailability = "configured" | "unconfigured" | "unavailable";
 
 export type Task = {
   id: string;
@@ -17,7 +19,7 @@ export type Settings = {
   dailyCapacityMinutes: number;
   planningInstruction: string;
   aiProvider: AiProvider;
-  aiModel: string;
+  aiModel: AiModel;
   theme: Theme;
 };
 
@@ -25,8 +27,57 @@ export type PlannerSnapshot = {
   tasks: Task[];
   orderByScope: Record<string, string[]>;
   settings: Settings;
-  aiAvailability: "configured" | "unconfigured";
+  aiAvailability: AiAvailability;
+  aiAvailabilityByProvider: Record<AiProvider, AiAvailability>;
   today: LocalDate;
+};
+
+export type AiAssistInput = {
+  capture: string;
+  scheduledDate: LocalDate | null;
+};
+
+export type AiAssistProposal = {
+  title: string;
+  estimateMinutes: number;
+  scheduledDate: LocalDate | null;
+};
+
+export type ApiKeyChange =
+  | { kind: "unchanged" }
+  | { kind: "replace"; apiKey: string }
+  | { kind: "remove" };
+
+export type SaveSettingsInput = {
+  settings: Settings;
+  apiKeyChange: ApiKeyChange;
+};
+
+export type AiPlanItem = {
+  id: string;
+  title: string;
+  estimateMinutes: number;
+  sourceScheduledDate: LocalDate | null;
+  scheduledDate: LocalDate;
+  position: number;
+};
+
+export type AiPlanProposal = {
+  items: AiPlanItem[];
+  totalMinutes: number;
+  remainingMinutes: number;
+  rationale: string | null;
+  emptyReason: "no-capacity" | "no-eligible-tasks" | "no-fitting-plan" | null;
+  todayTaskIds: string[];
+  expectedDailyCapacityMinutes: number;
+  expectedRemainingMinutes: number;
+};
+
+export type AiPlanAcceptanceInput = {
+  items: Array<Pick<AiPlanItem, "id" | "title" | "estimateMinutes" | "sourceScheduledDate">>;
+  todayTaskIds: string[];
+  expectedDailyCapacityMinutes: number;
+  expectedRemainingMinutes: number;
 };
 
 export type TaskInput = {
@@ -90,18 +141,22 @@ export function reorderTasks(input: ReorderTasksInput) {
   return plannerInvoke<void>("reorder_tasks", { input });
 }
 
-export function updateSettings(input: Settings) {
-  return plannerInvoke<void>("update_settings", { input });
+export function saveSettings(input: SaveSettingsInput) {
+  return plannerInvoke<PlannerSnapshot>("save_settings", { input });
 }
 
 export function applyPlannerPlan(assignments: PlannerPlanAssignment[]) {
   return plannerInvoke<void>("apply_planner_plan", { input: { assignments } });
 }
 
-export function setApiKey(provider: AiProvider, apiKey: string) {
-  return plannerInvoke<void>("set_api_key", { input: { provider, apiKey } });
+export function generateAiAssist(input: AiAssistInput) {
+  return plannerInvoke<AiAssistProposal>("generate_ai_assist", { input });
 }
 
-export function deleteApiKey(provider: AiProvider) {
-  return plannerInvoke<void>("delete_api_key", { input: { provider } });
+export function generateDailyPlan() {
+  return plannerInvoke<AiPlanProposal>("generate_daily_plan");
+}
+
+export function acceptDailyPlan(input: AiPlanAcceptanceInput) {
+  return plannerInvoke<void>("accept_daily_plan", { input });
 }

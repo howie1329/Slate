@@ -1,0 +1,24 @@
+{
+  "name": "@slate/ai-sidecar",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npm run clean && npm run build:js && npm run package:binary",
+    "build:js": "esbuild src/main.ts --bundle --platform=node --format=cjs --outfile=dist/slate-ai-sidecar.cjs",
+    "clean": "node scripts/clean.mjs",
+    "ensure": "node scripts/ensure-binary.mjs",
+    "package:binary": "node scripts/build-binary.mjs",
+    "test": "node --experimental-strip-types --test src/**/*.test.ts"
+  },
+  "dependencies": {
+    "@openrouter/ai-sdk-provider": "3.0.0",
+    "ai": "7.0.35",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "6.21.0",
+    "@types/node": "25.0.3",
+    "esbuild": "0.28.1",
+    "typescript": "5.8.3"
+  }
+}

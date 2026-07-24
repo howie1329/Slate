@@ -17,7 +17,9 @@ use uuid::Uuid;
 use crate::credentials;
 
 const DATABASE_FILE_NAME: &str = "slate.sqlite";
-const MIGRATION_1: &str = r#"
+const MAX_AI_CONTEXT_TASKS: usize = 50;
+const MAX_AI_CONTEXT_TITLE_CHARS: usize = 240;
+const MIGRATION_1_PREFIX: &str = r#"
 CREATE TABLE tasks (
   id TEXT PRIMARY KEY NOT NULL,
   title TEXT NOT NULL CHECK (length(trim(title)) > 0),
@@ -56,8 +58,20 @@ INSERT INTO settings (
   ai_provider,
   ai_model,
   theme
-) VALUES (1, 240, '', 'vercel-gateway', 'openai/gpt-5-mini', 'light');
+)
+VALUES (1, 240, '', '"#;
+const MIGRATION_1_SUFFIX: &str = r#"', 'light');
 "#;
+
+fn migration_1() -> String {
+    format!(
+        "{}{}','{}{}",
+        MIGRATION_1_PREFIX,
+        credentials::default_provider(),
+        credentials::default_model(),
+        MIGRATION_1_SUFFIX
+    )
+}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -87,7 +101,43 @@ pub struct PlannerSnapshot {
     order_by_scope: HashMap<String, Vec<String>>,
     settings: Settings,
     ai_availability: String,
+    ai_availability_by_provider: HashMap<String, String>,
     today: String,
+}
+
+#[derive(Clone)]
+pub(crate) struct AiAssistTaskContext {
+    pub(crate) id: String,
+    pub(crate) title: String,
+    pub(crate) estimate_minutes: Option<i64>,
+    pub(crate) scheduled_date: Option<String>,
+}
+
+pub(crate) struct AiAssistContext {
+    pub(crate) provider: String,
+    pub(crate) model: String,
+    pub(crate) today: String,
+}
+
+pub(crate) struct AiPlanTaskContext {
+    pub(crate) id: String,
+    pub(crate) title: String,
+    pub(crate) estimate_minutes: i64,
+    pub(crate) scheduled_date: Option<String>,
+    pub(crate) source_scope: String,
+    pub(crate) backlog_position: usize,
+}
+
+pub(crate) struct AiPlanContext {
+    pub(crate) provider: String,
+    pub(crate) model: String,
+    pub(crate) today: String,
+    pub(crate) daily_capacity_minutes: i64,
+    pub(crate) remaining_minutes: i64,
+    pub(crate) today_tasks: Vec<AiAssistTaskContext>,
+    pub(crate) today_task_ids: Vec<String>,
+    pub(crate) candidates: Vec<AiPlanTaskContext>,
+    pub(crate) planning_instruction: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -119,18 +169,88 @@ impl Repository {
         let settings = self.settings()?;
         let tasks = self.tasks()?;
         let order_by_scope = self.orders()?;
-        let ai_availability = if credentials::has_api_key(&settings.ai_provider) {
-            "configured"
-        } else {
-            "unconfigured"
-        };
+        let ai_availability_by_provider = credentials::supported_providers()
+            .map(|provider| {
+                let availability = match credentials::credential_availability(provider) {
+                    credentials::CredentialAvailability::Configured(_) => "configured",
+                    credentials::CredentialAvailability::Unconfigured => "unconfigured",
+                    credentials::CredentialAvailability::Unavailable => "unavailable",
+                };
+                (provider.to_string(), availability.to_string())
+            })
+            .collect::<HashMap<_, _>>();
+        let ai_availability = ai_availability_by_provider
+            .get(&settings.ai_provider)
+            .cloned()
+            .unwrap_or_else(|| "unconfigured".into());
 
         Ok(PlannerSnapshot {
             tasks,
             order_by_scope,
             settings,
-            ai_availability: ai_availability.into(),
+            ai_availability,
+            ai_availability_by_provider,
             today: local_today(),
+        })
+    }
+
+    fn ai_assist_context(&self) -> Result<AiAssistContext, String> {
+        let settings = self.settings()?;
+        let today = local_today();
+
+        Ok(AiAssistContext {
+            provider: settings.ai_provider,
+            model: settings.ai_model,
+            today,
+        })
+    }
+
+    fn ai_plan_context(&self) -> Result<AiPlanContext, String> {
+        let settings = self.settings()?;
+        let tasks = self.tasks()?;
+        let order_by_scope = self.orders()?;
+        let today = local_today();
+        let today_scope = format!("today:{today}");
+        let all_today_tasks = ordered_ai_context(&tasks, &order_by_scope, &today_scope, &today);
+        let today_task_ids = all_today_tasks
+            .iter()
+            .map(|task| task.id.clone())
+            .collect::<Vec<_>>();
+        let committed_minutes = tasks
+            .iter()
+            .filter(|task| {
+                task.completed_at.is_none()
+                    && active_scope(
+                        task.estimate_minutes,
+                        task.scheduled_date.as_deref(),
+                        &today,
+                    ) == today_scope
+            })
+            .filter_map(|task| task.estimate_minutes)
+            .fold(0_i64, i64::saturating_add);
+        let remaining_minutes = settings
+            .daily_capacity_minutes
+            .saturating_sub(committed_minutes)
+            .max(0);
+        let candidates = ["log:unscheduled", "log:overdue"]
+            .into_iter()
+            .flat_map(|scope| ordered_plan_context(&tasks, &order_by_scope, scope, &today))
+            .take(MAX_AI_CONTEXT_TASKS)
+            .collect();
+
+        Ok(AiPlanContext {
+            provider: settings.ai_provider,
+            model: settings.ai_model,
+            today,
+            daily_capacity_minutes: settings.daily_capacity_minutes,
+            remaining_minutes,
+            today_tasks: all_today_tasks
+                .into_iter()
+                .take(MAX_AI_CONTEXT_TASKS)
+                .collect(),
+            today_task_ids,
+            candidates,
+            planning_instruction: settings.planning_instruction.chars().take(2_000).collect(),
         })
     }
 
@@ -173,7 +293,7 @@ impl Repository {
     }
 
     fn settings(&self) -> Result<Settings, String> {
-        self.connection
+        let settings = self.connection
             .query_row(
                 "SELECT daily_capacity_minutes, planning_instruction, ai_provider, ai_model, theme
                  FROM settings WHERE id = 1",
@@ -188,7 +308,15 @@ impl Repository {
                     })
                 },
             )
-            .map_err(database_error)
+            .map_err(database_error)?;
+        validate_settings_values(
+            settings.daily_capacity_minutes,
+            &settings.planning_instruction,
+            &settings.ai_provider,
+            &settings.ai_model,
+            &settings.theme,
+        )?;
+        Ok(settings)
     }
 
     fn create_task(&mut self, input: TaskInput) -> Result<(), String> {
@@ -395,6 +523,138 @@ impl Repository {
         }
         transaction.commit().map_err(database_error)
     }
+
+    fn accept_daily_plan(&mut self, input: DailyPlanAcceptanceInput) -> Result<(), String> {
+        if input.items.is_empty()
+            || input.items.len() > MAX_AI_CONTEXT_TASKS
+            || input.expected_daily_capacity_minutes <= 0
+            || input.expected_remaining_minutes < 0
+        {
+            return Err("invalid-request".into());
+        }
+        ensure_unique_ids(
+            &input
+                .items
+                .iter()
+                .map(|item| item.id.clone())
+                .collect::<Vec<_>>(),
+        )?;
+
+        let today = local_today();
+        let today_scope = format!("today:{today}");
+        let transaction = self.connection.transaction().map_err(database_error)?;
+        let current_capacity = transaction
+            .query_row(
+                "SELECT daily_capacity_minutes FROM settings WHERE id = 1",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .map_err(database_error)?;
+        let current_today_ids = transaction
+            .prepare(
+                "SELECT t.id
+                 FROM tasks t
+                 LEFT JOIN task_orders o ON o.task_id = t.id AND o.scope = ?1
+                 WHERE t.completed_at IS NULL
+                   AND t.estimate_minutes IS NOT NULL
+                   AND t.scheduled_date = ?2
+                 ORDER BY CASE WHEN o.position IS NULL THEN 1 ELSE 0 END,
+                          o.position ASC, t.created_at ASC, t.id ASC",
+            )
+            .map_err(database_error)?
+            .query_map(params![today_scope, today], |row| row.get::<_, String>(0))
+            .map_err(database_error)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(database_error)?;
+        let committed_minutes = transaction
+            .query_row(
+                "SELECT COALESCE(SUM(estimate_minutes), 0)
+                 FROM tasks
+                 WHERE completed_at IS NULL
+                   AND estimate_minutes IS NOT NULL
+                   AND scheduled_date = ?1",
+                [&today],
+                |row| row.get::<_, i64>(0),
+            )
+            .map_err(database_error)?;
+        let current_remaining = current_capacity.saturating_sub(committed_minutes).max(0);
+
+        if current_capacity != input.expected_daily_capacity_minutes
+            || current_remaining != input.expected_remaining_minutes
+            || current_today_ids != input.today_task_ids
+        {
+            return Err("stale-plan".into());
+        }
+
+        let mut total_minutes = 0_i64;
+        for item in &input.items {
+            let current = transaction
+                .query_row(
+                    "SELECT title, estimate_minutes, scheduled_date, completed_at
+                     FROM tasks WHERE id = ?1",
+                    [&item.id],
+                    |row| {
+                        Ok((
+                            row.get::<_, String>(0)?,
+                            row.get::<_, Option<i64>>(1)?,
+                            row.get::<_, Option<String>>(2)?,
+                            row.get::<_, Option<String>>(3)?,
+                        ))
+                    },
+                )
+                .optional()
+                .map_err(database_error)?
+                .ok_or_else(|| "stale-plan".to_string())?;
+
+            if current.0 != item.title
+                || current.1 != Some(item.estimate_minutes)
+                || current.2 != item.source_scheduled_date
+                || current.3.is_some()
+                || current
+                    .2
+                    .as_deref()
+                    .is_some_and(|date| date >= today.as_str())
+                || item.estimate_minutes <= 0
+            {
+                return Err("stale-plan".into());
+            }
+            total_minutes = total_minutes
+                .checked_add(item.estimate_minutes)
+                .ok_or_else(|| "stale-plan".to_string())?;
+        }
+
+        if total_minutes > current_remaining {
+            return Err("stale-plan".into());
+        }
+
+        for item in &input.items {
+            transaction
+                .execute("DELETE FROM task_orders WHERE task_id = ?1", [&item.id])
+                .map_err(database_error)?;
+            transaction
+                .execute(
+                    "UPDATE tasks SET scheduled_date = ?1 WHERE id = ?2",
+                    params![today, item.id],
+                )
+                .map_err(database_error)?;
+        }
+        transaction
+            .execute("DELETE FROM task_orders WHERE scope = ?1", [&today_scope])
+            .map_err(database_error)?;
+        for (position, task_id) in current_today_ids
+            .iter()
+            .chain(input.items.iter().map(|item| &item.id))
+            .enumerate()
+        {
+            transaction
+                .execute(
+                    "INSERT INTO task_orders (scope, task_id, position) VALUES (?1, ?2, ?3)",
+                    params![today_scope, task_id, position as i64],
+                )
+                .map_err(database_error)?;
+        }
+        transaction.commit().map_err(database_error)
+    }
 }
 
 pub fn setup(app: &AppHandle) -> tauri::Result<()> {
@@ -453,6 +713,24 @@ pub struct UpdateSettingsInput {
     theme: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum ApiKeyChange {
+    Unchanged,
+    Replace {
+        #[serde(rename = "apiKey")]
+        api_key: String,
+    },
+    Remove,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveSettingsInput {
+    settings: UpdateSettingsInput,
+    api_key_change: ApiKeyChange,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlannerPlanAssignment {
@@ -468,9 +746,38 @@ pub struct ApplyPlannerPlanInput {
     assignments: Vec<PlannerPlanAssignment>,
 }
 
+pub(crate) struct DailyPlanAcceptanceItem {
+    pub(crate) id: String,
+    pub(crate) title: String,
+    pub(crate) estimate_minutes: i64,
+    pub(crate) source_scheduled_date: Option<String>,
+}
+
+pub(crate) struct DailyPlanAcceptanceInput {
+    pub(crate) items: Vec<DailyPlanAcceptanceItem>,
+    pub(crate) today_task_ids: Vec<String>,
+    pub(crate) expected_daily_capacity_minutes: i64,
+    pub(crate) expected_remaining_minutes: i64,
+}
+
 #[tauri::command]
 pub fn get_planner_snapshot(state: State<PersistenceState>) -> Result<PlannerSnapshot, String> {
     with_repository(&state, |repository| repository.snapshot())
+}
+
+pub(crate) fn read_ai_assist_context(state: &PersistenceState) -> Result<AiAssistContext, String> {
+    with_repository(state, |repository| repository.ai_assist_context())
+}
+
+pub(crate) fn read_ai_plan_context(state: &PersistenceState) -> Result<AiPlanContext, String> {
+    with_repository(state, |repository| repository.ai_plan_context())
+}
+
+pub(crate) fn accept_daily_plan(
+    state: &PersistenceState,
+    input: DailyPlanAcceptanceInput,
+) -> Result<(), String> {
+    with_repository(state, |repository| repository.accept_daily_plan(input))
 }
 
 #[tauri::command]
@@ -536,13 +843,29 @@ pub fn reorder_tasks(
 }
 
 #[tauri::command]
-pub fn update_settings(
+pub fn save_settings(
     app: AppHandle,
     state: State<PersistenceState>,
-    input: UpdateSettingsInput,
-) -> Result<(), String> {
-    with_repository(&state, |repository| repository.update_settings(input))?;
-    emit_change(&app, &state)
+    input: SaveSettingsInput,
+) -> Result<PlannerSnapshot, String> {
+    validate_save_settings_input(&input)?;
+
+    match &input.api_key_change {
+        ApiKeyChange::Unchanged => {}
+        ApiKeyChange::Replace { api_key } => {
+            credentials::write_api_key(&input.settings.ai_provider, api_key)?;
+        }
+        ApiKeyChange::Remove => {
+            credentials::remove_api_key(&input.settings.ai_provider)?;
+        }
+    }
+
+    let snapshot = with_repository(&state, |repository| {
+        repository.update_settings(input.settings)?;
+        repository.snapshot()
+    })?;
+    emit_change(&app, &state)?;
+    Ok(snapshot)
 }
 
 #[tauri::command]
@@ -584,7 +907,8 @@ fn apply_migrations(connection: &Connection) -> Result<(), String> {
     if version < 1 {
         connection
             .execute_batch(&format!(
-                "BEGIN IMMEDIATE; {MIGRATION_1} PRAGMA user_version = 1; COMMIT;"
+                "BEGIN IMMEDIATE; {} PRAGMA user_version = 1; COMMIT;",
+                migration_1()
             ))
             .map_err(database_error)?;
     }
@@ -652,6 +976,89 @@ fn active_scope(
     }
 }
 
+fn ordered_ai_context(
+    tasks: &[Task],
+    order_by_scope: &HashMap<String, Vec<String>>,
+    scope: &str,
+    today: &str,
+) -> Vec<AiAssistTaskContext> {
+    ordered_tasks(tasks, order_by_scope, scope, today)
+        .into_iter()
+        .map(|task| AiAssistTaskContext {
+            id: task.id.clone(),
+            title: ai_context_title(&task.title),
+            estimate_minutes: task.estimate_minutes,
+            scheduled_date: task.scheduled_date.clone(),
+        })
+        .collect()
+}
+
+fn ordered_plan_context(
+    tasks: &[Task],
+    order_by_scope: &HashMap<String, Vec<String>>,
+    scope: &str,
+    today: &str,
+) -> Vec<AiPlanTaskContext> {
+    ordered_tasks(tasks, order_by_scope, scope, today)
+        .into_iter()
+        .enumerate()
+        .filter_map(|(position, task)| {
+            Some(AiPlanTaskContext {
+                id: task.id.clone(),
+                title: ai_context_title(&task.title),
+                estimate_minutes: task.estimate_minutes?,
+                scheduled_date: task.scheduled_date.clone(),
+                source_scope: scope.to_string(),
+                backlog_position: position,
+            })
+        })
+        .collect()
+}
+
+fn ai_context_title(title: &str) -> String {
+    title.chars().take(MAX_AI_CONTEXT_TITLE_CHARS).collect()
+}
+
+fn ordered_tasks<'a>(
+    tasks: &'a [Task],
+    order_by_scope: &HashMap<String, Vec<String>>,
+    scope: &str,
+    today: &str,
+) -> Vec<&'a Task> {
+    let positions = order_by_scope
+        .get(scope)
+        .into_iter()
+        .flat_map(|task_ids| task_ids.iter().enumerate())
+        .map(|(position, task_id)| (task_id.as_str(), position))
+        .collect::<HashMap<_, _>>();
+    let mut scoped_tasks = tasks
+        .iter()
+        .filter(|task| {
+            task.completed_at.is_none()
+                && active_scope(task.estimate_minutes, task.scheduled_date.as_deref(), today)
+                    == scope
+        })
+        .collect::<Vec<_>>();
+
+    scoped_tasks.sort_by(|first, second| {
+        let first_position = positions
+            .get(first.id.as_str())
+            .copied()
+            .unwrap_or(usize::MAX);
+        let second_position = positions
+            .get(second.id.as_str())
+            .copied()
+            .unwrap_or(usize::MAX);
+
+        first_position
+            .cmp(&second_position)
+            .then_with(|| first.created_at.cmp(&second.created_at))
+            .then_with(|| first.id.cmp(&second.id))
+    });
+
+    scoped_tasks
+}
+
 fn move_task_to_scope_start(
     transaction: &rusqlite::Transaction<'_>,
     task_id: &str,
@@ -711,17 +1118,47 @@ fn validate_scope(scope: &str) -> Result<(), String> {
 }
 
 fn validate_settings(input: &UpdateSettingsInput) -> Result<(), String> {
-    if input.daily_capacity_minutes <= 0 {
+    validate_settings_values(
+        input.daily_capacity_minutes,
+        &input.planning_instruction,
+        &input.ai_provider,
+        &input.ai_model,
+        &input.theme,
+    )
+}
+
+fn validate_settings_values(
+    daily_capacity_minutes: i64,
+    planning_instruction: &str,
+    ai_provider: &str,
+    ai_model: &str,
+    theme: &str,
+) -> Result<(), String> {
+    if daily_capacity_minutes <= 0 {
         return Err("Daily capacity must be a positive number of minutes.".into());
     }
-    if !matches!(input.ai_provider.as_str(), "vercel-gateway" | "openrouter") {
+    if planning_instruction.chars().count() > 2_000 {
+        return Err("Planning instruction must be 2,000 characters or fewer.".into());
+    }
+    if !credentials::is_supported_provider(ai_provider) {
         return Err("AI provider is invalid.".into());
     }
-    if input.ai_model.trim().is_empty() {
-        return Err("AI model is required.".into());
+    if !credentials::is_supported_model(ai_model) {
+        return Err("AI model is invalid.".into());
     }
-    if !matches!(input.theme.as_str(), "light" | "dark") {
+    if !matches!(theme, "light" | "dark") {
         return Err("Theme is invalid.".into());
+    }
+    Ok(())
+}
+
+fn validate_save_settings_input(input: &SaveSettingsInput) -> Result<(), String> {
+    validate_settings(&input.settings)?;
+    if matches!(
+        &input.api_key_change,
+        ApiKeyChange::Replace { api_key } if api_key.trim().is_empty()
+    ) {
+        return Err("API key cannot be empty.".into());
     }
     Ok(())
 }
@@ -803,7 +1240,7 @@ mod tests {
         fs::create_dir_all(&directory).expect("create temporary test directory");
         let path = directory.join(DATABASE_FILE_NAME);
 
-        let repository = Repository::open(path.clone()).expect("open database");
+        let mut repository = Repository::open(path.clone()).expect("open database");
         assert_eq!(
             repository
                 .settings()
@@ -811,12 +1248,115 @@ mod tests {
                 .daily_capacity_minutes,
             240
         );
+        repository
+            .update_settings(UpdateSettingsInput {
+                daily_capacity_minutes: 240,
+                planning_instruction: "Protect focus time.".into(),
+                ai_provider: "openrouter".into(),
+                ai_model: "anthropic/claude-sonnet-4.5".into(),
+                theme: "light".into(),
+            })
+            .expect("update settings");
         drop(repository);
 
         let reopened = Repository::open(path).expect("reopen database");
-        assert_eq!(reopened.settings().expect("settings").theme, "light");
+        let settings = reopened.settings().expect("settings");
+        assert_eq!(settings.ai_provider, "openrouter");
+        assert_eq!(settings.ai_model, "anthropic/claude-sonnet-4.5");
+        assert_eq!(settings.planning_instruction, "Protect focus time.");
         drop(reopened);
         fs::remove_dir_all(directory).expect("remove temporary test directory");
+    }
+
+    #[test]
+    fn validates_the_complete_settings_save_before_writing() {
+        let valid_settings = || UpdateSettingsInput {
+            daily_capacity_minutes: 240,
+            planning_instruction: String::new(),
+            ai_provider: "openrouter".into(),
+            ai_model: "openai/gpt-5-mini".into(),
+            theme: "light".into(),
+        };
+
+        assert!(validate_save_settings_input(&SaveSettingsInput {
+            settings: valid_settings(),
+            api_key_change: ApiKeyChange::Unchanged,
+        })
+        .is_ok());
+        for provider in credentials::supported_providers() {
+            for model in credentials::supported_models() {
+                let mut settings = valid_settings();
+                settings.ai_provider = provider.into();
+                settings.ai_model = model.into();
+                assert!(validate_save_settings_input(&SaveSettingsInput {
+                    settings,
+                    api_key_change: ApiKeyChange::Unchanged,
+                })
+                .is_ok());
+            }
+        }
+        assert_eq!(
+            validate_save_settings_input(&SaveSettingsInput {
+                settings: valid_settings(),
+                api_key_change: ApiKeyChange::Replace {
+                    api_key: "   ".into(),
+                },
+            }),
+            Err("API key cannot be empty.".into())
+        );
+
+        let mut invalid_provider = valid_settings();
+        invalid_provider.ai_provider = "unknown".into();
+        assert_eq!(
+            validate_save_settings_input(&SaveSettingsInput {
+                settings: invalid_provider,
+                api_key_change: ApiKeyChange::Remove,
+            }),
+            Err("AI provider is invalid.".into())
+        );
+
+        let mut invalid_model = valid_settings();
+        invalid_model.ai_model = "custom/model".into();
+        assert_eq!(
+            validate_save_settings_input(&SaveSettingsInput {
+                settings: invalid_model,
+                api_key_change: ApiKeyChange::Unchanged,
+            }),
+            Err("AI model is invalid.".into())
+        );
+
+        let mut long_instruction = valid_settings();
+        long_instruction.planning_instruction = "a".repeat(2_001);
+        assert_eq!(
+            validate_save_settings_input(&SaveSettingsInput {
+                settings: long_instruction,
+                api_key_change: ApiKeyChange::Unchanged,
+            }),
+            Err("Planning instruction must be 2,000 characters or fewer.".into())
+        );
+    }
+
+    #[test]
+    fn deserializes_a_renderer_key_replacement_request() {
+        let input: SaveSettingsInput = serde_json::from_value(serde_json::json!({
+            "settings": {
+                "dailyCapacityMinutes": 240,
+                "planningInstruction": "",
+                "aiProvider": "openrouter",
+                "aiModel": "openai/gpt-5-mini",
+                "theme": "light"
+            },
+            "apiKeyChange": {
+                "kind": "replace",
+                "apiKey": "not-a-real-secret"
+            }
+        }))
+        .expect("deserialize settings save");
+
+        assert!(matches!(
+            input.api_key_change,
+            ApiKeyChange::Replace { api_key } if api_key == "not-a-real-secret"
+        ));
     }
 
     #[test]
@@ -1019,5 +1559,195 @@ mod tests {
             .expect("task");
         assert_eq!(stored_task.scheduled_date, None);
         assert!(database.repository.orders().expect("orders").is_empty());
+    }
+
+    #[test]
+    fn ai_assist_context_contains_only_provider_settings_and_today() {
+        let database = TestDatabase::new();
+        let today = local_today();
+        let context = database.repository.ai_assist_context().expect("AI context");
+        assert_eq!(context.today, today);
+        assert_eq!(context.provider, credentials::default_provider());
+        assert_eq!(context.model, credentials::default_model());
+    }
+
+    #[test]
+    fn ai_plan_context_bounds_long_today_titles_without_changing_stored_data() {
+        let mut database = TestDatabase::new();
+        let today = local_today();
+        let long_title = "a".repeat(MAX_AI_CONTEXT_TITLE_CHARS + 1);
+        database
+            .repository
+            .create_task(TaskInput {
+                title: long_title.clone(),
+                estimate_minutes: Some(30),
+                scheduled_date: Some(today),
+            })
+            .expect("create today task");
+
+        let context = database.repository.ai_plan_context().expect("plan context");
+        let today_task = context
+            .today_tasks
+            .iter()
+            .find(|task| task.title.len() == MAX_AI_CONTEXT_TITLE_CHARS)
+            .expect("bounded today task");
+        assert_eq!(today_task.title.chars().count(), MAX_AI_CONTEXT_TITLE_CHARS);
+        assert_eq!(
+            database
+                .repository
+                .tasks()
+                .expect("load tasks")
+                .into_iter()
+                .find(|task| task.title == long_title)
+                .expect("stored today task")
+                .title
+                .chars()
+                .count(),
+            MAX_AI_CONTEXT_TITLE_CHARS + 1
+        );
+    }
+
+    #[test]
+    fn ai_plan_context_bounds_long_backlog_titles_without_changing_stored_data() {
+        let mut database = TestDatabase::new();
+        let long_title = "a".repeat(MAX_AI_CONTEXT_TITLE_CHARS + 1);
+        database
+            .repository
+            .create_task(TaskInput {
+                title: long_title.clone(),
+                estimate_minutes: Some(30),
+                scheduled_date: None,
+            })
+            .expect("create backlog task");
+
+        let context = database.repository.ai_plan_context().expect("plan context");
+        let candidate = context
+            .candidates
+            .iter()
+            .find(|task| task.title.len() == MAX_AI_CONTEXT_TITLE_CHARS)
+            .expect("bounded backlog candidate");
+        assert_eq!(candidate.title.chars().count(), MAX_AI_CONTEXT_TITLE_CHARS);
+        assert_eq!(
+            database
+                .repository
+                .tasks()
+                .expect("load tasks")
+                .into_iter()
+                .find(|task| task.title == long_title)
+                .expect("stored backlog task")
+                .title
+                .chars()
+                .count(),
+            MAX_AI_CONTEXT_TITLE_CHARS + 1
+        );
+    }
+
+    #[test]
+    fn daily_plan_acceptance_appends_backlog_tasks_to_today() {
+        let mut database = TestDatabase::new();
+        let today = local_today();
+        let today_task = {
+            database
+                .repository
+                .create_task(TaskInput {
+                    title: "Already committed".into(),
+                    estimate_minutes: Some(30),
+                    scheduled_date: Some(today.clone()),
+                })
+                .expect("create today task");
+            database
+                .repository
+                .tasks()
+                .expect("load today task")
+                .into_iter()
+                .find(|task| task.title == "Already committed")
+                .expect("today task")
+        };
+        let candidate = create_task(&mut database.repository, "Plan this");
+        let context = database.repository.ai_plan_context().expect("plan context");
+        let planned = context
+            .candidates
+            .iter()
+            .find(|task| task.id == candidate.id)
+            .expect("candidate");
+
+        database
+            .repository
+            .accept_daily_plan(DailyPlanAcceptanceInput {
+                items: vec![DailyPlanAcceptanceItem {
+                    id: planned.id.clone(),
+                    title: planned.title.clone(),
+                    estimate_minutes: planned.estimate_minutes,
+                    source_scheduled_date: planned.scheduled_date.clone(),
+                }],
+                today_task_ids: context.today_task_ids,
+                expected_daily_capacity_minutes: context.daily_capacity_minutes,
+                expected_remaining_minutes: context.remaining_minutes,
+            })
+            .expect("accept daily plan");
+
+        let snapshot = database.repository.snapshot().expect("snapshot");
+        assert_eq!(
+            snapshot
+                .tasks
+                .iter()
+                .find(|task| task.id == candidate.id)
+                .expect("planned task")
+                .scheduled_date
+                .as_deref(),
+            Some(today.as_str())
+        );
+        assert_eq!(
+            snapshot.order_by_scope.get(&format!("today:{today}")),
+            Some(&vec![today_task.id, candidate.id]),
+        );
+    }
+
+    #[test]
+    fn daily_plan_acceptance_rejects_stale_task_without_writing() {
+        let mut database = TestDatabase::new();
+        let candidate = create_task(&mut database.repository, "Original title");
+        let context = database.repository.ai_plan_context().expect("plan context");
+        let planned = context
+            .candidates
+            .iter()
+            .find(|task| task.id == candidate.id)
+            .expect("candidate");
+        database
+            .repository
+            .update_task(UpdateTaskInput {
+                id: candidate.id.clone(),
+                title: "Changed title".into(),
+                estimate_minutes: Some(30),
+                scheduled_date: None,
+            })
+            .expect("change task");
+
+        let result = database
+            .repository
+            .accept_daily_plan(DailyPlanAcceptanceInput {
+                items: vec![DailyPlanAcceptanceItem {
+                    id: planned.id.clone(),
+                    title: planned.title.clone(),
+                    estimate_minutes: planned.estimate_minutes,
+                    source_scheduled_date: planned.scheduled_date.clone(),
+                }],
+                today_task_ids: context.today_task_ids,
+                expected_daily_capacity_minutes: context.daily_capacity_minutes,
+                expected_remaining_minutes: context.remaining_minutes,
+            });
+
+        assert_eq!(result, Err("stale-plan".into()));
+        assert_eq!(
+            database
+                .repository
+                .tasks()
+                .expect("tasks")
+                .into_iter()
+                .find(|task| task.id == candidate.id)
+                .expect("candidate")
+                .scheduled_date,
+            None
+        );
     }
 }

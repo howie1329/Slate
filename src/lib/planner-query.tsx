@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
 import {
   QueryClient,
@@ -10,21 +10,25 @@ import {
 import {
   applyPlannerPlan,
   createTask,
-  deleteApiKey,
   deleteTask,
+  acceptDailyPlan,
+  generateAiAssist,
+  generateDailyPlan,
   getPlannerSnapshot,
   isTauriWindow,
   reorderTasks,
-  setApiKey,
+  saveSettings,
   setTaskCompleted,
   setTaskScheduledDate,
-  updateSettings,
   updateTask,
   type PlannerPlanAssignment,
+  type PlannerSnapshot,
+  type AiAssistInput,
+  type AiPlanAcceptanceInput,
   type ReorderTasksInput,
+  type SaveSettingsInput,
   type SetTaskCompletedInput,
   type SetTaskScheduledDateInput,
-  type Settings,
   type TaskInput,
   type UpdateTaskInput,
 } from "@/lib/planner";
@@ -124,27 +128,56 @@ export function useReorderTasks() {
   return usePlannerMutation<ReorderTasksInput>(reorderTasks);
 }
 
-export function useUpdateSettings() {
-  return usePlannerMutation<Settings>(updateSettings);
+export function useSaveSettings() {
+  const queryClient = useQueryClient();
+  const pendingRef = useRef(false);
+  const [isPending, setIsPending] = useState(false);
+
+  return {
+    isPending,
+    mutate: (
+      input: SaveSettingsInput,
+      options?: {
+        onSuccess?: (snapshot: PlannerSnapshot) => void;
+        onError?: (error: unknown) => void;
+      },
+    ) => {
+      if (pendingRef.current) {
+        return;
+      }
+
+      pendingRef.current = true;
+      setIsPending(true);
+      void saveSettings(input)
+        .then((snapshot) => {
+          queryClient.setQueryData<PlannerSnapshot>(plannerStateQueryKey, snapshot);
+          options?.onSuccess?.(snapshot);
+        })
+        .catch((error: unknown) => options?.onError?.(error))
+        .finally(() => {
+          pendingRef.current = false;
+          setIsPending(false);
+        });
+    },
+  };
 }
 
 export function useApplyPlannerPlan() {
   return usePlannerMutation<PlannerPlanAssignment[]>(applyPlannerPlan);
 }
 
-export function useSetApiKey() {
-  const queryClient = useQueryClient();
+export function useGenerateAiAssist() {
   return useMutation({
-    mutationFn: ({ provider, apiKey }: { provider: Settings["aiProvider"]; apiKey: string }) =>
-      setApiKey(provider, apiKey),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: plannerStateQueryKey }),
+    mutationFn: (input: AiAssistInput) => generateAiAssist(input),
   });
 }
 
-export function useDeleteApiKey() {
-  const queryClient = useQueryClient();
+export function useGenerateDailyPlan() {
   return useMutation({
-    mutationFn: (provider: Settings["aiProvider"]) => deleteApiKey(provider),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: plannerStateQueryKey }),
+    mutationFn: () => generateDailyPlan(),
   });
+}
+
+export function useAcceptDailyPlan() {
+  return usePlannerMutation<AiPlanAcceptanceInput>(acceptDailyPlan);
 }
