@@ -115,11 +115,12 @@ These are not rejected permanently. They remain outside 1.0 until the determinis
 Slate may expand around the same commitment-budget model in the following order:
 
 1. **Daily resilience:** global capture, end-of-day review, anchors, and contextual recovery when the day changes.
-2. **Spaces:** distinct planning contexts with their own capacity only when users need them.
-3. **Calibration:** respectful feedback and conservative suggestions that improve estimates and capacity without scoring productivity.
-4. **Outside context:** reviewed candidate actions from systems such as GitHub, Gmail, and calendar-informed capacity.
-5. **Optional device expansion:** mobile capture and review, followed by sync only when a real multi-device need and conflict model exist.
-6. **Local agent access:** an optional, permissioned MCP interface that captures agent-discovered work into Backlog by default.
+2. **Full-window planning workspace:** a visual desktop surface for shaping commitments while preserving the popover as the fast daily planning tool.
+3. **Spaces:** distinct planning contexts with their own capacity only when users need them.
+4. **Calibration:** respectful feedback and conservative suggestions that improve estimates and capacity without scoring productivity.
+5. **Outside context:** reviewed candidate actions from systems such as GitHub, Gmail, and calendar-informed capacity.
+6. **Optional device expansion:** mobile capture and review, followed by sync only when a real multi-device need and conflict model exist.
+7. **Local agent access:** an optional, permissioned MCP interface that captures agent-discovered work into Backlog by default.
 
 Each expansion is conditional. The full sequencing, entry criteria, exit criteria, and non-goals are maintained in [the roadmap](roadmap.md).
 

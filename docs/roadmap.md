@@ -2,7 +2,7 @@
 
 > **Status:** Directional roadmap
 >
-> **Updated:** 2026-07-23
+> **Updated:** 2026-07-24
 >
 > This document describes the order in which Slate should earn new capabilities. It is not a fixed release schedule. Each stage should be validated against the product thesis before the next stage expands the model.
 
@@ -130,7 +130,58 @@ Help Slate remain useful when the day changes, without adding project-management
 - A disrupted day can be recovered without rebuilding the plan manually.
 - Users understand why Slate preserved, returned, or proposed a task.
 
-## Stage 3 — Add planning contexts only if needed
+## Stage 3 — Build the full-window planning workspace
+
+### Goal
+
+Give Slate a visual, spacious desktop surface for shaping and reviewing commitments while preserving the menu-bar popover as the fast daily planning tool.
+
+The product direction and initial interaction model are defined in [Full-window planning workspace](full-window-planning-workspace.md).
+
+### Scope
+
+- Add a full-window commitment board as a derived view over the existing task model.
+- Use commitment-oriented lanes such as Capture, Ready, Today, and Done rather than generic project-management statuses.
+- Support deliberate drag-and-drop movement with visible capacity impact when work enters Today.
+- Add keyboard navigation, search, a small number of useful filters, and safe multi-select actions.
+- Add a full-window focus mode for active Today commitments.
+- Give Plan My Day review more room for inspecting proposed additions before acceptance.
+- Add a reviewable “Make This Fit” action for oversized or unclear work.
+- Explore a lightweight Today / Next / Later horizon without introducing a calendar or time-blocking grid.
+
+### Domain boundary
+
+- Board lanes are derived from completion, estimate, and date fields in the existing task model.
+- Do not add a persistent kanban-status field until real use proves commitment state is insufficient.
+- Capacity validation, atomic writes, SQLite persistence, and cross-window invalidation remain authoritative.
+- The normal daily loop must remain usable from the popover.
+
+### Guardrails
+
+- No custom columns, nested projects, subtasks, dependencies, tags, assignees, or WIP system in the first release.
+- Do not normalize overdue work into an automatic rollover lane.
+- Do not add a generic In Progress state merely because it is familiar.
+- User-initiated moves may warn about over-capacity, but AI and imported work remain reviewable before writes.
+- The full window adds perspective and planning room; it does not become a prerequisite for ordinary daily planning.
+
+### Entry criteria
+
+- Stage 1 1.0 exit criteria are met.
+- Stage 2 daily-resilience exit criteria are met.
+- Backlog, Today, capacity, and task lifecycle behavior are trustworthy without the board.
+- Full-window and popover state share the same authoritative task and persistence boundaries.
+- Real use shows that users need more visual planning context than the compact workflow provides.
+
+### Exit criteria
+
+- Users understand the board’s commitment lanes quickly.
+- Moving work into Today makes its capacity cost clear before or at commitment.
+- The board reduces planning friction without creating organization overhead.
+- Keyboard, pointer, reduced-motion, empty, overloaded, error, and persistence states are usable.
+- No board action silently rolls work forward or changes an existing commitment.
+- Users describe the full window as helping them shape realistic commitments rather than as a project-management database.
+
+## Stage 4 — Add planning contexts only if needed
 
 ### Goal
 
@@ -173,7 +224,7 @@ Do not start Spaces because they are common in task managers. Start them when ob
 - Per-Space and total capacity do not conflict conceptually.
 - The product still feels like a daily commitment planner, not a project-management suite.
 
-## Stage 4 — Improve calibration and recovery quality
+## Stage 5 — Improve calibration and recovery quality
 
 ### Goal
 
@@ -202,7 +253,7 @@ Help users make better estimates and capacity decisions over time without measur
 - Slate helps shrink, clarify, release, or re-estimate work.
 - Insights lead to better future plans without increasing pressure to work more.
 
-## Stage 5 — Add outside context carefully
+## Stage 6 — Add outside context carefully
 
 ### Goal
 
@@ -244,7 +295,7 @@ A mobile companion should focus on capture, Today, completion, remaining capacit
 - Calendar context informs decisions without turning Slate into a calendar.
 - Sync behavior and failure recovery are understandable before any hosted service is introduced.
 
-## Stage 6 — Local agent access through MCP
+## Stage 7 — Local agent access through MCP
 
 ### Goal
 
@@ -284,6 +335,7 @@ Before expanding the product, answer these questions with real use:
 - Do users understand Backlog versus Today without onboarding?
 - Does Plan My Day save effort while preserving trust and control?
 - Do users return for end-of-day review when plans change?
+- Does the full-window workspace make commitment planning clearer without creating project-management overhead?
 - Do multiple Spaces solve a recurring problem or merely add organization overhead?
 - Do external candidates reduce capture friction or create another inbox to maintain?
 - Does agent access create useful follow-up capture without making commitments feel unsafe?
