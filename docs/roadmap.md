@@ -136,7 +136,7 @@ Help Slate remain useful when the day changes, without adding project-management
 
 Give Slate a visual, spacious desktop surface for shaping and reviewing commitments while preserving the menu-bar popover as the fast daily planning tool.
 
-The product direction and initial interaction model are defined in [Full-window planning workspace](full-window-planning-workspace.md).
+The product direction and initial interaction model are defined in [Full-window planning workspace](full-window-planning-workspace/README.md).
 
 ### Scope
 
