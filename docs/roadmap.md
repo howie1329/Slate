@@ -2,7 +2,7 @@
 
 > **Status:** Directional roadmap
 >
-> **Updated:** 2026-07-24
+> **Updated:** 2026-07-25
 >
 > This document describes the order in which Slate should earn new capabilities. It is not a fixed release schedule. Each stage should be validated against the product thesis before the next stage expands the model.
 
@@ -73,7 +73,7 @@ Make the capture-to-commit-to-completion loop reliable and demonstrable without 
 
 ### Scope
 
-- Finish task editing, scheduling, deletion, ordering, and capacity behavior.
+- Finish task editing, scheduling, deletion, and capacity behavior.
 - Make Today and Backlog understandable when empty, active, completed, overdue, and over capacity.
 - Keep unsized tasks out of Today and AI-generated plans while allowing them to remain in Backlog.
 - Preserve explicit Today commitments when planning again.
@@ -143,6 +143,7 @@ The product direction and initial interaction model are defined in [Full-window 
 - Add a full-window commitment board as a derived view over the existing task model.
 - Use commitment-oriented lanes such as Capture, Ready, Today, and Done rather than generic project-management statuses.
 - Support deliberate drag-and-drop movement with visible capacity impact when work enters Today.
+- Add deliberate task reordering within active lanes, with pointer and keyboard controls that persist through the existing scoped-ordering boundary.
 - Add keyboard navigation, search, a small number of useful filters, and safe multi-select actions.
 - Add a full-window focus mode for active Today commitments.
 - Give Plan My Day review more room for inspecting proposed additions before acceptance.
