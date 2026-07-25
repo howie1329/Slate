@@ -7,6 +7,12 @@ Slate has one AI action button in the persistent footer. The button changes beha
 - With non-empty input: **AI Assist**.
 - With empty or whitespace-only input: **Plan My Day**.
 
+## Implementation status
+
+AI Assist and Plan My Day are implemented in the current vertical slices. Both use the native Keychain-backed provider boundary and packaged Node sidecar; Assist presents one editable proposal, while Plan My Day presents an additive, stale-safe review proposal. Final packaged/manual acceptance remains before calling Plan My Day broadly shipped.
+
+The implementation details and acceptance checklist are in [Plan My Day sidecar vertical slice](plans/012-plan-my-day-sidecar-vertical-slice.md).
+
 The regular Save button remains available for manual task capture. AI is an optional acceleration layer; manual capture and task management must continue to work without a configured key or network access.
 
 ## Shared footer behavior
@@ -23,7 +29,11 @@ The AI button should treat whitespace-only input as empty. Its label, tooltip, a
 - Input present: `Use AI Assist`.
 - Input empty: `Plan My Day`.
 
-If AI is unavailable, the button should communicate that state and direct the user to Settings. It must not prevent regular Save from working.
+When the active provider has no saved key, the AI button is disabled and its tooltip directs the user to Settings. An inaccessible macOS Keychain is a separate unavailable state with retry guidance; it is never presented as a missing key. An `unavailable-key` response still opens the unavailable review state when a key is removed outside Slate after the last native snapshot. Neither state prevents regular Save from working.
+
+Settings uses one footer Save action for provider, global model, planning preferences, and the selected provider's Keychain credential. A saved credential appears only as a fixed non-secret mask. OpenRouter and AI Gateway keys are stored independently; secrets never enter planner snapshots, SQLite, query-cache data, logs, or change events.
+
+Provider and model choices come from Slate's checked-in curated catalog. There is no model discovery or custom model field. Provider SDK calls are bounded at 12 seconds; the native sidecar request deadline is 16 seconds so process startup and cleanup have room to complete.
 
 ## AI Assist
 
@@ -36,9 +46,10 @@ AI Assist turns rough capture text into a cleaner, more actionable task without 
 AI Assist receives:
 
 - The text currently in the composer.
-- The current workspace context.
+- The local Today date, so relative dates can be interpreted cautiously.
 - The current scheduled date, if one already exists.
-- Relevant Log/backlog context when date inference may be useful.
+
+Assist is capture-first. It does not receive Today tasks, Backlog tasks, planning instructions, or other planner context. Plan My Day is the only AI action that receives planner context.
 
 ### Suggested result
 
@@ -48,7 +59,7 @@ AI may suggest:
 - An estimated duration in whole positive minutes.
 - An optional scheduled date.
 
-The AI must not overwrite an explicit date. When capture begins from Today, the task already has Today’s date, so AI Assist focuses on title cleanup and duration estimation. When capture begins from Log/backlog without a date, AI may infer a date from the task text and available backlog context; if no date is justified, it should leave the task unscheduled.
+The AI must not overwrite an explicit date. When capture begins from Today, the task already has Today’s date, so AI Assist focuses on title cleanup and duration estimation. When capture begins from Log/backlog without a date, AI may infer a date from the capture only when it is clearly justified; otherwise it should leave the task unscheduled.
 
 ### Interaction
 
@@ -80,7 +91,7 @@ The same footer AI button triggers Plan My Day when the composer is empty.
 
 The planner receives:
 
-- Existing uncompleted Today tasks.
+- Existing uncompleted Today tasks as fixed planning context, not candidates for movement.
 - Remaining capacity.
 - Log tasks with valid positive estimates.
 - Explicit dates and overdue state.
@@ -97,7 +108,9 @@ Plan My Day returns an additive list of task assignments for Today. Each propose
 - Task title.
 - Estimate.
 - Source Log section or date context when useful.
-- The resulting position in Today.
+- The resulting Today date and native-derived position.
+
+Existing Today tasks are not returned as assignments. They stay on Today with their current date and order. Selected Backlog tasks receive the current local Today date and Today scope only when the user accepts the plan.
 
 The plan should fill remaining capacity where possible. It may leave capacity unused when no eligible task fits or when the planning instruction suggests restraint.
 
@@ -108,7 +121,7 @@ The plan should fill remaining capacity where possible. It may leave capacity un
 3. Plan My Day evaluates the current local planner state.
 4. A larger review panel opens above the footer with the proposed task list.
 5. The user chooses one of:
-   - **Accept plan** — apply all assignments atomically.
+   - **Accept plan** — move all selected Backlog assignments to Today atomically, updating their dates and order together.
    - **Redo** — generate a new plan using the current state.
    - **Dismiss** — close the panel without changing tasks.
 
@@ -150,7 +163,7 @@ Only one AI review should be active at a time. Opening a new AI action should re
 
 - AI suggestions are never committed automatically.
 - AI Assist acceptance creates one task through the existing persistence boundary.
-- Plan My Day acceptance applies all assignments in one atomic persistence operation.
+- Plan My Day acceptance applies all selected Backlog assignments in one atomic persistence operation; existing Today tasks remain unchanged.
 - API keys remain in macOS Keychain and never appear in planner snapshots, SQLite, review state, or change events.
 - Manual Save remains available regardless of AI configuration or network access.
 

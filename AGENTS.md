@@ -1,7 +1,7 @@
 <!-- agentkit:start agents -->
 # Slate agent guide
 
-Slate is a local-first macOS planner for deciding what work realistically fits into today. The current product has the compact desktop shell, Today/Backlog/Settings workspace, SQLite persistence, task lifecycle operations, daily capacity state, and native Keychain storage. AI Assist and Plan My Day are planned 1.0 work and are not currently shipped.
+Slate is a local-first macOS planner for deciding what work realistically fits into today. The current product has the compact desktop shell, Today/Backlog/Settings workspace, SQLite persistence, task lifecycle operations, daily capacity state, native Keychain storage, and reviewable AI Assist and Plan My Day vertical slices through the packaged Node sidecar. Final packaged/manual acceptance remains before Plan My Day is broadly shipped.
 
 ## Source of truth
 

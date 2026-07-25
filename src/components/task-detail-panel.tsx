@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useTaskMotion } from "@/components/task-motion";
 import { useDeleteTask, usePlannerState, useUpdateTask } from "@/lib/planner-query";
 import type { LocalDate, Task } from "@/lib/planner";
+import { dateFromLocalDate, formatDueDate, localDateFromDate } from "@/lib/local-date";
 import { useTaskSelection, type TaskSelectionTransition } from "@/components/task-selection";
 import type { WindowMode } from "@/lib/window-mode";
 
@@ -52,29 +53,6 @@ const panelVariants = {
           },
         },
 };
-
-function dateFromLocalDate(value: LocalDate) {
-  return new Date(`${value}T00:00:00`);
-}
-
-function localDateFromDate(value: Date): LocalDate {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}` as LocalDate;
-}
-
-function formatDueDate(value: LocalDate | null) {
-  if (!value) {
-    return "Set date";
-  }
-
-  return dateFromLocalDate(value).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-  });
-}
 
 type TaskDetailPanelProps = {
   taskId: string;

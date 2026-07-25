@@ -1,5 +1,7 @@
+mod ai;
 mod credentials;
 mod persistence;
+mod sidecar;
 mod window_controller;
 
 #[tauri::command]
@@ -14,15 +16,15 @@ fn hide_popover(app: tauri::AppHandle) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = tauri::Builder::default();
+    let builder = tauri::Builder::default().plugin(tauri_plugin_shell::init());
 
     #[cfg(target_os = "macos")]
     let builder = builder.plugin(tauri_nspanel::init());
 
     builder
         .setup(|app| {
-            persistence::setup(&app.handle())?;
-            Ok(window_controller::setup(&app.handle())?)
+            persistence::setup(app.handle())?;
+            Ok(window_controller::setup(app.handle())?)
         })
         .on_window_event(window_controller::handle_window_event)
         .invoke_handler(tauri::generate_handler![
@@ -35,11 +37,12 @@ pub fn run() {
             persistence::set_task_scheduled_date,
             persistence::delete_task,
             persistence::reorder_tasks,
-            persistence::update_settings,
+            persistence::save_settings,
             persistence::apply_planner_plan,
             persistence::retry_persistence,
-            credentials::set_api_key,
-            credentials::delete_api_key,
+            ai::generate_ai_assist,
+            ai::generate_daily_plan,
+            ai::accept_daily_plan,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

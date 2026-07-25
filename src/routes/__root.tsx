@@ -4,6 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import NumberFlow from "@number-flow/react";
 import { Link, Outlet, createRootRoute, useRouterState } from "@tanstack/react-router";
 import { motion } from "motion/react";
+import { useAiReview } from "@/components/ai-review";
 import { TaskComposerFooter } from "@/components/task-composer-footer";
 import { RouteMotionProvider, useRouteMotion, type RouteMotionTransition } from "@/components/route-motion";
 import { TaskMotionProvider } from "@/components/task-motion";
@@ -46,12 +47,14 @@ function SlateShell() {
   });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const { clearSelection, selectedTaskId } = useTaskSelection();
+  const { dismiss: dismissAiReview, state: aiReviewState } = useAiReview();
   const { routeTransition, setRouteTransition } = useRouteMotion();
 
   useEffect(() => {
     clearSelection("instant");
+    dismissAiReview();
     setRouteTransition("instant");
-  }, [clearSelection, pathname, setRouteTransition]);
+  }, [clearSelection, dismissAiReview, pathname, setRouteTransition]);
 
   function handleOpenFullApp() {
     void openFullApp();
@@ -89,16 +92,21 @@ function SlateShell() {
       }`}
       data-window-mode={windowMode}
       onPointerDownCapture={(event) => {
-        if (
-          selectedTaskId &&
-          event.target instanceof HTMLElement &&
-          !event.target.closest("[data-task-detail], [data-task-row], [data-task-calendar]")
-        ) {
+        const target = event.target instanceof Element ? event.target : null;
+        const isInsideReview = target?.closest("[data-ai-review], [data-ai-review-calendar]");
+
+        if (aiReviewState.kind !== "idle" && !isInsideReview) {
+          dismissAiReview();
+        }
+        if (selectedTaskId && !target?.closest("[data-task-detail], [data-task-row], [data-task-calendar]")) {
           clearSelection();
         }
       }}
       onKeyDown={(event) => {
-        if (event.key === "Escape" && selectedTaskId && !event.defaultPrevented) {
+        if (event.key === "Escape" && aiReviewState.kind !== "idle" && !event.defaultPrevented) {
+          event.preventDefault();
+          dismissAiReview();
+        } else if (event.key === "Escape" && selectedTaskId && !event.defaultPrevented) {
           event.preventDefault();
           clearSelection("instant");
         } else if (windowMode === "popover" && event.key === "Escape" && !event.defaultPrevented) {
@@ -162,7 +170,6 @@ function SlateShell() {
           </div>
 
           <TaskComposerFooter
-            aiIsConfigured={planner.data?.aiAvailability === "configured"}
             scheduledDate={pathname === "/today" ? planner.data?.today ?? null : null}
             windowMode={windowMode}
           />

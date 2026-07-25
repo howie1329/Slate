@@ -1,5 +1,7 @@
 # Implementation plan: AI Assist, Plan My Day, and review tray
 
+> Status: Product behavior reference only. The native HTTP transport in this historical plan is superseded by the packaged Node sidecar in plan 007. AI Assist is implemented in plan 011 and Plan My Day is implemented in plan 012; final packaged/manual acceptance remains.
+
 ## Objective
 
 Ship the two AI actions defined in [the AI actions brief](../ai-actions-brief.md) through one footer button:
@@ -14,7 +16,7 @@ Both results remain transient until the user accepts them in a review tray above
 - **Priority:** P1
 - **Effort:** Large
 - **Risk:** Medium — credentials, provider responses, and stale plan acceptance need deliberate handling.
-- **Prerequisites:** `004-today-capacity-state` and `005-persistence-recovery-screen` are implemented. The existing `apply_planner_plan` command provides the atomic write path that this feature will harden and reuse.
+- **Prerequisites:** `004-today-capacity-state` and `005-persistence-recovery-screen` are implemented. Plan My Day uses the dedicated native acceptance command defined in plan 012 rather than treating the older generic `apply_planner_plan` command as an AI boundary.
 
 ## Current architecture and constraints
 
@@ -26,7 +28,7 @@ Both results remain transient until the user accepts them in a review tray above
 
 ## Fixed transport decision
 
-This plan selects the native Rust HTTP transport. If Slate chooses to use the Vercel AI SDK in a bundled Node process instead, follow [007-ai-sdk-node-sidecar.md](007-ai-sdk-node-sidecar.md) for the transport, packaging, and IPC changes while retaining this plan's product behavior and persistence requirements.
+This plan selects the native Rust HTTP transport. The shipped implementation uses a bundled Node sidecar while retaining this plan's product behavior and persistence requirements.
 
 Make the native Rust host, not the React webview, the AI client. The host reads the selected provider key from Keychain just in time, makes the provider request, validates the result, and returns only a safe proposal. This is required by the credential boundary and aligns with Vercel AI Gateway’s instruction not to expose its credential to browser clients.
 
@@ -79,14 +81,14 @@ After decoding, reject invalid values. If input `scheduledDate` is non-null, rep
 
 The renderer invokes Plan My Day with no task IDs. The native command reads a fresh snapshot and computes:
 
-- Today and its active commitments.
+- Today and its active commitments, which are fixed context and never move candidates.
 - Daily capacity and remaining capacity.
 - Eligible Backlog tasks: incomplete, positive estimated minutes, not already Today, and either unscheduled or overdue. Exclude future-dated and title-only tasks.
 - Current Backlog ordering as a soft priority signal and the saved planning instruction.
 
 Give the model stable eligible task IDs, titles, estimates, date context, current order, remaining minutes, and the instruction. Ask it to return an ordered list of selected task IDs plus optional short rationale; it must not return dates, scopes, or positions.
 
-Validate the selection after decoding: no unknown IDs, duplicates, completed tasks, invalid estimates, future-dated tasks, existing Today tasks, or total beyond remaining capacity. Convert the valid ordered IDs into final Today assignments by assigning Today’s date and positions after the last existing Today task. Return those final items, total minutes, remaining capacity after the proposal, and an explicit empty-state reason when nothing can be added.
+Validate the selection after decoding: no unknown IDs, duplicates, completed tasks, invalid estimates, future-dated tasks, existing Today tasks, or total beyond remaining capacity. Convert the valid ordered Backlog IDs into final Today assignments by assigning the current local Today date and positions after the last existing Today task. Return those final items, total minutes, remaining capacity after the proposal, and an explicit empty-state reason when nothing can be added. Existing Today tasks are not returned as assignments.
 
 Use deterministic validation as the final authority. The model ranks eligible work; it never determines persistence fields or bypasses capacity.
 
@@ -134,7 +136,7 @@ Files:
 2. Keep only transient data in this state: original Assist capture text, immutable route date, current editable Assist draft, current plan proposal, and retry metadata. Never store API keys or raw provider responses.
 3. `startAssist` clears task selection, stores the original capture and route date, switches to loading, calls the native command, and replaces loading with the proposal or error. `redoAssist` uses the retained original capture, not the cleared composer value.
 4. `startPlan` uses a fresh native plan request each time. `redoPlan` repeats it from the current local persistence state, not a cached snapshot.
-5. When AI is unconfigured, open the unavailable tray state with an **Open Settings** action instead of silently disabling the Sparkles button. Manual Save remains independent and usable.
+5. Superseded by plan 013 for known preflight state: when the active provider has no saved key, disable the AI button and direct the user to Settings with a tooltip. Preserve this unavailable tray with **Open Settings** for runtime `unavailable-key` failures, such as an external Keychain change after the last snapshot. Manual Save remains independent and usable.
 6. Starting an AI action replaces any prior AI review. Starting an AI action clears a selected task; clicking a task row while a review is open dismisses the review before opening the task detail panel.
 7. Extend root outside-click and Escape handling to recognize `[data-ai-review]`. Escape or an outside click dismisses the review first; the popover only hides after no task detail or review surface remains open.
 

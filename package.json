@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:desktop": "tauri dev",
+    "dev:desktop": "npm run ensure:sidecar && tauri dev",
     "build": "vite build && tsc",
+    "build:sidecar": "npm --prefix sidecar run build",
+    "ensure:sidecar": "npm --prefix sidecar run ensure",
     "preview": "vite preview",
     "tauri": "tauri"
   },

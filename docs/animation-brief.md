@@ -103,7 +103,7 @@ Keep the current CSS animations for dialogs, popovers, and selects. They already
 1. [x] Install `motion` and add the root reduced-motion configuration.
 2. [x] Add task-list layout and presence transitions for create, delete, complete, restore, and cross-section moves.
 3. [x] Convert the task detail panel to paired presence transitions.
-4. [ ] Build the AI review tray with loading-to-result transitions as part of the planned AI feature.
+4. [x] Build the AI review tray with loading-to-result transitions as part of the AI feature slices.
 5. [x] Add the minimal route fade and pending-save icon treatment.
 6. [ ] Validate in both full and menu-bar popover modes, including macOS Reduced Motion and the 360 x 520 minimum window.
 

@@ -5,6 +5,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AiReviewProvider } from "@/components/ai-review";
 import { PlannerQueryProvider } from "@/lib/planner-query";
 import { router } from "./router";
 import "./styles.css";
@@ -21,7 +22,9 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
       <PlannerQueryProvider>
         <ThemeProvider>
           <TooltipProvider>
-            <RouterProvider router={router} />
+            <AiReviewProvider>
+              <RouterProvider router={router} />
+            </AiReviewProvider>
             <Toaster />
           </TooltipProvider>
         </ThemeProvider>

@@ -12,10 +12,11 @@ The repository contains a working local planning foundation:
 - Native task creation, editing, completion, deletion, and date scheduling.
 - Today capacity and over-capacity state.
 - macOS Keychain storage for provider API keys.
+- Settings-based provider and fixed model selection for AI features.
 - Shared local state between the popover and full window through native change events and TanStack Query invalidation.
 - Light and dark themes and compact task-detail editing above the persistent footer.
 
-The current product is still pre-1.0. The next work is to finish the deterministic daily loop, implement the reviewable AI actions, add the remaining ordering behavior, and harden the compact-window and persistence states. AI controls are present in the interface but are currently disabled until their native provider and review-tray flow is shipped.
+The current product is still pre-1.0. AI Assist and Plan My Day are implemented as reviewable vertical slices: provider requests cross the native Keychain boundary through the packaged Node sidecar, Assist creates tasks only after review, and Plan My Day moves selected backlog tasks to Today only after atomic native acceptance. Final packaged/manual acceptance remains before broad 1.0 shipment.
 
 The product direction and staged expansion plan live in [the product brief](docs/product-brief.md) and [the roadmap](docs/roadmap.md).
 
@@ -25,8 +26,8 @@ Slate is designed around a compact menu-bar popover that can perform the essenti
 
 - **Today:** committed tasks, remaining capacity, over-capacity state, and completed work.
 - **Backlog:** captured work grouped by estimate and date state.
-- **Settings:** daily capacity, AI provider configuration, API key state, and planning instruction.
-- **Persistent footer:** quick capture, Save, AI action, and Settings access.
+- **Settings:** daily capacity, AI provider/model configuration, provider-specific Keychain credentials, and planning instruction through one explicit Save action.
+- **Persistent footer:** quick capture, Save, context-sensitive AI Assist or Plan My Day, and Settings access.
 
 The full window provides more room for the same workflow. It is not an unlock gate for essential planning behavior.
 
@@ -34,15 +35,21 @@ The full window provides more room for the same workflow. It is not an unlock ga
 
 ```bash
 npm install
+npm --prefix sidecar ci
+npm run build:sidecar
 npm run dev:desktop
 ```
 
 `npm run dev:desktop` starts Vite on port 1420 and launches the native Slate tray app. The popover opens from the macOS menu bar; the full app is available through Open Full App.
+The sidecar is an independently locked package, so install and build it once before desktop development; `npm run ensure:sidecar` then rejects a missing or stale binary.
 
 ## Validation and release builds
 
 ```bash
 npm run build
+npm --prefix sidecar ci
+npm --prefix sidecar test
+npm run build:sidecar
 npm run tauri -- build
 ```
 
@@ -58,7 +65,7 @@ The production application and DMG are generated under `src-tauri/target/release
 - SQLite through a native Rust `rusqlite` repository with bundled SQLite
 - macOS Keychain access through the Tauri layer
 - TanStack Query for renderer caching and cross-window invalidation
-- Native Rust AI provider adapter planned for the 1.0 AI actions
+- Native Tauri provider boundary with a packaged Node sidecar using JavaScript AI SDKs
 
 ## Project structure
 
