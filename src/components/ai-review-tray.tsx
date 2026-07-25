@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Calendar01Icon,
+  Cancel01Icon,
   Clock01Icon,
   Loading03Icon,
   SparklesIcon,
@@ -224,16 +225,27 @@ function AssistResult({ onDismiss, onRedo, proposal }: { onDismiss: () => void; 
     <form aria-label="Review AI Assist task" onSubmit={handleAccept}>
       <div className="flex items-center gap-2">
         <HugeiconsIcon aria-hidden="true" icon={SparklesIcon} size={16} strokeWidth={1.8} />
-        <p className="m-0 text-menu font-semibold">Review AI Assist</p>
-        <span className="ml-auto text-xs text-[var(--task-detail-muted)]">Draft</span>
+        <p className="m-0 text-menu font-semibold">Review task</p>
+        <Button
+          aria-label="Dismiss AI Assist review"
+          className="ml-auto text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
+          disabled={disabled}
+          onClick={onDismiss}
+          size="icon-xs"
+          title="Dismiss review"
+          type="button"
+          variant="ghost"
+        >
+          <HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.8} />
+        </Button>
       </div>
 
-      <label className="mt-3 block text-menu-label font-semibold" htmlFor="ai-assist-title">
+      <label className="sr-only" htmlFor="ai-assist-title">
         Task title
       </label>
       <Input
         autoFocus
-        className="mt-1 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] placeholder:text-[var(--task-detail-muted)]"
+        className="mt-2 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] placeholder:text-[var(--task-detail-muted)]"
         disabled={disabled}
         id="ai-assist-title"
         onChange={(event) => setTitle(event.target.value)}
@@ -241,32 +253,30 @@ function AssistResult({ onDismiss, onRedo, proposal }: { onDismiss: () => void; 
       />
 
       <div className="mt-2 grid grid-cols-2 gap-2">
-        <label className="text-menu-label font-semibold" htmlFor="ai-assist-estimate">
-          Estimate
-          <span className="relative mt-1 flex items-center">
-            <HugeiconsIcon aria-hidden="true" className="pointer-events-none absolute left-2 text-[var(--task-detail-muted)]" icon={Clock01Icon} size={15} strokeWidth={1.7} />
-            <Input
-              className="border-[var(--task-detail-border)] bg-[var(--task-detail-field)] pl-7 text-[var(--task-detail-foreground)]"
-              disabled={disabled}
-              id="ai-assist-estimate"
-              inputMode="numeric"
-              min="1"
-              max="1440"
-              onChange={(event) => setEstimate(event.target.value)}
-              type="number"
-              value={estimate}
-            />
-          </span>
+        <label className="relative flex items-center" htmlFor="ai-assist-estimate">
+          <span className="sr-only">Estimate in minutes</span>
+          <HugeiconsIcon aria-hidden="true" className="pointer-events-none absolute left-2 text-[var(--task-detail-muted)]" icon={Clock01Icon} size={15} strokeWidth={1.7} />
+          <Input
+            className="border-[var(--task-detail-border)] bg-[var(--task-detail-field)] pl-7 pr-10 text-[var(--task-detail-foreground)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            disabled={disabled}
+            id="ai-assist-estimate"
+            inputMode="numeric"
+            min="1"
+            max="1440"
+            onChange={(event) => setEstimate(event.target.value)}
+            type="number"
+            value={estimate}
+          />
+          <span aria-hidden="true" className="pointer-events-none absolute right-2 text-xs text-[var(--task-detail-muted)]">min</span>
         </label>
 
-        <div>
-          <span className="text-menu-label font-semibold">Date</span>
+        <div className="flex items-center">
           <Popover>
             <PopoverTrigger
               render={
                 <Button
                   aria-label="Edit task date"
-                  className="mt-1 h-8 w-full justify-start border-[var(--task-detail-border)] px-2 text-[var(--task-detail-foreground)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
+                  className="h-8 w-full justify-start border-[var(--task-detail-border)] px-2 text-[var(--task-detail-foreground)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
                   disabled={disabled}
                   type="button"
                   variant="outline"
@@ -296,20 +306,15 @@ function AssistResult({ onDismiss, onRedo, proposal }: { onDismiss: () => void; 
         </div>
       </div>
 
-      <div className="mt-2 min-h-5" aria-live="polite">
-        {validationError ? <p className="m-0 text-xs text-destructive">{validationError}</p> : null}
-      </div>
+      {validationError ? <p className="m-0 mt-2 text-xs text-destructive" role="alert">{validationError}</p> : null}
 
-      <div className="mt-1 flex items-center justify-end gap-1.5">
-        <Button disabled={disabled} onClick={onDismiss} size="sm" type="button" variant="ghost">
-          Dismiss
-        </Button>
+      <div className="mt-2 flex items-center justify-end gap-1.5">
         <Button disabled={disabled} onClick={onRedo} size="sm" type="button" variant="outline">
-          Redo
+          Try again
         </Button>
         <Button disabled={disabled} size="sm" type="submit">
           <HugeiconsIcon aria-hidden="true" data-icon="inline-start" icon={disabled ? Loading03Icon : Tick02Icon} className={disabled ? "animate-spin motion-reduce:animate-none" : undefined} strokeWidth={1.9} />
-          {disabled ? "Saving…" : "Accept"}
+          {disabled ? "Adding…" : "Add task"}
         </Button>
       </div>
     </form>
