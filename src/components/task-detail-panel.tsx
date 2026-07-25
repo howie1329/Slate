@@ -298,6 +298,18 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
                 }}
                 selected={scheduledDate ? dateFromLocalDate(scheduledDate) : undefined}
               />
+              {scheduledDate !== null ? (
+                <div className="border-t border-border p-2">
+                  <Button
+                    className="w-full justify-center text-menu"
+                    onClick={() => setScheduledDate(null)}
+                    type="button"
+                    variant="ghost"
+                  >
+                    Return to Backlog
+                  </Button>
+                </div>
+              ) : null}
             </PopoverContent>
           </Popover>
 

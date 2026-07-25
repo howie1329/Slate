@@ -1,7 +1,8 @@
 import type { LocalDate, Task } from "@/lib/planner";
 
-export type ActiveTaskScope =
+export type TaskDisplayScope =
   | "log:needs-estimate"
+  | "log:completed"
   | "log:unscheduled"
   | "log:upcoming"
   | "log:overdue"
@@ -15,9 +16,9 @@ export type CapacityState = {
   overflowTaskId: string | null;
 };
 
-export function scopeForTask(task: Task, today: LocalDate): ActiveTaskScope | null {
+export function scopeForTask(task: Task, today: LocalDate): TaskDisplayScope {
   if (task.completedAt !== null) {
-    return null;
+    return task.scheduledDate === today ? `today:${today}` : "log:completed";
   }
 
   if (task.estimateMinutes === null) {
@@ -33,6 +34,17 @@ export function scopeForTask(task: Task, today: LocalDate): ActiveTaskScope | nu
   }
 
   return task.scheduledDate < today ? "log:overdue" : "log:upcoming";
+}
+
+export function orderCompletedTasks(tasks: Task[]) {
+  return [...tasks].sort((first, second) => {
+    const completedAtOrder = (second.completedAt ?? "").localeCompare(first.completedAt ?? "");
+    if (completedAtOrder !== 0) {
+      return completedAtOrder;
+    }
+
+    return second.createdAt.localeCompare(first.createdAt) || second.id.localeCompare(first.id);
+  });
 }
 
 export function orderTasks(tasks: Task[], orderByScope: Record<string, string[]>, scope: string) {

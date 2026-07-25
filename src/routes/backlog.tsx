@@ -10,7 +10,7 @@ import { useTaskSelection } from "@/components/task-selection";
 import { focusTaskComposer } from "@/lib/task-composer";
 import type { PlannerSnapshot } from "@/lib/planner";
 import { usePlannerState, useSetTaskCompleted } from "@/lib/planner-query";
-import { orderTasks, scopeForTask } from "@/lib/task-groups";
+import { orderCompletedTasks, orderTasks, scopeForTask } from "@/lib/task-groups";
 
 export const Route = createFileRoute("/backlog")({
   component: BacklogPage,
@@ -36,10 +36,9 @@ function BacklogWorkspace({ planner }: { planner: PlannerSnapshot }) {
     ["Unscheduled", "log:unscheduled"],
     ["Overdue / needs reschedule", "log:overdue"],
     ["Upcoming", "log:upcoming"],
+    ["Completed", "log:completed"],
   ] as const;
-  const hasVisibleTasks = tasks.some(
-    (task) => task.completedAt === null && scopeForTask(task, today) !== `today:${today}`,
-  );
+  const hasVisibleTasks = tasks.some((task) => scopeForTask(task, today) !== `today:${today}`);
   const [showEmptyState, setShowEmptyState] = useState(!hasVisibleTasks);
 
   useEffect(() => {
@@ -98,11 +97,15 @@ function BacklogWorkspace({ planner }: { planner: PlannerSnapshot }) {
             selectedTaskId={selectedTaskId}
             onSelectTask={selectTask}
             taskMutation={taskMutation}
-            tasks={orderTasks(
-              tasks.filter((task) => scopeForTask(task, today) === scope),
-              orderByScope,
-              scope,
-            )}
+            tasks={
+              scope === "log:completed"
+                ? orderCompletedTasks(tasks.filter((task) => scopeForTask(task, today) === scope))
+                : orderTasks(
+                    tasks.filter((task) => scopeForTask(task, today) === scope),
+                    orderByScope,
+                    scope,
+                  )
+            }
           />
         ))}
       </div>

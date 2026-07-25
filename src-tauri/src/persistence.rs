@@ -1470,6 +1470,55 @@ mod tests {
     }
 
     #[test]
+    fn clearing_a_scheduled_date_returns_an_active_task_to_unscheduled() {
+        let mut database = TestDatabase::new();
+        let task = create_task(&mut database.repository, "Return me");
+        let today = local_today();
+
+        database
+            .repository
+            .update_task(UpdateTaskInput {
+                id: task.id.clone(),
+                title: task.title.clone(),
+                estimate_minutes: task.estimate_minutes,
+                scheduled_date: Some(today.clone()),
+            })
+            .expect("schedule task for today");
+        let today_snapshot = database.repository.snapshot().expect("today snapshot");
+        assert_eq!(
+            today_snapshot.order_by_scope.get(&format!("today:{today}")),
+            Some(&vec![task.id.clone()]),
+        );
+
+        database
+            .repository
+            .update_task(UpdateTaskInput {
+                id: task.id.clone(),
+                title: task.title,
+                estimate_minutes: task.estimate_minutes,
+                scheduled_date: None,
+            })
+            .expect("clear scheduled date");
+
+        let stored_task = database
+            .repository
+            .tasks()
+            .expect("load tasks")
+            .into_iter()
+            .find(|candidate| candidate.id == task.id)
+            .expect("updated task");
+        assert_eq!(stored_task.scheduled_date, None);
+        let snapshot = database.repository.snapshot().expect("unscheduled snapshot");
+        assert_eq!(
+            snapshot.order_by_scope.get("log:unscheduled"),
+            Some(&vec![task.id]),
+        );
+        assert!(!snapshot
+            .order_by_scope
+            .contains_key(&format!("today:{today}")));
+    }
+
+    #[test]
     fn restored_tasks_return_to_the_start_of_their_scope() {
         let mut database = TestDatabase::new();
         let first = create_task(&mut database.repository, "First");

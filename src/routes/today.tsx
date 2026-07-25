@@ -38,7 +38,7 @@ function TodayWorkspace({ planner }: { planner: PlannerSnapshot }) {
   const scheduledToday = tasks.filter((task) => task.scheduledDate === today);
   const todayScope = `today:${today}`;
   const activeTasks = orderTasks(
-    tasks.filter((task) => scopeForTask(task, today) === todayScope),
+    tasks.filter((task) => task.completedAt === null && scopeForTask(task, today) === todayScope),
     orderByScope,
     todayScope,
   );
