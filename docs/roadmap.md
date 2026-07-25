@@ -83,7 +83,9 @@ Make the capture-to-commit-to-completion loop reliable and demonstrable without 
 - Put both AI actions in a footer-adjacent review tray. Nothing is persisted until the user accepts it.
 - Validate accepted plans again at the SQLite transaction boundary so stale proposals cannot partially apply.
 - Keep credentials in the native Keychain boundary; no provider key enters renderer state, SQLite, logs, or change events.
-- Verify the popover at the configured minimum size and produce a stable packaged macOS build.
+- Verify the popover at the configured minimum size.
+- Choose and document the supported macOS and processor architecture matrix, then align the app plist, native binary, and bundled sidecar deployment targets with it.
+- Replace starter bundle metadata and produce a Developer ID signed, notarized, and stapled DMG for direct distribution. The existing `macOSPrivateApi` dependency keeps Mac App Store distribution out of scope.
 
 ### Capacity contract
 
@@ -100,6 +102,7 @@ When a plan is over capacity, Slate should explain the overage and offer recover
 - Plan acceptance is atomic and rejects stale or invalid proposals without partial writes.
 - Closing and reopening the app preserves task and preference state.
 - The popover and full window expose the same essential workflow.
+- The release artifact contains production metadata, covers the declared architecture/OS matrix, and passes Gatekeeper assessment after notarization and stapling.
 - `npm run build` and the relevant native tests pass.
 
 ## Stage 2 — Make the daily loop resilient

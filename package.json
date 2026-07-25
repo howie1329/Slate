@@ -2,6 +2,13 @@
   "name": "slate",
   "private": true,
   "version": "0.1.0",
+  "description": "A calm, local-first macOS planner for deciding what realistically fits into today.",
+  "author": "Howard Thomas",
+  "homepage": "https://github.com/howie1329/Slate",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/howie1329/Slate.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +17,8 @@
     "build:sidecar": "npm --prefix sidecar run build",
     "ensure:sidecar": "npm --prefix sidecar run ensure",
     "preview": "vite preview",
+    "release:macos": "./scripts/release-macos.sh",
+    "verify:macos-release": "./scripts/verify-macos-release.sh",
     "tauri": "tauri"
   },
   "dependencies": {
