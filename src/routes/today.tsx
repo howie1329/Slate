@@ -10,7 +10,7 @@ import { useTaskMotion, type TaskMotionTransition } from "@/components/task-moti
 import { useTaskSelection } from "@/components/task-selection";
 import type { PlannerSnapshot } from "@/lib/planner";
 import { focusTaskComposer } from "@/lib/task-composer";
-import { usePlannerState, useSetTaskCompleted } from "@/lib/planner-query";
+import { usePlannerState, useReorderTasks, useSetTaskCompleted } from "@/lib/planner-query";
 import { calculateCapacityState, orderTasks, scopeForTask } from "@/lib/task-groups";
 
 export const Route = createFileRoute("/today")({
@@ -29,6 +29,7 @@ function TodayPage() {
 
 function TodayWorkspace({ planner }: { planner: PlannerSnapshot }) {
   const setTaskCompleted = useSetTaskCompleted();
+  const reorderTasks = useReorderTasks();
   const navigate = useNavigate();
   const { recordTaskMutation, taskMutation } = useTaskMotion();
   const { setRouteTransition } = useRouteMotion();
@@ -52,6 +53,7 @@ function TodayWorkspace({ planner }: { planner: PlannerSnapshot }) {
   const capacity = calculateCapacityState(activeTasks, capacityMinutes);
   const { overflowTaskId } = capacity;
   const hasTasks = activeTasks.length > 0 || completedTasks.length > 0;
+  const mutationPending = reorderTasks.isPending || setTaskCompleted.isPending;
   const [showEmptyState, setShowEmptyState] = useState(!hasTasks);
 
   useEffect(() => {
@@ -80,17 +82,26 @@ function TodayWorkspace({ planner }: { planner: PlannerSnapshot }) {
     }
   }
 
+  function handleReorderTasks(taskIds: string[]) {
+    reorderTasks.mutate(
+      { scope: todayScope, taskIds },
+      { onError: () => toast.error("Could not save task order.") },
+    );
+  }
+
   return (
     <section className={`flex h-full min-h-0 flex-col overflow-y-auto px-4 pt-2 sm:px-6 sm:pt-3 ${selectedTaskId ? "pb-48" : "pb-24"}`} aria-label="Today tasks">
       <div className="mx-auto w-full max-w-xl">
         <TaskGroup
           className="mt-2"
           label="To do"
+          onReorderTasks={handleReorderTasks}
           onSelectTask={selectTask}
           onTasksExitComplete={handleTasksExitComplete}
           onToggleTask={toggleTask}
           overflowTaskId={overflowTaskId}
-          pending={setTaskCompleted.isPending}
+          pending={mutationPending}
+          reorderDisabled={mutationPending}
           selectedTaskId={selectedTaskId}
           taskMutation={taskMutation}
           tasks={activeTasks}
@@ -101,7 +112,7 @@ function TodayWorkspace({ planner }: { planner: PlannerSnapshot }) {
           onSelectTask={selectTask}
           onTasksExitComplete={handleTasksExitComplete}
           onToggleTask={toggleTask}
-          pending={setTaskCompleted.isPending}
+          pending={mutationPending}
           selectedTaskId={selectedTaskId}
           taskMutation={taskMutation}
           tasks={completedTasks}

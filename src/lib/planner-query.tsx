@@ -125,7 +125,38 @@ export function useDeleteTask() {
 }
 
 export function useReorderTasks() {
-  return usePlannerMutation<ReorderTasksInput>(reorderTasks);
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: reorderTasks,
+    onMutate: async (input: ReorderTasksInput) => {
+      await queryClient.cancelQueries({ queryKey: plannerStateQueryKey });
+
+      const previousSnapshot = queryClient.getQueryData<PlannerSnapshot>(plannerStateQueryKey);
+
+      queryClient.setQueryData<PlannerSnapshot>(plannerStateQueryKey, (snapshot) => {
+        if (!snapshot) {
+          return snapshot;
+        }
+
+        return {
+          ...snapshot,
+          orderByScope: {
+            ...snapshot.orderByScope,
+            [input.scope]: input.taskIds,
+          },
+        };
+      });
+
+      return { previousSnapshot };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previousSnapshot) {
+        queryClient.setQueryData(plannerStateQueryKey, context.previousSnapshot);
+      }
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: plannerStateQueryKey }),
+  });
 }
 
 export function useSaveSettings() {
