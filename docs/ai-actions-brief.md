@@ -29,7 +29,9 @@ The AI button should treat whitespace-only input as empty. Its label, tooltip, a
 - Input present: `Use AI Assist`.
 - Input empty: `Plan My Day`.
 
-When the active provider has no saved key, the AI button is disabled and its tooltip directs the user to Settings. An inaccessible macOS Keychain is a separate unavailable state with retry guidance; it is never presented as a missing key. An `unavailable-key` response still opens the unavailable review state when a key is removed outside Slate after the last native snapshot. Neither state prevents regular Save from working.
+Planner snapshots determine whether each provider has a saved key through a non-interactive, metadata-only Keychain lookup. Startup, focus, task changes, and other ordinary planner refreshes never retrieve API-key data or request Keychain authentication. `configured` means the provider's Keychain item exists; the native layer reads the selected provider's key once, just in time, only after the user invokes an AI action.
+
+When the active provider has no saved key, the AI button is disabled and its tooltip directs the user to Settings. A Keychain metadata failure remains a separate unavailable state with retry guidance. If a just-in-time read is locked or denied, the AI action returns `credentials-unavailable`; if the item was removed after the last snapshot, it returns `unavailable-key`. Neither state prevents regular Save from working.
 
 Settings uses one footer Save action for provider, global model, planning preferences, and the selected provider's Keychain credential. A saved credential appears only as a fixed non-secret mask. OpenRouter and AI Gateway keys are stored independently; secrets never enter planner snapshots, SQLite, query-cache data, logs, or change events.
 
@@ -165,6 +167,7 @@ Only one AI review should be active at a time. Opening a new AI action should re
 - AI Assist acceptance creates one task through the existing persistence boundary.
 - Plan My Day acceptance applies all selected Backlog assignments in one atomic persistence operation; existing Today tasks remain unchanged.
 - API keys remain in macOS Keychain and never appear in planner snapshots, SQLite, review state, or change events.
+- Passive planner refreshes inspect Keychain metadata only; secret data is read once per user-initiated AI request.
 - Manual Save remains available regardless of AI configuration or network access.
 
 ## Out of scope

@@ -166,20 +166,13 @@ impl Repository {
         Ok(Self { connection })
     }
 
-    fn snapshot(&self) -> Result<PlannerSnapshot, String> {
+    fn snapshot(
+        &self,
+        ai_availability_by_provider: HashMap<String, String>,
+    ) -> Result<PlannerSnapshot, String> {
         let settings = self.settings()?;
         let tasks = self.tasks()?;
         let order_by_scope = self.orders()?;
-        let ai_availability_by_provider = credentials::supported_providers()
-            .map(|provider| {
-                let availability = match credentials::credential_availability(provider) {
-                    credentials::CredentialAvailability::Configured(_) => "configured",
-                    credentials::CredentialAvailability::Unconfigured => "unconfigured",
-                    credentials::CredentialAvailability::Unavailable => "unavailable",
-                };
-                (provider.to_string(), availability.to_string())
-            })
-            .collect::<HashMap<_, _>>();
         let ai_availability = ai_availability_by_provider
             .get(&settings.ai_provider)
             .cloned()
@@ -294,7 +287,8 @@ impl Repository {
     }
 
     fn settings(&self) -> Result<Settings, String> {
-        let settings = self.connection
+        let settings = self
+            .connection
             .query_row(
                 "SELECT daily_capacity_minutes, planning_instruction, ai_provider, ai_model, theme
                  FROM settings WHERE id = 1",
@@ -763,7 +757,7 @@ pub(crate) struct DailyPlanAcceptanceInput {
 
 #[tauri::command]
 pub fn get_planner_snapshot(state: State<PersistenceState>) -> Result<PlannerSnapshot, String> {
-    with_repository(&state, |repository| repository.snapshot())
+    planner_snapshot(&state)
 }
 
 pub(crate) fn read_ai_assist_context(state: &PersistenceState) -> Result<AiAssistContext, String> {
@@ -861,10 +855,10 @@ pub fn save_settings(
         }
     }
 
-    let snapshot = with_repository(&state, |repository| {
-        repository.update_settings(input.settings)?;
-        repository.snapshot()
+    with_repository(&state, |repository| {
+        repository.update_settings(input.settings)
     })?;
+    let snapshot = planner_snapshot(&state)?;
     emit_change(&app, &state)?;
     Ok(snapshot)
 }
@@ -898,6 +892,26 @@ pub fn emit_change(app: &AppHandle, state: &PersistenceState) -> Result<(), Stri
     let revision = state.revision.fetch_add(1, Ordering::Relaxed) + 1;
     app.emit("planner://changed", PlannerChanged { revision })
         .map_err(|error| format!("Could not notify Slate windows about a planner change: {error}"))
+}
+
+fn planner_snapshot(state: &PersistenceState) -> Result<PlannerSnapshot, String> {
+    let availability_by_provider = credential_availability_by_provider();
+    with_repository(state, |repository| {
+        repository.snapshot(availability_by_provider)
+    })
+}
+
+fn credential_availability_by_provider() -> HashMap<String, String> {
+    credentials::supported_providers()
+        .map(|provider| {
+            let availability = match credentials::credential_availability(provider) {
+                credentials::CredentialAvailability::Configured => "configured",
+                credentials::CredentialAvailability::Unconfigured => "unconfigured",
+                credentials::CredentialAvailability::Unavailable => "unavailable",
+            };
+            (provider.to_string(), availability.to_string())
+        })
+        .collect()
 }
 
 fn apply_migrations(connection: &Connection) -> Result<(), String> {
@@ -1235,6 +1249,20 @@ mod tests {
             .expect("created task")
     }
 
+    fn test_ai_availability() -> HashMap<String, String> {
+        [
+            ("vercel-gateway".into(), "unconfigured".into()),
+            ("openrouter".into(), "configured".into()),
+        ]
+        .into()
+    }
+
+    fn test_snapshot(repository: &Repository) -> PlannerSnapshot {
+        repository
+            .snapshot(test_ai_availability())
+            .expect("snapshot")
+    }
+
     #[test]
     fn initializes_default_settings_and_persists_them_after_reopen() {
         let directory =
@@ -1268,6 +1296,30 @@ mod tests {
         assert_eq!(settings.planning_instruction, "Protect focus time.");
         drop(reopened);
         fs::remove_dir_all(directory).expect("remove temporary test directory");
+    }
+
+    #[test]
+    fn snapshot_uses_supplied_safe_credential_status() {
+        let database = TestDatabase::new();
+        let availability_by_provider = [
+            ("vercel-gateway".into(), "configured".into()),
+            ("openrouter".into(), "unavailable".into()),
+        ]
+        .into();
+
+        let snapshot = database
+            .repository
+            .snapshot(availability_by_provider)
+            .expect("snapshot");
+
+        assert_eq!(snapshot.ai_availability, "configured");
+        assert_eq!(
+            snapshot
+                .ai_availability_by_provider
+                .get("openrouter")
+                .map(String::as_str),
+            Some("unavailable")
+        );
     }
 
     #[test]
@@ -1412,7 +1464,7 @@ mod tests {
             })
             .expect("reorder tasks");
 
-        let snapshot = database.repository.snapshot().expect("snapshot");
+        let snapshot = test_snapshot(&database.repository);
         assert!(snapshot
             .tasks
             .iter()
@@ -1464,7 +1516,7 @@ mod tests {
             })
             .expect("move task into destination scope");
 
-        let snapshot = database.repository.snapshot().expect("snapshot");
+        let snapshot = test_snapshot(&database.repository);
         assert_eq!(
             snapshot.order_by_scope.get("log:unscheduled"),
             Some(&vec![moved.id, first.id, second.id]),
@@ -1486,7 +1538,7 @@ mod tests {
                 scheduled_date: Some(today.clone()),
             })
             .expect("schedule task for today");
-        let today_snapshot = database.repository.snapshot().expect("today snapshot");
+        let today_snapshot = test_snapshot(&database.repository);
         assert_eq!(
             today_snapshot.order_by_scope.get(&format!("today:{today}")),
             Some(&vec![task.id.clone()]),
@@ -1510,7 +1562,7 @@ mod tests {
             .find(|candidate| candidate.id == task.id)
             .expect("updated task");
         assert_eq!(stored_task.scheduled_date, None);
-        let snapshot = database.repository.snapshot().expect("unscheduled snapshot");
+        let snapshot = test_snapshot(&database.repository);
         assert_eq!(
             snapshot.order_by_scope.get("log:unscheduled"),
             Some(&vec![task.id]),
@@ -1548,7 +1600,7 @@ mod tests {
             })
             .expect("restore task");
 
-        let snapshot = database.repository.snapshot().expect("snapshot");
+        let snapshot = test_snapshot(&database.repository);
         assert_eq!(
             snapshot.order_by_scope.get("log:unscheduled"),
             Some(&vec![restored.id, first.id]),
@@ -1571,7 +1623,7 @@ mod tests {
             .repository
             .delete_task(task.id)
             .expect("delete task");
-        let snapshot = database.repository.snapshot().expect("snapshot");
+        let snapshot = test_snapshot(&database.repository);
         assert!(snapshot.tasks.is_empty());
         assert!(snapshot.order_by_scope.is_empty());
     }
@@ -1783,7 +1835,7 @@ mod tests {
             })
             .expect("accept daily plan");
 
-        let snapshot = database.repository.snapshot().expect("snapshot");
+        let snapshot = test_snapshot(&database.repository);
         assert_eq!(
             snapshot
                 .tasks
