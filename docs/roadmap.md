@@ -72,7 +72,7 @@ Slate 1.0.0 is the shipped baseline for the first usable daily planning loop:
 - Light and dark themes with a restrained visual system.
 - Pointer-only Motion transitions for task presence/layout, task-detail entry and exit, route changes, empty states, and pending-save feedback.
 - Reviewable AI Assist and atomic Plan My Day flows through the Keychain-backed packaged Node sidecar.
-- A signed, notarized, and stapled Apple Silicon DMG for macOS 13.5 or later.
+- An ad-hoc-signed Apple Silicon DMG for macOS 13.5 or later, with an explicit first-launch security warning and published checksum.
 
 Stage 1 is complete. The next eligible work is Stage 2 daily resilience, not Spaces, sync, mobile, or integrations. New work remains evidence-gated, and the distinction between the shipped Backlog view and a future richer Log view stays deliberate.
 
@@ -98,7 +98,7 @@ Make the capture-to-commit-to-completion loop reliable and demonstrable without 
 - Keep credentials in the native Keychain boundary; no provider key enters renderer state, SQLite, logs, or change events.
 - Verify the popover at the configured minimum size.
 - Choose and document the supported macOS and processor architecture matrix, then align the app plist, native binary, and bundled sidecar deployment targets with it.
-- Replace starter bundle metadata and produce a Developer ID signed, notarized, and stapled DMG for direct distribution. The existing `macOSPrivateApi` dependency keeps Mac App Store distribution out of scope.
+- Replace starter bundle metadata and produce an ad-hoc-signed DMG for direct distribution, with checksum verification and accurate first-launch instructions. The existing `macOSPrivateApi` dependency keeps Mac App Store distribution out of scope.
 
 ### Capacity contract
 
@@ -115,7 +115,7 @@ When a plan is over capacity, Slate should explain the overage and offer recover
 - Plan acceptance is atomic and rejects stale or invalid proposals without partial writes.
 - Closing and reopening the app preserves task and preference state.
 - The popover and full window expose the same essential workflow.
-- The release artifact contains production metadata, covers the declared architecture/OS matrix, and passes Gatekeeper assessment after notarization and stapling.
+- The release artifact contains production metadata, covers the declared architecture/OS matrix, has valid ad-hoc signatures, and includes checksum and first-launch guidance.
 - `npm run build` and the relevant native tests pass.
 
 ## Stage 2 — Make the daily loop resilient (1.1–1.x)
@@ -129,7 +129,7 @@ The detailed behavior and data boundaries are defined in [Daily resilience](dail
 ### Entry criteria
 
 - Stage 1 1.0 exit criteria are met.
-- The signed, notarized packaged app and compact popover have passed release acceptance.
+- The ad-hoc-signed packaged app and compact popover have passed release acceptance.
 - Manual task lifecycle, capacity, AI review, and persistence are trustworthy before new history or recovery states expand the model.
 
 Slate 1.0.0 satisfies these entry gates. Stage 2 remains a deliberate product decision rather than an automatic expansion.

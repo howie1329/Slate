@@ -38,8 +38,8 @@ Use npm with the committed `package-lock.json`.
 | Run the desktop app | `npm run dev:desktop` |
 | Build the web application and type-check | `npm run build` |
 | Preview the web build | `npm run preview` |
-| Build, sign, notarize, staple, and verify the macOS DMG | `npm run release:macos` |
-| Verify an existing macOS release bundle | `npm run verify:macos-release` |
+| Build and verify the ad-hoc-signed macOS DMG | `npm run release:macos` |
+| Verify an existing ad-hoc macOS release bundle | `npm run verify:macos-release` |
 | Run a Tauri subcommand | `npm run tauri -- <subcommand>` |
 
 For a native release bundle, use `npm run tauri -- build`. The package currently has no dedicated test script; do not document one as a standard project command until it is added to `package.json`.

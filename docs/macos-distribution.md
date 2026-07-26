@@ -1,29 +1,22 @@
 # macOS distribution
 
-Slate is distributed directly as a notarized DMG. Mac App Store distribution is not supported because the native popover shell depends on Tauri's `macOSPrivateApi`.
+Slate is distributed directly as an ad-hoc-signed DMG. This path does not require an Apple Developer Program membership, but macOS cannot verify the publisher or notarization status. Users must explicitly approve the first launch.
+
+Mac App Store distribution is not supported because the native popover shell depends on Tauri's `macOSPrivateApi`.
 
 ## Supported systems
 
 - Processor: Apple Silicon (`arm64`)
 - Operating system: macOS 13.5 or later
-- Artifact: Developer ID signed, notarized, and stapled DMG
+- Artifact: Ad-hoc-signed DMG
 
 The bundled Node sidecar sets the macOS 13.5 floor. The Tauri app plist, Rust deployment target, and sidecar build are checked against the same version during the release workflow. Intel and universal artifacts remain out of scope until Slate can build and test the complete app and sidecar stack on `x86_64`.
 
-## Apple prerequisites
+## Security tradeoff
 
-Install a valid **Developer ID Application** certificate and its private key in the signing keychain. Confirm it appears in:
+Ad-hoc signing protects the internal code-signing structure of the app bundle, but it does not identify the publisher and is not a substitute for Apple notarization. macOS Gatekeeper will warn users that Apple cannot verify the app.
 
-```sh
-security find-identity -v -p codesigning
-```
-
-Set `APPLE_SIGNING_IDENTITY` to the full certificate name. Configure notarization with one of the credential sets supported by Tauri:
-
-- App Store Connect API: `APPLE_API_ISSUER`, `APPLE_API_KEY`, and `APPLE_API_KEY_PATH`
-- Apple ID: `APPLE_ID`, `APPLE_PASSWORD` using an app-specific password, and `APPLE_TEAM_ID`
-
-Keep these values in the shell environment or a secure CI secret store. Do not commit them or place them in a local project file.
+Publish a SHA-256 checksum beside every DMG so users can verify the downloaded artifact before overriding macOS security.
 
 ## Build and verify
 
@@ -33,16 +26,29 @@ Run:
 npm run release:macos
 ```
 
-The command refuses to build without an Apple Silicon host, the configured Developer ID identity, and notarization credentials. Tauri builds the sidecar and app, signs them with hardened runtime, submits the DMG for notarization, and staples the result. The verification step then checks:
+The command requires an Apple Silicon Mac, forces Tauri's ad-hoc signing identity (`-`), and disables notarization credentials for a deterministic free release. The verification step then checks:
 
 - production bundle identity, version, architecture, and macOS deployment target;
-- strict Developer ID signatures on the app and sidecar;
+- valid ad-hoc signatures on the app and sidecar;
 - the hardened-runtime sidecar can start successfully;
-- notarization tickets are stapled to the app and DMG;
-- Gatekeeper accepts both the app and DMG.
+- the DMG contains the expected application bundle.
 
-The release artifact is written to:
+The workflow does not claim Developer ID identity, notarization, stapling, or Gatekeeper acceptance.
+
+The release artifacts are written to:
 
 ```text
 src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/Slate_<version>_aarch64.dmg
+src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/Slate_<version>_aarch64.dmg.sha256
 ```
+
+## First launch
+
+After downloading and installing Slate, try to open it once. If macOS blocks the app:
+
+1. Open **System Settings → Privacy & Security**.
+2. Scroll to **Security**.
+3. Click **Open Anyway** for Slate.
+4. Confirm **Open** and enter the Mac login password if prompted.
+
+macOS saves this approval as an exception for future launches. Users should only override the warning for a DMG obtained from Slate's official GitHub release and whose checksum matches the published SHA-256 value.

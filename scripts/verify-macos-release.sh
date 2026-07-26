@@ -25,8 +25,6 @@ cleanup() {
 }
 trap cleanup EXIT
 
-xcrun stapler validate "$dmg_path"
-spctl --assess --type open --context context:primary-signature --verbose=4 "$dmg_path"
 hdiutil attach "$dmg_path" -nobrowse -readonly -mountpoint "$mount_point" -quiet
 
 [[ -d "$app_path" ]] || fail "DMG does not contain Slate.app"
@@ -48,13 +46,10 @@ codesign --verify --deep --strict --verbose=2 "$app_path"
 
 app_signature="$(codesign -dvvv "$app_path" 2>&1)"
 sidecar_signature="$(codesign -dvvv "$sidecar_binary" 2>&1)"
-grep -q "Authority=Developer ID Application:" <<<"$app_signature" || fail "app is not Developer ID signed"
-grep -q "Authority=Developer ID Application:" <<<"$sidecar_signature" || fail "sidecar is not Developer ID signed"
+grep -q "^Signature=adhoc$" <<<"$app_signature" || fail "app is not ad-hoc signed"
+grep -q "^Signature=adhoc$" <<<"$sidecar_signature" || fail "sidecar is not ad-hoc signed"
 
 sidecar_response="$(printf '{}\n' | "$sidecar_binary")"
-[[ "$sidecar_response" == '{"ok":false,"error":{"category":"invalid-request"}}' ]] || fail "signed sidecar failed its runtime smoke test"
+[[ "$sidecar_response" == '{"ok":false,"error":{"category":"invalid-request"}}' ]] || fail "ad-hoc-signed sidecar failed its runtime smoke test"
 
-xcrun stapler validate "$app_path"
-spctl --assess --type execute --verbose=4 "$app_path"
-
-echo "Verified signed, notarized, and stapled release: $dmg_path"
+echo "Verified ad-hoc-signed release: $dmg_path"
