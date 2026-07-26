@@ -2,7 +2,7 @@
 
 > **Status:** Current product contract and shipped 1.0 baseline
 >
-> This brief describes Slate 1.0.0, the behavior it ships, and the boundaries future work must preserve. The staged expansion plan lives in [the roadmap](roadmap.md).
+> This brief describes the Slate 1.0.x product contract, including the 1.0.1 onboarding release, and the boundaries future work must preserve. The staged expansion plan lives in [the roadmap](roadmap.md).
 
 ## Product definition
 
@@ -16,7 +16,7 @@ An individual knowledge worker who captures more work than they can reliably fin
 
 ## Current product state
 
-Slate 1.0.0 is the shipped local planning baseline. It provides:
+Slate 1.0.1 is the shipped local planning baseline. It provides:
 
 - A Tauri macOS shell with a menu-bar popover and full application window.
 - Today, Backlog, and Settings routes using the same workspace shell.
@@ -27,6 +27,7 @@ Slate 1.0.0 is the shipped local planning baseline. It provides:
 - A task-detail panel above the persistent footer.
 - macOS Keychain storage for provider API keys.
 - Reviewable AI Assist and Plan My Day flows through the packaged Node sidecar.
+- A short, skippable first-run onboarding flow that explains capacity, Backlog, Today, and task details.
 - Cross-window refresh through native planner-change events and TanStack Query invalidation.
 
 AI Assist and Plan My Day ship as reviewable Keychain-backed sidecar flows. The manual workflow remains the product’s source of truth, and AI never commits a task or plan without explicit acceptance.
