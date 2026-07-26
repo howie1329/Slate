@@ -4,7 +4,7 @@
 >
 > **Updated:** 2026-07-24
 >
-> This document defines a possible desktop expansion for Slate after the local daily planner is trustworthy. It is a product direction, not an implementation plan or a commitment to every feature listed here.
+> This document defines Slate 2.0–2.x after the local planner and 1.x daily-resilience boundaries are trustworthy. It is a product direction, not an implementation plan or a commitment to every feature listed here.
 
 ## Direction
 
@@ -102,31 +102,40 @@ Selecting a card should open the existing compact task-detail interaction with m
 
 The first version should not require rich notes, subtasks, dependencies, or project records to make the board useful.
 
-## Desktop feature set
+## Release slices
 
 The workspace can grow through several related capabilities, but they should be sequenced behind the core board.
 
-### First release
+### 2.0 — Workspace foundation
 
 - Commitment board with derived lanes.
+- Equivalent list view using the same selection, ordering, task detail, and capacity context.
 - Drag-and-drop movement with capacity preview.
 - Full-window Today, Backlog, and completed-work context.
 - Keyboard navigation and visible focus states.
-- Search and a small number of useful filters.
-- Multi-select for safe batch actions such as estimate, date, complete, or return.
-- Focus mode showing only active Today commitments.
-- Full-window Plan My Day review with enough context to inspect proposed additions.
-- A “Make This Fit” action that proposes a smaller or clearer version of oversized work and requires acceptance.
+- Keyboard and menu alternatives for every drag action.
+- Reversible, atomic, and stale-safe movement through the Stage 2 reviewed change-set boundary.
+- A restrained toolbar with search, view selection, and capacity context.
 
-### Follow-up desktop affordances
+### 2.1 — Planning acceleration
 
+- A small number of useful filters.
+- Multi-select for safe reviewed actions such as estimate, date, complete, return, release, or Fit into Today.
 - Today / Next / Later horizon review.
+- Full-window Plan My Day review with enough context to inspect proposed additions.
+- A calm Needs Attention surface for current missing-estimate, overdue, and over-capacity decisions.
 - Quick command menu for capture, navigation, and task actions.
-- Dragging selected text, links, or files into Slate as reviewed capture candidates.
-- Apple Shortcuts and Raycast capture after demand is established.
-- Recent capture and recent completion views.
+
+Repeated-deferral insights do not enter Needs Attention until Calibration has enough event history.
+
+### 2.2 — Distinctive workspace polish
+
+- Focus mode showing only selected active Today commitments.
+- A one-off “Make This Fit” action that proposes a smaller or clearer version of an oversized task and requires acceptance.
+- Dragging selected text, links, or files into Slate as reviewed user-authored capture input.
+- Recent capture, recent completion, and per-task history inspection backed by the Stage 2 event ledger.
 - Contextual end-of-day and disrupted-day review inside the full window.
-- Calibration feedback that explains repeated planning misses without scoring productivity.
+- History-informed Calibration feedback only after the separate Calibration entry criteria are met.
 
 These are extensions of the same workspace, not reasons to add separate dashboards.
 
@@ -150,9 +159,9 @@ The initial workspace should reuse the existing task model and native command bo
 
 - Board lanes are derived from task fields such as completion, estimate, and date.
 - Dragging does not require a permanent kanban-status field in the first release.
-- Capacity validation remains explicit and native-backed.
+- Capacity, Anchor, released-state, expected-state, and atomic change-set validation remain explicit and native-backed.
 - SQLite remains the local source of truth.
-- API keys remain in macOS Keychain and never enter board state, snapshots, logs, or change events.
+- API keys remain in macOS Keychain and never enter board state, snapshots, logs, invalidation events, or accepted event history.
 - Cross-window invalidation continues to keep the popover and full window consistent.
 
 A new persistent status field should be added only if real use shows that commitment state cannot express the user’s need. “In progress” should not be introduced merely because it is familiar from other kanban products.
@@ -172,14 +181,15 @@ A new persistent status field should be added only if real use shows that commit
 Begin this stage only after the Stage 1 1.0 and Stage 2 daily-resilience exit criteria are met. The following should also be true:
 
 - Backlog and Today are understandable without the board.
-- Capacity behavior is stable and trustworthy.
-- Drag-and-drop can be made atomic and stale-safe at the native boundary.
+- Default and per-day capacity, Anchors, release, and recovery behavior are stable and trustworthy.
+- The Stage 2 reviewed change-set boundary can apply board movement atomically and reject stale state.
+- Authoritative task selectors can derive the same lanes, counts, ordering, and capacity for board, list, popover, and full-window summaries.
 - The full window and popover already share authoritative task state.
 - Real use suggests that users need more visual planning context than the compact workflow provides.
 
 ## Exit criteria
 
-The first workspace release is successful when:
+The 2.0 workspace foundation is successful when:
 
 - A user can understand the relationship between Capture, Ready, Today, and Done quickly.
 - Moving work into Today makes its capacity cost clear before or at the moment of commitment.
@@ -191,4 +201,4 @@ The first workspace release is successful when:
 
 ## Roadmap placement
 
-This direction belongs after **Stage 2 — Make the daily loop resilient** and before Spaces. The current roadmap names it **Stage 3 — Build the full-window planning workspace**. Spaces, calibration, outside context, and local agent access should follow the new stage unless evidence justifies a different order.
+This direction is **Stage 3 — Build the full-window planning workspace**, covering Slate 2.0–2.x. It follows the 1.x daily-resilience foundation. Calibration follows as the next major product outcome; Spaces remain conditional and do not block Calibration, outside context, or local agent access.

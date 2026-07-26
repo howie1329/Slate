@@ -42,14 +42,22 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["dmg"],
+    "category": "Productivity",
+    "copyright": "Copyright © 2026 Howard Thomas. All rights reserved.",
+    "shortDescription": "A calm, local-first planner for deciding what realistically fits into today.",
+    "longDescription": "Slate is a local-first macOS planner for capturing work, committing a realistic day, and adapting those commitments without turning productivity into a score.",
     "externalBin": ["binaries/slate-ai-sidecar"],
     "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ]
+      "icons/slate/32x32.png",
+      "icons/slate/128x128.png",
+      "icons/slate/128x128@2x.png",
+      "icons/slate/icon.icns"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "13.5",
+      "hardenedRuntime": true,
+      "entitlements": "Entitlements.plist"
+    }
   }
 }

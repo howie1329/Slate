@@ -77,11 +77,12 @@ The full window should show decisions that need action, not a performance dashbo
 - Tasks needing estimates.
 - Overdue commitments.
 - Current over-capacity amount.
-- Repeatedly deferred work.
 - Pending AI proposals.
 - Work that has been captured but is still unclear.
 
 Each item should link directly to the relevant board selection or review action. The rail should disappear or collapse when there is nothing meaningful to resolve.
+
+Repeatedly deferred work may join this surface only after Calibration has enough accepted Stage 2 event history to define and explain the pattern without false precision.
 
 ## 6. Make movement reversible and accessible
 
@@ -96,6 +97,8 @@ Drag-and-drop should feel safe, not magical. Provide:
 
 Apple’s macOS guidance recommends alternatives to drag-and-drop, multi-item dragging, clear destination feedback, and undoable operations. ([Apple drag and drop guidance](https://developer.apple.com/design/human-interface-guidelines/drag-and-drop?changes=_3))
 
+Movement, undo, and batch actions should reuse the Stage 2 expected-state and atomic change-set boundary rather than introduce board-specific mutation behavior.
+
 ## 7. Add batch planning actions
 
 Selecting several Ready tasks should expose a small action set:
@@ -107,6 +110,8 @@ Selecting several Ready tasks should expose a small action set:
 - Complete or release.
 
 Actions that change commitments should show a preview before applying. For example, **Fit into Today** can select the best-fitting subset, show the total minutes, and let the user accept or adjust the proposal.
+
+Release uses the Stage 2 recoverable released disposition. It is not destructive deletion.
 
 ## 8. Add a temporary Focus mode without “In Progress”
 
@@ -148,9 +153,11 @@ The most valuable AI additions are decision aids:
 
 AI should never move cards autonomously. Every proposal should remain transient until accepted, and the review should show the exact commitment changes before writing them.
 
+Make This Fit begins here as a one-off proposal for selected work. History-informed shrink suggestions remain Calibration work.
+
 ## Recommended release slices
 
-### Workspace foundation
+### 2.0 — Workspace foundation
 
 - Capacity-aware Ready → Today movement.
 - Board/list parity.
@@ -158,19 +165,19 @@ AI should never move cards autonomously. Every proposal should remain transient 
 - Undoable keyboard- and pointer-based movement.
 - Top toolbar with search and capacity context.
 
-### Planning acceleration
+### 2.1 — Planning acceleration
 
 - Needs attention rail.
 - Multi-select and batch planning.
 - Today / Next 7 Days / Later horizon.
 - Full-window Plan My Day review.
 
-### Distinctive polish
+### 2.2 — Distinctive polish
 
 - Temporary Focus mode.
-- Drag-in capture from selected text, links, or files.
+- Drag-in user capture from selected text, links, or files.
 - AI-based Make This Fit and plan explanations.
-- Recent capture and recent completion review.
+- Recent capture, recent completion, and per-task history inspection backed by the Stage 2 event ledger.
 
 ## Ideas to defer
 
@@ -184,7 +191,7 @@ Do not use this direction to justify:
 - Time tracking or calendar grids.
 - Analytics dashboards.
 
-The test is whether an idea makes commitment decisions clearer. If it mainly helps organize more metadata, it belongs outside the first workspace release.
+The test is whether an idea makes commitment decisions clearer. If it mainly helps organize more metadata, it belongs outside the 2.0 workspace foundation.
 
 ## Success signals
 

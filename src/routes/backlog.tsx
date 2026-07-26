@@ -9,7 +9,7 @@ import { useTaskMotion, type TaskMotionTransition } from "@/components/task-moti
 import { useTaskSelection } from "@/components/task-selection";
 import { focusTaskComposer } from "@/lib/task-composer";
 import type { PlannerSnapshot } from "@/lib/planner";
-import { usePlannerState, useSetTaskCompleted } from "@/lib/planner-query";
+import { usePlannerState, useReorderTasks, useSetTaskCompleted } from "@/lib/planner-query";
 import { orderCompletedTasks, orderTasks, scopeForTask } from "@/lib/task-groups";
 
 export const Route = createFileRoute("/backlog")({
@@ -28,6 +28,7 @@ function BacklogPage() {
 
 function BacklogWorkspace({ planner }: { planner: PlannerSnapshot }) {
   const setTaskCompleted = useSetTaskCompleted();
+  const reorderTasks = useReorderTasks();
   const { recordTaskMutation, taskMutation } = useTaskMotion();
   const { selectedTaskId, selectTask } = useTaskSelection();
   const { tasks, today, orderByScope } = planner;
@@ -39,6 +40,7 @@ function BacklogWorkspace({ planner }: { planner: PlannerSnapshot }) {
     ["Completed", "log:completed"],
   ] as const;
   const hasVisibleTasks = tasks.some((task) => scopeForTask(task, today) !== `today:${today}`);
+  const mutationPending = reorderTasks.isPending || setTaskCompleted.isPending;
   const [showEmptyState, setShowEmptyState] = useState(!hasVisibleTasks);
 
   useEffect(() => {
@@ -67,6 +69,13 @@ function BacklogWorkspace({ planner }: { planner: PlannerSnapshot }) {
     }
   }
 
+  function handleReorderTasks(scope: string, taskIds: string[]) {
+    reorderTasks.mutate(
+      { scope, taskIds },
+      { onError: () => toast.error("Could not save task order.") },
+    );
+  }
+
   return (
     <section
       aria-labelledby="backlog-heading"
@@ -87,27 +96,36 @@ function BacklogWorkspace({ planner }: { planner: PlannerSnapshot }) {
             <HugeiconsIcon icon={InboxIcon} strokeWidth={1.8} />
           </PlannerEmptyState>
         ) : null}
-        {groups.map(([label, scope]) => (
-          <TaskGroup
-            key={scope}
-            label={label}
-            onTasksExitComplete={handleTasksExitComplete}
-            onToggleTask={toggleTask}
-            pending={setTaskCompleted.isPending}
-            selectedTaskId={selectedTaskId}
-            onSelectTask={selectTask}
-            taskMutation={taskMutation}
-            tasks={
-              scope === "log:completed"
-                ? orderCompletedTasks(tasks.filter((task) => scopeForTask(task, today) === scope))
-                : orderTasks(
-                    tasks.filter((task) => scopeForTask(task, today) === scope),
-                    orderByScope,
-                    scope,
-                  )
-            }
-          />
-        ))}
+        {groups.map(([label, scope]) => {
+          const groupTasks =
+            scope === "log:completed"
+              ? orderCompletedTasks(tasks.filter((task) => scopeForTask(task, today) === scope))
+              : orderTasks(
+                  tasks.filter((task) => scopeForTask(task, today) === scope),
+                  orderByScope,
+                  scope,
+                );
+
+          return (
+            <TaskGroup
+              key={scope}
+              label={label}
+              onReorderTasks={
+                scope === "log:completed"
+                  ? undefined
+                  : (taskIds) => handleReorderTasks(scope, taskIds)
+              }
+              onSelectTask={selectTask}
+              onTasksExitComplete={handleTasksExitComplete}
+              onToggleTask={toggleTask}
+              pending={mutationPending}
+              reorderDisabled={mutationPending}
+              selectedTaskId={selectedTaskId}
+              taskMutation={taskMutation}
+              tasks={groupTasks}
+            />
+          );
+        })}
       </div>
     </section>
   );

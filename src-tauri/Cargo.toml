@@ -2,8 +2,10 @@
 name = "slate"
 version = "0.1.0"
 description = "A local-first macOS task planner"
-authors = ["you"]
+authors = ["Howard Thomas"]
 edition = "2021"
+homepage = "https://github.com/howie1329/Slate"
+repository = "https://github.com/howie1329/Slate"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
