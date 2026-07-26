@@ -42,7 +42,7 @@ export function PlannerQueryProvider({ children }: { children: ReactNode }) {
         defaultOptions: {
           queries: {
             retry: false,
-            refetchOnWindowFocus: true,
+            refetchOnWindowFocus: false,
           },
         },
       }),
@@ -60,7 +60,9 @@ function PlannerChangeListener() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const invalidate = () => queryClient.invalidateQueries({ queryKey: plannerStateQueryKey });
+    const invalidate = () => {
+      void invalidatePlannerState(queryClient);
+    };
     window.addEventListener("focus", invalidate);
 
     if (!isTauriWindow()) {
@@ -95,12 +97,19 @@ export function usePlannerState() {
   });
 }
 
+function invalidatePlannerState(queryClient: QueryClient) {
+  return queryClient.invalidateQueries(
+    { queryKey: plannerStateQueryKey },
+    { cancelRefetch: false },
+  );
+}
+
 function usePlannerMutation<TInput>(mutationFn: (input: TInput) => Promise<void>) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: plannerStateQueryKey }),
+    onSuccess: () => invalidatePlannerState(queryClient),
   });
 }
 

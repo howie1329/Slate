@@ -1,9 +1,12 @@
 use std::sync::OnceLock;
 
 use keyring::{Entry, Error};
+#[cfg(target_os = "macos")]
+use security_framework::item::{ItemClass, ItemSearchOptions};
 use serde::Deserialize;
 
 const SERVICE_NAME: &str = "com.howardthomas.slate";
+const ERR_SEC_ITEM_NOT_FOUND: i32 = -25300;
 
 #[derive(Debug, Deserialize)]
 struct AiCatalog {
@@ -38,7 +41,10 @@ fn catalog() -> &'static AiCatalog {
 }
 
 pub(crate) fn supported_providers() -> impl Iterator<Item = &'static str> {
-    catalog().providers.iter().map(|provider| provider.id.as_str())
+    catalog()
+        .providers
+        .iter()
+        .map(|provider| provider.id.as_str())
 }
 
 pub(crate) fn supported_models() -> impl Iterator<Item = &'static str> {
@@ -63,7 +69,7 @@ pub(crate) fn default_model() -> &'static str {
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum CredentialAvailability {
-    Configured(String),
+    Configured,
     Unconfigured,
     Unavailable,
 }
@@ -89,28 +95,55 @@ fn entry(provider: &str) -> Result<Entry, String> {
 }
 
 pub(crate) fn credential_availability(provider: &str) -> CredentialAvailability {
-    let entry = match entry(provider) {
-        Ok(entry) => entry,
-        Err(_) => return CredentialAvailability::Unavailable,
-    };
+    if validate_provider(provider).is_err() {
+        return CredentialAvailability::Unavailable;
+    }
 
-    availability_from_password_result(entry.get_password())
+    availability_from_item_search(keychain_item_exists(provider))
 }
 
-pub(crate) fn read_api_key(provider: &str) -> Result<String, ReadApiKeyError> {
-    match credential_availability(provider) {
-        CredentialAvailability::Configured(key) => Ok(key),
-        CredentialAvailability::Unconfigured => Err(ReadApiKeyError::Missing),
-        CredentialAvailability::Unavailable => Err(ReadApiKeyError::Unavailable),
+#[cfg(target_os = "macos")]
+fn keychain_item_exists(provider: &str) -> Result<bool, i32> {
+    ItemSearchOptions::new()
+        .class(ItemClass::generic_password())
+        .service(SERVICE_NAME)
+        .account(&format!("ai-api-key:{provider}"))
+        .load_attributes(true)
+        .limit(1)
+        .skip_authenticated_items(true)
+        .search()
+        .map(|items| !items.is_empty())
+        .map_err(|error| error.code())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn keychain_item_exists(_: &str) -> Result<bool, i32> {
+    Err(-25291)
+}
+
+fn availability_from_item_search(result: Result<bool, i32>) -> CredentialAvailability {
+    match result {
+        Ok(true) => CredentialAvailability::Configured,
+        Err(ERR_SEC_ITEM_NOT_FOUND) => CredentialAvailability::Unconfigured,
+        Ok(false) | Err(_) => CredentialAvailability::Unavailable,
     }
 }
 
-fn availability_from_password_result(result: Result<String, Error>) -> CredentialAvailability {
+pub(crate) fn read_api_key(provider: &str) -> Result<String, ReadApiKeyError> {
+    let entry = match entry(provider) {
+        Ok(entry) => entry,
+        Err(_) => return Err(ReadApiKeyError::Unavailable),
+    };
+
+    api_key_from_password_result(entry.get_password())
+}
+
+fn api_key_from_password_result(result: Result<String, Error>) -> Result<String, ReadApiKeyError> {
     match result {
-        Ok(key) if !key.trim().is_empty() => CredentialAvailability::Configured(key),
-        Ok(_) => CredentialAvailability::Unavailable,
-        Err(Error::NoEntry) => CredentialAvailability::Unconfigured,
-        Err(_) => CredentialAvailability::Unavailable,
+        Ok(key) if !key.trim().is_empty() => Ok(key),
+        Ok(_) => Err(ReadApiKeyError::Unavailable),
+        Err(Error::NoEntry) => Err(ReadApiKeyError::Missing),
+        Err(_) => Err(ReadApiKeyError::Unavailable),
     }
 }
 
@@ -135,7 +168,10 @@ pub(crate) fn remove_api_key(provider: &str) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{availability_from_password_result, CredentialAvailability, Entry, SERVICE_NAME};
+    use super::{
+        api_key_from_password_result, availability_from_item_search, CredentialAvailability, Entry,
+        ReadApiKeyError, ERR_SEC_ITEM_NOT_FOUND, SERVICE_NAME,
+    };
     use keyring::{credential::CredentialPersistence, default};
 
     #[cfg(target_os = "macos")]
@@ -167,41 +203,72 @@ mod tests {
     }
 
     #[test]
-    fn maps_a_missing_key_to_unconfigured() {
+    fn maps_an_existing_keychain_item_to_configured() {
         assert_eq!(
-            availability_from_password_result(Err(keyring::Error::NoEntry)),
+            availability_from_item_search(Ok(true)),
+            CredentialAvailability::Configured
+        );
+    }
+
+    #[test]
+    fn maps_a_missing_keychain_item_to_unconfigured() {
+        assert_eq!(
+            availability_from_item_search(Err(ERR_SEC_ITEM_NOT_FOUND)),
             CredentialAvailability::Unconfigured
         );
     }
 
     #[test]
-    fn maps_keychain_access_failures_to_unavailable() {
-        let error = keyring::Error::NoStorageAccess(Box::new(std::io::Error::other("locked")));
+    fn maps_keychain_search_failures_to_unavailable() {
         assert_eq!(
-            availability_from_password_result(Err(error)),
+            availability_from_item_search(Err(-25291)),
+            CredentialAvailability::Unavailable
+        );
+        assert_eq!(
+            availability_from_item_search(Ok(false)),
             CredentialAvailability::Unavailable
         );
     }
 
     #[test]
-    fn maps_a_non_empty_key_to_configured() {
+    fn reads_a_non_empty_api_key() {
         assert_eq!(
-            availability_from_password_result(Ok("not-a-real-secret".into())),
-            CredentialAvailability::Configured("not-a-real-secret".into())
+            api_key_from_password_result(Ok("not-a-real-secret".into())),
+            Ok("not-a-real-secret".into())
+        );
+    }
+
+    #[test]
+    fn maps_a_missing_api_key_to_missing() {
+        assert_eq!(
+            api_key_from_password_result(Err(keyring::Error::NoEntry)),
+            Err(ReadApiKeyError::Missing)
+        );
+    }
+
+    #[test]
+    fn maps_keychain_read_failures_to_unavailable() {
+        let error = keyring::Error::NoStorageAccess(Box::new(std::io::Error::other("locked")));
+        assert_eq!(
+            api_key_from_password_result(Err(error)),
+            Err(ReadApiKeyError::Unavailable)
         );
     }
 
     #[test]
     fn maps_an_empty_saved_value_to_unavailable() {
         assert_eq!(
-            availability_from_password_result(Ok("   ".into())),
-            CredentialAvailability::Unavailable
+            api_key_from_password_result(Ok("   ".into())),
+            Err(ReadApiKeyError::Unavailable)
         );
     }
 
     #[test]
     fn exposes_every_catalog_provider() {
-        assert_eq!(super::supported_providers().collect::<Vec<_>>(), vec!["vercel-gateway", "openrouter"]);
+        assert_eq!(
+            super::supported_providers().collect::<Vec<_>>(),
+            vec!["vercel-gateway", "openrouter"]
+        );
         assert_eq!(
             super::supported_models().collect::<Vec<_>>(),
             vec![
