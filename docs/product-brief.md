@@ -1,8 +1,8 @@
 # Slate Product Brief
 
-> **Status:** Current product contract and 1.0 direction
+> **Status:** Current product contract and shipped 1.0 baseline
 >
-> This brief describes what Slate is now, what 1.0 must prove, and which boundaries future work must preserve. The staged expansion plan lives in [the roadmap](roadmap.md).
+> This brief describes Slate 1.0.0, the behavior it ships, and the boundaries future work must preserve. The staged expansion plan lives in [the roadmap](roadmap.md).
 
 ## Product definition
 
@@ -16,24 +16,22 @@ An individual knowledge worker who captures more work than they can reliably fin
 
 ## Current product state
 
-The current application is a pre-1.0 local planning foundation. It already provides:
+Slate 1.0.0 is the shipped local planning baseline. It provides:
 
 - A Tauri macOS shell with a menu-bar popover and full application window.
 - Today, Backlog, and Settings routes using the same workspace shell.
 - Local SQLite persistence for tasks, ordering data, daily capacity, and non-sensitive preferences.
 - Task creation, editing, completion, deletion, and calendar-date scheduling.
+- Pointer and keyboard ordering within active Today and Backlog groups, persisted through SQLite.
 - Visible Today capacity, remaining minutes, and over-capacity state.
 - A task-detail panel above the persistent footer.
 - macOS Keychain storage for provider API keys.
+- Reviewable AI Assist and Plan My Day flows through the packaged Node sidecar.
 - Cross-window refresh through native planner-change events and TanStack Query invalidation.
 
-The following are deliberately not presented as shipped yet:
+AI Assist and Plan My Day ship as reviewable Keychain-backed sidecar flows. The manual workflow remains the product’s source of truth, and AI never commits a task or plan without explicit acceptance.
 
-- Final packaged/manual acceptance of the Plan My Day provider and atomic review flow.
-- A finished drag-and-drop ordering experience.
-- Global quick capture, end-of-day review, Spaces, integrations, sync, mobile, or MCP.
-
-AI Assist and the Plan My Day vertical slices are implemented on the current branch as reviewable Keychain-backed sidecar flows. Final packaged/manual acceptance remains before calling Plan My Day broadly shipped. The manual workflow remains the product’s source of truth.
+Global quick capture, end-of-day review, Spaces, integrations, sync, mobile, and MCP remain outside the shipped 1.0 baseline and follow the evidence-gated roadmap.
 
 ## Product surfaces
 

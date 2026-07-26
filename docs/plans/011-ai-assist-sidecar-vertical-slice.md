@@ -6,7 +6,7 @@ Ship the first production AI feature end to end: turn non-empty footer capture t
 
 ## Status
 
-Completed on the current branch. Plan My Day was intentionally separate and is now implemented in [012-plan-my-day-sidecar-vertical-slice.md](012-plan-my-day-sidecar-vertical-slice.md).
+Completed and release-accepted for Slate 1.0.0. Plan My Day was intentionally separate and ships through [012-plan-my-day-sidecar-vertical-slice.md](012-plan-my-day-sidecar-vertical-slice.md).
 
 This slice validates the real product path before Plan My Day:
 
@@ -220,12 +220,12 @@ npm run tauri -- build
 - [x] No task or planner event is produced before acceptance.
 - [x] Accepted Assist uses the existing native create-task path.
 - [x] Keys remain native and never enter renderer state, storage, logs, or change events.
-- [ ] Both configured providers work through the packaged sidecar; live provider verification remains a manual acceptance step requiring each key.
+- [x] Both configured providers work through the packaged sidecar.
 - [x] Loading, unavailable, error, retry, result, and dismissal states work in the compact window.
 - [x] Empty composer is outside the Assist slice and is routed to the separate Plan My Day slice.
 - [x] README and AI brief accurately describe the shipped Assist state.
 - [x] The stale Gateway dependency reference is corrected.
-- [ ] Native, sidecar, and packaged acceptance checks pass; automated checks pass, while live provider and macOS UI acceptance remain manual.
+- [x] Native, sidecar, and packaged acceptance checks pass.
 
 ## References
 

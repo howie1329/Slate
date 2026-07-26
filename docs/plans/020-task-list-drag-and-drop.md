@@ -10,7 +10,7 @@
 - **Depends on**: existing `reorder_tasks` Tauri command and scoped `task_orders` persistence
 - **Category**: feature / task workflow
 - **Planned at**: commit `7fd30ac`, 2026-07-25
-- **Implementation status**: renderer implementation and automated gates complete; manual pointer and keyboard acceptance pending
+- **Implementation status**: implementation and release acceptance complete for Slate 1.0.0
 
 ## Objective
 
@@ -382,24 +382,24 @@ Then run the desktop app and complete the manual matrix in both the compact popo
 
 ## Done criteria
 
-- [ ] Implementation begins on `feat/task-list-drag-and-drop`.
-- [ ] Only the four selected dnd-kit packages are added.
-- [ ] Active Today tasks can be reordered by pointer and keyboard.
-- [ ] Every active Backlog group can be reordered independently by pointer and keyboard.
-- [ ] Done and Completed remain unorderable.
-- [ ] Dragging cannot schedule, unschedule, complete, restore, or cross task groups.
-- [ ] Reorder handles have visible focus, useful accessible names, instructions, and position announcements.
-- [ ] Checkbox and task-detail interactions do not initiate dragging.
-- [ ] Optimistic ordering updates immediately and rolls back on native failure.
-- [ ] Successful ordering persists through SQLite and survives app restart.
-- [ ] Today overflow state follows the reordered list.
-- [ ] dnd-kit transforms and Motion transforms are applied to separate DOM elements.
-- [ ] Existing create, edit, complete, restore, delete, selection, and animation behavior remains intact.
-- [ ] The compact popover remains usable at 360 × 520, including long-list scrolling.
-- [ ] `cargo test --manifest-path src-tauri/Cargo.toml` passes.
-- [ ] `npm run build` exits 0.
-- [ ] `git diff --check` produces no output.
-- [ ] No route tree, migration, native permission, AI, or unrelated product behavior changes are introduced.
+- [x] Implementation begins on `feat/task-list-drag-and-drop`.
+- [x] Only the four selected dnd-kit packages are added.
+- [x] Active Today tasks can be reordered by pointer and keyboard.
+- [x] Every active Backlog group can be reordered independently by pointer and keyboard.
+- [x] Done and Completed remain unorderable.
+- [x] Dragging cannot schedule, unschedule, complete, restore, or cross task groups.
+- [x] Reorder handles have visible focus, useful accessible names, instructions, and position announcements.
+- [x] Checkbox and task-detail interactions do not initiate dragging.
+- [x] Optimistic ordering updates immediately and rolls back on native failure.
+- [x] Successful ordering persists through SQLite and survives app restart.
+- [x] Today overflow state follows the reordered list.
+- [x] dnd-kit transforms and Motion transforms are applied to separate DOM elements.
+- [x] Existing create, edit, complete, restore, delete, selection, and animation behavior remains intact.
+- [x] The compact popover remains usable at 360 × 520, including long-list scrolling.
+- [x] `cargo test --manifest-path src-tauri/Cargo.toml` passes.
+- [x] `npm run build` exits 0.
+- [x] `git diff --check` produces no output.
+- [x] No route tree, migration, native permission, AI, or unrelated product behavior changes are introduced.
 
 ## STOP conditions
 

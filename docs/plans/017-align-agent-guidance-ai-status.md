@@ -1,5 +1,7 @@
 # Plan 017: Align agent guidance with the implemented AI workflow
 
+> **Historical status:** Completed before Slate 1.0.0. References below to pending packaged/manual acceptance describe the repository state when this plan was written and are superseded by the shipped-state sources of truth.
+>
 > **Executor instructions**: Follow this plan step by step. Run every verification command and confirm the expected result before moving to the next step. If anything in the "STOP conditions" section occurs, stop and report — do not improvise. When done, update the status row for this plan in `docs/plans/README.md`.
 >
 > **Drift check (run first)**: `git diff --stat b5dbb37..HEAD -- AGENTS.md docs/plans/README.md`

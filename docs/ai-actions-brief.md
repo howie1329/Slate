@@ -9,7 +9,7 @@ Slate has one AI action button in the persistent footer. The button changes beha
 
 ## Implementation status
 
-AI Assist and Plan My Day are implemented in the current vertical slices. Both use the native Keychain-backed provider boundary and packaged Node sidecar; Assist presents one editable proposal, while Plan My Day presents an additive, stale-safe review proposal. Final packaged/manual acceptance remains before calling Plan My Day broadly shipped.
+AI Assist and Plan My Day ship in Slate 1.0.0. Both use the native Keychain-backed provider boundary and packaged Node sidecar; Assist presents one editable proposal, while Plan My Day presents an additive, stale-safe review proposal. Neither flow writes until the user accepts its reviewed result.
 
 The implementation details and acceptance checklist are in [Plan My Day sidecar vertical slice](plans/012-plan-my-day-sidecar-vertical-slice.md).
 

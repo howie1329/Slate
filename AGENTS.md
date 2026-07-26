@@ -1,7 +1,7 @@
 <!-- agentkit:start agents -->
 # Slate agent guide
 
-Slate is a local-first macOS planner for deciding what work realistically fits into today. The current product has the compact desktop shell, Today/Backlog/Settings workspace, SQLite persistence, task lifecycle operations, daily capacity state, native Keychain storage, and reviewable AI Assist and Plan My Day vertical slices through the packaged Node sidecar. Final packaged/manual acceptance remains before Plan My Day is broadly shipped.
+Slate is a local-first macOS planner for deciding what work realistically fits into today. Slate 1.0.0 is the shipped baseline: it includes the compact desktop shell, Today/Backlog/Settings workspace, SQLite persistence, task lifecycle and ordering operations, daily capacity state, native Keychain storage, and reviewable AI Assist and Plan My Day flows through the packaged Node sidecar.
 
 ## Source of truth
 
@@ -38,6 +38,8 @@ Use npm with the committed `package-lock.json`.
 | Run the desktop app | `npm run dev:desktop` |
 | Build the web application and type-check | `npm run build` |
 | Preview the web build | `npm run preview` |
+| Build, sign, notarize, staple, and verify the macOS DMG | `npm run release:macos` |
+| Verify an existing macOS release bundle | `npm run verify:macos-release` |
 | Run a Tauri subcommand | `npm run tauri -- <subcommand>` |
 
 For a native release bundle, use `npm run tauri -- build`. The package currently has no dedicated test script; do not document one as a standard project command until it is added to `package.json`.

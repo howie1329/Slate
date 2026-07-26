@@ -10,13 +10,14 @@ The repository contains a working local planning foundation:
 - `/today`, `/backlog`, and `/settings` routes using the shared workspace shell.
 - SQLite-backed tasks, task ordering, daily capacity, and non-sensitive preferences.
 - Native task creation, editing, completion, deletion, and date scheduling.
+- Pointer and keyboard task ordering within active Today and Backlog groups.
 - Today capacity and over-capacity state.
 - macOS Keychain storage for provider API keys.
 - Settings-based provider and fixed model selection for AI features.
 - Shared local state between the popover and full window through native change events and TanStack Query invalidation.
 - Light and dark themes and compact task-detail editing above the persistent footer.
 
-The current product is still pre-1.0. AI Assist and Plan My Day are implemented as reviewable vertical slices: provider requests cross the native Keychain boundary through the packaged Node sidecar, Assist creates tasks only after review, and Plan My Day moves selected backlog tasks to Today only after atomic native acceptance. Final packaged/manual acceptance remains before broad 1.0 shipment.
+Slate 1.0.0 is the current shipped baseline. AI Assist and Plan My Day are reviewable production flows: provider requests cross the native Keychain boundary through the packaged Node sidecar, Assist creates tasks only after review, and Plan My Day moves selected Backlog tasks to Today only after atomic native acceptance. The release is distributed directly as a signed, notarized, and stapled Apple Silicon DMG for macOS 13.5 or later.
 
 The product direction and staged expansion plan live in [the product brief](docs/product-brief.md) and [the roadmap](docs/roadmap.md).
 

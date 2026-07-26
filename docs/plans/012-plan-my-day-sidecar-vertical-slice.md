@@ -21,7 +21,7 @@ Plan My Day must not edit, delete, complete, reorder, or silently reschedule exi
 - Risk: High — the main risks are stale acceptance, capacity correctness, and explaining why work was or was not selected.
 - Prerequisite: AI Assist sidecar vertical slice in 011 is complete.
 - Prerequisite: The packaged Node sidecar, native Keychain boundary, review-state owner, and shared footer tray already exist.
-- Implementation is complete on the current branch; packaged/manual acceptance remains before broad shipment.
+- Implementation and packaged/manual release acceptance are complete for Slate 1.0.0.
 
 ## Source-of-truth decisions
 
@@ -329,22 +329,22 @@ Manual acceptance:
 
 ## Done criteria
 
-The implementation and automated native/sidecar checks are complete. Unchecked items below are the remaining hands-on desktop, live-provider, and packaged-release acceptance gates.
+The implementation, automated checks, hands-on desktop verification, live-provider checks, and packaged-release acceptance are complete for Slate 1.0.0.
 
 - [x] Empty composer invokes Plan My Day through the native sidecar boundary.
 - [x] Candidate context is deterministic, bounded, and excludes ineligible tasks.
 - [x] Plan My Day never changes SQLite during generation, retry, redo, empty-state display, or dismissal.
-- [ ] The result is a reviewable additive plan with task summaries, totals, and capacity impact.
+- [x] The result is a reviewable additive plan with task summaries, totals, and capacity impact.
 - [x] Existing Today commitments remain unchanged.
 - [x] Accepted Backlog candidates receive the current local Today date and Today scope only after user approval.
 - [x] Native-derived Today positions are append-only and never supplied as renderer authority.
 - [x] Acceptance is native-authoritative, atomic, append-only, and stale-safe.
 - [x] Invalid provider output cannot create partial writes.
-- [ ] Loading, empty, unavailable, error, retry, result, and dismiss states work in the compact window.
-- [ ] Manual Save and ordinary task management work without AI.
-- [ ] Both configured providers work through the packaged sidecar.
-- [ ] README, product brief, AI actions brief, and roadmap accurately describe the shipped state.
-- [ ] Native, sidecar, and packaged acceptance checks pass.
+- [x] Loading, empty, unavailable, error, retry, result, and dismiss states work in the compact window.
+- [x] Manual Save and ordinary task management work without AI.
+- [x] Both configured providers work through the packaged sidecar.
+- [x] README, product brief, AI actions brief, and roadmap accurately describe the shipped state.
+- [x] Native, sidecar, and packaged acceptance checks pass.
 
 ## References
 

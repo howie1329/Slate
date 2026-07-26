@@ -2,7 +2,7 @@
 
 > **Status:** Directional roadmap
 >
-> **Updated:** 2026-07-25
+> **Updated:** 2026-07-26
 >
 > This document describes the order in which Slate should earn new capabilities. It is not a fixed release schedule. Each stage should be validated against the product thesis before the next stage expands the model.
 
@@ -59,30 +59,26 @@ The version labels are directional rather than promises of release dates. Calibr
 
 ## Where the project is now
 
-Slate currently has the foundation for the first usable daily planning loop:
+Slate 1.0.0 is the shipped baseline for the first usable daily planning loop:
 
 - Tauri macOS host with a compact menu-bar popover and full application window.
 - Today, Backlog, and Settings routes using the same workspace shell.
 - Local SQLite persistence for tasks, ordering, and non-sensitive preferences.
-- Native task creation, editing, completion, deletion, scheduling, and reordering boundaries.
+- Native task creation, editing, completion, deletion, scheduling, and persisted pointer/keyboard reordering.
 - Daily capacity state with visible remaining and over-capacity behavior.
 - macOS Keychain storage for provider API keys.
 - Renderer caching and cross-window invalidation through TanStack Query and native change events.
 - Compact task-detail interaction above the persistent footer.
 - Light and dark themes with a restrained visual system.
 - Pointer-only Motion transitions for task presence/layout, task-detail entry and exit, route changes, empty states, and pending-save feedback.
+- Reviewable AI Assist and atomic Plan My Day flows through the Keychain-backed packaged Node sidecar.
+- A signed, notarized, and stapled Apple Silicon DMG for macOS 13.5 or later.
 
-The immediate product is not finished yet:
+Stage 1 is complete. The next eligible work is Stage 2 daily resilience, not Spaces, sync, mobile, or integrations. New work remains evidence-gated, and the distinction between the shipped Backlog view and a future richer Log view stays deliberate.
 
-- AI Assist and the atomic Plan My Day review flow are implemented as reviewable vertical slices; final packaged/manual acceptance remains.
-- Native, sidecar, and renderer tests cover the Plan My Day contract, candidate bounds, and stale-safe acceptance.
-- The daily loop needs final empty, error, completed, and overloaded states.
-- Compact-window behavior, reduced motion, documentation, and packaged-build quality need a final pass.
-- The distinction between the current Backlog view and a future richer Log view should remain deliberate rather than being expanded prematurely.
+## Stage 1 — Shipped local daily planner
 
-The next goal is therefore not Spaces, sync, mobile, or integrations. It is a trustworthy 1.0 core.
-
-## Stage 1 — Finish the local daily planner
+**Status:** Shipped in Slate 1.0.0; the 1.0 exit criteria are met.
 
 ### Goal
 
@@ -135,6 +131,8 @@ The detailed behavior and data boundaries are defined in [Daily resilience](dail
 - Stage 1 1.0 exit criteria are met.
 - The signed, notarized packaged app and compact popover have passed release acceptance.
 - Manual task lifecycle, capacity, AI review, and persistence are trustworthy before new history or recovery states expand the model.
+
+Slate 1.0.0 satisfies these entry gates. Stage 2 remains a deliberate product decision rather than an automatic expansion.
 
 ### Foundations
 
