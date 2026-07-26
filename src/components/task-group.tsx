@@ -217,7 +217,7 @@ export function TaskGroup({
 
   return (
     <section aria-label={label} className={cn("mt-5", className)}>
-      <h2 className="m-0 border-b border-border pb-2 text-menu-label font-medium text-muted-foreground">
+      <h2 className="m-0 border-b border-border pb-2 text-menu-label font-semibold text-muted-foreground">
         {label}
       </h2>
       <ul className="m-0 list-none divide-y divide-border p-0">

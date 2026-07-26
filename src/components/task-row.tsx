@@ -156,7 +156,7 @@ function TaskRowContent({
         <motion.div
           animate="visible"
           className={cn(
-            "group/task-row flex min-h-11 items-center gap-2 transition-colors duration-150 hover:bg-muted motion-reduce:transition-none",
+            "group/task-row flex min-h-12 items-center transition-colors duration-150 hover:bg-muted/50 motion-reduce:transition-none",
             isSelected && "bg-muted",
             isOverflow && "ring-1 ring-inset ring-destructive",
             sortable?.isDragging && "bg-muted ring-1 ring-inset ring-ring",
@@ -187,19 +187,26 @@ function TaskRowContent({
           <button
             aria-expanded={isSelected}
             aria-label={`Edit ${task.title}${isOverflow ? ", pushes today over capacity" : ""}`}
-            className="flex min-w-0 flex-1 self-stretch items-center gap-3 rounded-md pl-1 pr-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            className="flex min-w-0 flex-1 self-stretch items-center gap-3 rounded-md pl-3 pr-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             onClick={(event) => onSelectTask(task.id, event.detail > 0 ? "animate" : "instant")}
             type="button"
           >
             <span
               className={cn(
-                "min-w-0 flex-1 truncate text-menu",
-                isCompleted ? "text-muted-foreground line-through" : "text-foreground",
+                "min-w-0 flex-1 truncate text-menu font-medium",
+                isCompleted
+                  ? cn("font-normal line-through", isSelected ? "text-foreground/70" : "text-muted-foreground")
+                  : cn("text-foreground", isSelected && "font-semibold"),
               )}
             >
               {task.title}
             </span>
-            <span className="shrink-0 text-xs leading-4 tabular-nums text-muted-foreground">
+            <span
+              className={cn(
+                "w-14 shrink-0 text-right text-xs leading-4 tabular-nums",
+                isSelected ? "text-foreground/70" : "text-muted-foreground",
+              )}
+            >
               {formatMinutes(task.estimateMinutes)}
             </span>
           </button>
@@ -209,17 +216,15 @@ function TaskRowContent({
               {...sortable.listeners}
               aria-label={`Reorder ${task.title}, position ${sortable.position} of ${sortable.itemCount}`}
               className={cn(
-                "mr-0.5 flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground opacity-50 outline-none transition-[color,background-color,opacity] duration-150 hover:bg-background hover:text-foreground hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring active:cursor-grabbing motion-reduce:transition-none",
-                sortable.disabled && "cursor-default opacity-35",
+                "mr-1 flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground opacity-25 outline-none transition-[color,background-color,opacity] duration-150 group-hover/task-row:opacity-70 hover:bg-background hover:text-foreground hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring active:cursor-grabbing motion-reduce:transition-none",
+                sortable.disabled && "cursor-default opacity-20 group-hover/task-row:opacity-35",
               )}
               ref={sortable.setActivatorNodeRef}
               type="button"
             >
               <HugeiconsIcon aria-hidden="true" icon={DragDropVerticalIcon} size={16} strokeWidth={1.8} />
             </button>
-          ) : (
-            <span aria-hidden="true" className="mr-0.5 size-8 shrink-0" />
-          )}
+          ) : null}
         </motion.div>
       </motion.div>
     </li>
