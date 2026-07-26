@@ -114,15 +114,16 @@ These are not rejected permanently. They remain outside 1.0 until the determinis
 
 Slate may expand around the same commitment-budget model in the following order:
 
-1. **Daily resilience:** global capture, end-of-day review, anchors, and contextual recovery when the day changes.
-2. **Full-window planning workspace:** a visual desktop surface for shaping commitments while preserving the popover as the fast daily planning tool.
-3. **Spaces:** distinct planning contexts with their own capacity only when users need them.
-4. **Calibration:** respectful feedback and conservative suggestions that improve estimates and capacity without scoring productivity.
-5. **Outside context:** reviewed candidate actions from systems such as GitHub, Gmail, and calendar-informed capacity.
-6. **Optional device expansion:** mobile capture and review, followed by sync only when a real multi-device need and conflict model exist.
-7. **Local agent access:** an optional, permissioned MCP interface that captures agent-discovered work into Backlog by default.
+1. **1.1–1.x — Daily resilience:** global capture, accepted task/day history, per-day capacity overrides, Anchors, unfinished-commitment review, and contextual recovery when the day changes.
+2. **2.0–2.x — Full-window planning workspace:** a visual desktop surface for shaping commitments while preserving the popover as the fast daily planning tool.
+3. **3.0 — Calibration:** respectful, history-informed feedback and conservative suggestions that improve estimates and capacity without scoring productivity.
+4. **4.0, only if earned — Spaces:** distinct planning contexts with their own capacity only when users demonstrate that one planner cannot express their needs.
+5. **5.0 — Outside context:** reviewed, deduplicated candidate actions from systems such as GitHub and Gmail, plus calendar-informed capacity proposals.
+6. **6.0, only if earned — Optional sync and mobile:** explicit identity, conflict, tombstone, and offline-recovery rules followed by a limited mobile companion for a proven multi-device use case.
 
-Each expansion is conditional. The full sequencing, entry criteria, exit criteria, and non-goals are maintained in [the roadmap](roadmap.md).
+**Local agent access** is an independent post-1.x track. A permissioned MCP interface may arrive before later major releases once history, authorization, expected-state validation, and shared domain rules are stable. It does not depend on Spaces, integrations, sync, or mobile.
+
+Each expansion is conditional. Optional Spaces do not block Calibration, integrations, or MCP. The full sequencing, dependency rules, entry criteria, exit criteria, and non-goals are maintained in [the roadmap](roadmap.md). The Stage 2 behavior and data contract is maintained in [Daily resilience](daily-resilience.md).
 
 ## Product guardrails
 
