@@ -164,7 +164,7 @@ export function useReorderTasks() {
         queryClient.setQueryData(plannerStateQueryKey, context.previousSnapshot);
       }
     },
-    onSettled: () => invalidatePlannerState(queryClient),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: plannerStateQueryKey }),
   });
 }
 
