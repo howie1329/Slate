@@ -3,6 +3,7 @@ import type { AiModel, AiProvider } from "./ai-catalog";
 
 export type LocalDate = `${number}-${number}-${number}`;
 export type Theme = "dark" | "light";
+export type OnboardingStatus = "not-started" | "completed" | "skipped";
 export type { AiModel, AiProvider } from "./ai-catalog";
 export type AiAvailability = "configured" | "unconfigured" | "unavailable";
 
@@ -21,6 +22,7 @@ export type Settings = {
   aiProvider: AiProvider;
   aiModel: AiModel;
   theme: Theme;
+  onboardingStatus: OnboardingStatus;
 };
 
 export type PlannerSnapshot = {
