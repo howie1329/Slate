@@ -1,7 +1,8 @@
-import { chmod, mkdir } from "node:fs/promises";
+import { chmod, mkdir, rm, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { sidecarInputFingerprint } from "./binary-inputs.mjs";
 
 const sidecarRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const projectRoot = resolve(sidecarRoot, "..");
@@ -21,7 +22,9 @@ if (targetTriple !== supportedTargetTriple) {
 }
 
 const output = resolve(projectRoot, "src-tauri/binaries", `slate-ai-sidecar-${targetTriple}`);
+const fingerprintFile = `${output}.sha256`;
 await mkdir(dirname(output), { recursive: true });
+await rm(fingerprintFile, { force: true });
 
 execFileSync(resolve(sidecarRoot, "node_modules/.bin/pkg"), [
   entry,
@@ -45,4 +48,5 @@ if (sidecarMinimumMacOS !== minimumMacOSVersion) {
   );
 }
 
+await writeFile(fingerprintFile, `${await sidecarInputFingerprint(sidecarRoot)}\n`);
 console.log(`Built ${output}`);
