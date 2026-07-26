@@ -248,18 +248,7 @@ pub async fn generate_daily_plan(
                 .cloned()
                 .map(PlanTaskContext::from)
                 .collect(),
-            candidates: context
-                .candidates
-                .iter()
-                .map(|candidate| PlanCandidate {
-                    id: candidate.id.clone(),
-                    title: candidate.title.clone(),
-                    estimate_minutes: candidate.estimate_minutes,
-                    scheduled_date: candidate.scheduled_date.clone(),
-                    source_scope: candidate.source_scope.clone(),
-                    backlog_position: candidate.backlog_position,
-                })
-                .collect(),
+            candidates: context.candidates.iter().map(PlanCandidate::from).collect(),
             planning_instruction: context.planning_instruction.clone(),
         },
     };
@@ -303,6 +292,19 @@ impl From<AiAssistTaskContext> for PlanTaskContext {
             title: context.title,
             estimate_minutes: context.estimate_minutes,
             scheduled_date: context.scheduled_date,
+        }
+    }
+}
+
+impl From<&persistence::AiPlanTaskContext> for PlanCandidate {
+    fn from(context: &persistence::AiPlanTaskContext) -> Self {
+        Self {
+            id: context.id.clone(),
+            title: context.context_title.clone(),
+            estimate_minutes: context.estimate_minutes,
+            scheduled_date: context.scheduled_date.clone(),
+            source_scope: context.source_scope.clone(),
+            backlog_position: context.backlog_position,
         }
     }
 }
@@ -504,6 +506,7 @@ mod tests {
             candidates: vec![AiPlanTaskContext {
                 id: "backlog-task".into(),
                 title: "Backlog task".into(),
+                context_title: "Backlog task".into(),
                 estimate_minutes: 30,
                 scheduled_date: None,
                 source_scope: "log:unscheduled".into(),
@@ -585,6 +588,46 @@ mod tests {
         assert_eq!(result.items[0].scheduled_date, "2026-07-23");
         assert_eq!(result.items[0].position, 1);
         assert_eq!(result.remaining_minutes, 90);
+    }
+
+    #[test]
+    fn serializes_only_the_bounded_plan_candidate_title() {
+        let full_title = "🧭".repeat(241);
+        let context_title = "🧭".repeat(240);
+        let candidate = AiPlanTaskContext {
+            id: "backlog-task".into(),
+            title: full_title.clone(),
+            context_title: context_title.clone(),
+            estimate_minutes: 30,
+            scheduled_date: None,
+            source_scope: "log:unscheduled".into(),
+            backlog_position: 0,
+        };
+
+        let serialized =
+            serde_json::to_value(PlanCandidate::from(&candidate)).expect("Plan candidate JSON");
+
+        assert_eq!(
+            serialized.get("title").and_then(|value| value.as_str()),
+            Some(context_title.as_str())
+        );
+        assert!(!serialized.to_string().contains(&full_title));
+    }
+
+    #[test]
+    fn maps_plan_ids_to_full_native_titles() {
+        let full_title = "🧭".repeat(241);
+        let mut context = plan_context();
+        context.candidates[0].title = full_title.clone();
+        context.candidates[0].context_title = "🧭".repeat(240);
+
+        let result = parse_plan_response(
+            r#"{"ok":true,"result":{"operation":"plan","proposal":{"taskIds":["backlog-task"],"rationale":null}}}"#,
+            &context,
+        )
+        .expect("plan proposal");
+
+        assert_eq!(result.items[0].title, full_title);
     }
 
     #[test]

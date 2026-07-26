@@ -122,6 +122,7 @@ pub(crate) struct AiAssistContext {
 pub(crate) struct AiPlanTaskContext {
     pub(crate) id: String,
     pub(crate) title: String,
+    pub(crate) context_title: String,
     pub(crate) estimate_minutes: i64,
     pub(crate) scheduled_date: Option<String>,
     pub(crate) source_scope: String,
@@ -1005,7 +1006,8 @@ fn ordered_plan_context(
         .filter_map(|(position, task)| {
             Some(AiPlanTaskContext {
                 id: task.id.clone(),
-                title: ai_context_title(&task.title),
+                title: task.title.clone(),
+                context_title: ai_context_title(&task.title),
                 estimate_minutes: task.estimate_minutes?,
                 scheduled_date: task.scheduled_date.clone(),
                 source_scope: scope.to_string(),
@@ -1659,7 +1661,7 @@ mod tests {
     #[test]
     fn ai_plan_context_bounds_long_backlog_titles_without_changing_stored_data() {
         let mut database = TestDatabase::new();
-        let long_title = "a".repeat(MAX_AI_CONTEXT_TITLE_CHARS + 1);
+        let long_title = "🧭".repeat(MAX_AI_CONTEXT_TITLE_CHARS + 1);
         database
             .repository
             .create_task(TaskInput {
@@ -1673,9 +1675,16 @@ mod tests {
         let candidate = context
             .candidates
             .iter()
-            .find(|task| task.title.len() == MAX_AI_CONTEXT_TITLE_CHARS)
+            .find(|task| task.title == long_title)
             .expect("bounded backlog candidate");
-        assert_eq!(candidate.title.chars().count(), MAX_AI_CONTEXT_TITLE_CHARS);
+        assert_eq!(
+            candidate.context_title.chars().count(),
+            MAX_AI_CONTEXT_TITLE_CHARS
+        );
+        assert_eq!(
+            candidate.title.chars().count(),
+            MAX_AI_CONTEXT_TITLE_CHARS + 1
+        );
         assert_eq!(
             database
                 .repository
@@ -1689,6 +1698,45 @@ mod tests {
                 .count(),
             MAX_AI_CONTEXT_TITLE_CHARS + 1
         );
+    }
+
+    #[test]
+    fn daily_plan_acceptance_accepts_long_title_without_changing_it() {
+        let mut database = TestDatabase::new();
+        let today = local_today();
+        let long_title = "🧭".repeat(MAX_AI_CONTEXT_TITLE_CHARS + 1);
+        let task = create_task(&mut database.repository, &long_title);
+        let context = database.repository.ai_plan_context().expect("plan context");
+        let planned = context
+            .candidates
+            .iter()
+            .find(|candidate| candidate.id == task.id)
+            .expect("candidate");
+
+        database
+            .repository
+            .accept_daily_plan(DailyPlanAcceptanceInput {
+                items: vec![DailyPlanAcceptanceItem {
+                    id: planned.id.clone(),
+                    title: planned.title.clone(),
+                    estimate_minutes: planned.estimate_minutes,
+                    source_scheduled_date: planned.scheduled_date.clone(),
+                }],
+                today_task_ids: context.today_task_ids,
+                expected_daily_capacity_minutes: context.daily_capacity_minutes,
+                expected_remaining_minutes: context.remaining_minutes,
+            })
+            .expect("accept daily plan");
+
+        let accepted = database
+            .repository
+            .tasks()
+            .expect("tasks")
+            .into_iter()
+            .find(|candidate| candidate.id == task.id)
+            .expect("accepted task");
+        assert_eq!(accepted.title, long_title);
+        assert_eq!(accepted.scheduled_date.as_deref(), Some(today.as_str()));
     }
 
     #[test]
