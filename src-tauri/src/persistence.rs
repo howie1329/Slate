@@ -73,6 +73,14 @@ fn migration_1() -> String {
     )
 }
 
+fn migration_2() -> &'static str {
+    r#"
+ALTER TABLE settings
+ADD COLUMN onboarding_status TEXT NOT NULL DEFAULT 'not-started'
+CHECK (onboarding_status IN ('not-started', 'completed', 'skipped'));
+"#
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Task {
@@ -92,6 +100,7 @@ pub struct Settings {
     ai_provider: String,
     ai_model: String,
     theme: String,
+    onboarding_status: String,
 }
 
 #[derive(Serialize)]
@@ -290,7 +299,7 @@ impl Repository {
         let settings = self
             .connection
             .query_row(
-                "SELECT daily_capacity_minutes, planning_instruction, ai_provider, ai_model, theme
+                "SELECT daily_capacity_minutes, planning_instruction, ai_provider, ai_model, theme, onboarding_status
                  FROM settings WHERE id = 1",
                 [],
                 |row| {
@@ -300,6 +309,7 @@ impl Repository {
                         ai_provider: row.get(2)?,
                         ai_model: row.get(3)?,
                         theme: row.get(4)?,
+                        onboarding_status: row.get(5)?,
                     })
                 },
             )
@@ -310,6 +320,7 @@ impl Repository {
             &settings.ai_provider,
             &settings.ai_model,
             &settings.theme,
+            &settings.onboarding_status,
         )?;
         Ok(settings)
     }
@@ -482,7 +493,7 @@ impl Repository {
         self.connection
             .execute(
                 "UPDATE settings
-                 SET daily_capacity_minutes = ?1, planning_instruction = ?2, ai_provider = ?3, ai_model = ?4, theme = ?5
+                 SET daily_capacity_minutes = ?1, planning_instruction = ?2, ai_provider = ?3, ai_model = ?4, theme = ?5, onboarding_status = ?6
                  WHERE id = 1",
                 params![
                     input.daily_capacity_minutes,
@@ -490,6 +501,7 @@ impl Repository {
                     input.ai_provider,
                     input.ai_model,
                     input.theme,
+                    input.onboarding_status,
                 ],
             )
             .map_err(database_error)?;
@@ -706,6 +718,7 @@ pub struct UpdateSettingsInput {
     ai_provider: String,
     ai_model: String,
     theme: String,
+    onboarding_status: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -928,6 +941,15 @@ fn apply_migrations(connection: &Connection) -> Result<(), String> {
             .map_err(database_error)?;
     }
 
+    if version < 2 {
+        connection
+            .execute_batch(&format!(
+                "BEGIN IMMEDIATE; {} PRAGMA user_version = 2; COMMIT;",
+                migration_2()
+            ))
+            .map_err(database_error)?;
+    }
+
     Ok(())
 }
 
@@ -1140,6 +1162,7 @@ fn validate_settings(input: &UpdateSettingsInput) -> Result<(), String> {
         &input.ai_provider,
         &input.ai_model,
         &input.theme,
+        &input.onboarding_status,
     )
 }
 
@@ -1149,6 +1172,7 @@ fn validate_settings_values(
     ai_provider: &str,
     ai_model: &str,
     theme: &str,
+    onboarding_status: &str,
 ) -> Result<(), String> {
     if daily_capacity_minutes <= 0 {
         return Err("Daily capacity must be a positive number of minutes.".into());
@@ -1164,6 +1188,9 @@ fn validate_settings_values(
     }
     if !matches!(theme, "light" | "dark") {
         return Err("Theme is invalid.".into());
+    }
+    if !matches!(onboarding_status, "not-started" | "completed" | "skipped") {
+        return Err("Onboarding status is invalid.".into());
     }
     Ok(())
 }
@@ -1285,6 +1312,7 @@ mod tests {
                 ai_provider: "openrouter".into(),
                 ai_model: "anthropic/claude-sonnet-4.5".into(),
                 theme: "light".into(),
+                onboarding_status: "not-started".into(),
             })
             .expect("update settings");
         drop(repository);
@@ -1294,7 +1322,74 @@ mod tests {
         assert_eq!(settings.ai_provider, "openrouter");
         assert_eq!(settings.ai_model, "anthropic/claude-sonnet-4.5");
         assert_eq!(settings.planning_instruction, "Protect focus time.");
+        assert_eq!(settings.onboarding_status, "not-started");
         drop(reopened);
+        fs::remove_dir_all(directory).expect("remove temporary test directory");
+    }
+
+    #[test]
+    fn migrates_v1_settings_to_default_onboarding_status() {
+        let directory =
+            std::env::temp_dir().join(format!("slate-persistence-test-{}", Uuid::new_v4()));
+        fs::create_dir_all(&directory).expect("create temporary test directory");
+        let path = directory.join(DATABASE_FILE_NAME);
+
+        let connection = Connection::open(&path).expect("open v1 database");
+        connection
+            .execute_batch(&format!("{} PRAGMA user_version = 1;", migration_1()))
+            .expect("create v1 database");
+        drop(connection);
+
+        let repository = Repository::open(path).expect("migrate v1 database");
+        let settings = repository.settings().expect("settings");
+        assert_eq!(settings.daily_capacity_minutes, 240);
+        assert_eq!(settings.onboarding_status, "not-started");
+        drop(repository);
+        fs::remove_dir_all(directory).expect("remove temporary test directory");
+    }
+
+    #[test]
+    fn persists_onboarding_status_after_reopen() {
+        let directory =
+            std::env::temp_dir().join(format!("slate-persistence-test-{}", Uuid::new_v4()));
+        fs::create_dir_all(&directory).expect("create temporary test directory");
+        let path = directory.join(DATABASE_FILE_NAME);
+
+        let mut repository = Repository::open(path.clone()).expect("open database");
+        repository
+            .update_settings(UpdateSettingsInput {
+                daily_capacity_minutes: 240,
+                planning_instruction: String::new(),
+                ai_provider: credentials::default_provider().into(),
+                ai_model: credentials::default_model().into(),
+                theme: "light".into(),
+                onboarding_status: "completed".into(),
+            })
+            .expect("save completed status");
+        drop(repository);
+
+        let mut reopened = Repository::open(path.clone()).expect("reopen database");
+        assert_eq!(
+            reopened.settings().expect("settings").onboarding_status,
+            "completed"
+        );
+        reopened
+            .update_settings(UpdateSettingsInput {
+                daily_capacity_minutes: 240,
+                planning_instruction: String::new(),
+                ai_provider: credentials::default_provider().into(),
+                ai_model: credentials::default_model().into(),
+                theme: "light".into(),
+                onboarding_status: "skipped".into(),
+            })
+            .expect("save skipped status");
+        drop(reopened);
+
+        let reopened = Repository::open(path).expect("reopen database after skipped status");
+        assert_eq!(
+            reopened.settings().expect("settings").onboarding_status,
+            "skipped"
+        );
         fs::remove_dir_all(directory).expect("remove temporary test directory");
     }
 
@@ -1330,6 +1425,7 @@ mod tests {
             ai_provider: "openrouter".into(),
             ai_model: "openai/gpt-5-mini".into(),
             theme: "light".into(),
+            onboarding_status: "not-started".into(),
         };
 
         assert!(validate_save_settings_input(&SaveSettingsInput {
@@ -1379,6 +1475,16 @@ mod tests {
             Err("AI model is invalid.".into())
         );
 
+        let mut invalid_onboarding_status = valid_settings();
+        invalid_onboarding_status.onboarding_status = "in-progress".into();
+        assert_eq!(
+            validate_save_settings_input(&SaveSettingsInput {
+                settings: invalid_onboarding_status,
+                api_key_change: ApiKeyChange::Unchanged,
+            }),
+            Err("Onboarding status is invalid.".into())
+        );
+
         let mut long_instruction = valid_settings();
         long_instruction.planning_instruction = "a".repeat(2_001);
         assert_eq!(
@@ -1398,7 +1504,8 @@ mod tests {
                 "planningInstruction": "",
                 "aiProvider": "openrouter",
                 "aiModel": "openai/gpt-5-mini",
-                "theme": "light"
+                "theme": "light",
+                "onboardingStatus": "not-started"
             },
             "apiKeyChange": {
                 "kind": "replace",

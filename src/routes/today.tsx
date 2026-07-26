@@ -122,8 +122,8 @@ function TodayWorkspace({ planner }: { planner: PlannerSnapshot }) {
             actionLabel={hasBacklogTasks ? "Browse backlog" : "Add a task"}
             description={
               hasBacklogTasks
-                ? "Choose what deserves space before you make a commitment."
-                : "Add one task below to make your first commitment."
+                ? "Choose a task from Backlog when you’re ready to make a commitment."
+                : "Add a task below to commit it to today."
             }
             onAction={(event: MouseEvent<HTMLButtonElement>) => {
               if (hasBacklogTasks) {

@@ -88,7 +88,7 @@ function BacklogWorkspace({ planner }: { planner: PlannerSnapshot }) {
         {showEmptyState && !hasVisibleTasks ? (
           <PlannerEmptyState
             actionLabel="Add a task"
-            description="Capture work here, then decide when it deserves space in your day."
+            description="Capture work here first, then decide whether it deserves space in Today."
             onAction={focusTaskComposer}
             title="Your backlog is clear."
             transition={taskMutation?.transition ?? "instant"}

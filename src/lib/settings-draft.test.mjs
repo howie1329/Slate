@@ -21,6 +21,7 @@ const snapshot = {
     aiProvider: "openrouter",
     aiModel: "openai/gpt-5-mini",
     theme: "light",
+    onboardingStatus: "not-started",
   },
   aiAvailability: "configured",
   aiAvailabilityByProvider: {

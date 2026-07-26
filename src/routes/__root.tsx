@@ -5,6 +5,7 @@ import NumberFlow from "@number-flow/react";
 import { Link, Outlet, createRootRoute, useRouterState } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { useAiReview } from "@/components/ai-review";
+import { OnboardingFlow } from "@/components/onboarding-flow";
 import { TaskComposerFooter } from "@/components/task-composer-footer";
 import { RouteMotionProvider, useRouteMotion, type RouteMotionTransition } from "@/components/route-motion";
 import { TaskMotionProvider } from "@/components/task-motion";
@@ -94,11 +95,12 @@ function SlateShell() {
       onPointerDownCapture={(event) => {
         const target = event.target instanceof Element ? event.target : null;
         const isInsideReview = target?.closest("[data-ai-review], [data-ai-review-calendar]");
+        const isInsideOnboarding = target?.closest("[data-onboarding]");
 
         if (aiReviewState.kind !== "idle" && !isInsideReview) {
           dismissAiReview();
         }
-        if (selectedTaskId && !target?.closest("[data-task-detail], [data-task-row], [data-task-calendar]")) {
+        if (selectedTaskId && !isInsideOnboarding && !target?.closest("[data-task-detail], [data-task-row], [data-task-calendar]")) {
           clearSelection();
         }
       }}
@@ -175,6 +177,14 @@ function SlateShell() {
           />
         </>
       )}
+      {planner.data ? (
+        <OnboardingFlow
+          isSettingsPage={isSettingsPage}
+          pathname={pathname}
+          planner={planner.data}
+          windowMode={windowMode}
+        />
+      ) : null}
     </main>
   );
 }

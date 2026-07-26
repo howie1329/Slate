@@ -133,5 +133,6 @@ function settingsEqual(first: Settings, second: Settings) {
     && first.aiProvider === second.aiProvider
     && first.aiModel === second.aiModel
     && first.theme === second.theme
+    && first.onboardingStatus === second.onboardingStatus
   );
 }
