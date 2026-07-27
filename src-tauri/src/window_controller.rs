@@ -95,10 +95,14 @@ pub fn hide_popover<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 pub fn open_full_app<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     hide_popover(app)?;
 
+    #[cfg(target_os = "macos")]
+    app.set_activation_policy(tauri::ActivationPolicy::Regular)?;
+
     let main = main_window(app)?;
     main.unminimize()?;
     main.show()?;
-    main.set_focus()
+    main.set_focus()?;
+    main.set_fullscreen(true)
 }
 
 pub fn handle_window_event<R: Runtime>(window: &tauri::Window<R>, event: &tauri::WindowEvent) {
@@ -109,6 +113,15 @@ pub fn handle_window_event<R: Runtime>(window: &tauri::Window<R>, event: &tauri:
             api.prevent_close();
             if let Err(error) = window.hide() {
                 eprintln!("failed to hide Slate window after close request: {error}");
+            }
+            #[cfg(target_os = "macos")]
+            if window.label() == MAIN_WINDOW_LABEL {
+                if let Err(error) = window
+                    .app_handle()
+                    .set_activation_policy(tauri::ActivationPolicy::Accessory)
+                {
+                    eprintln!("failed to restore Slate's menu-bar activation policy: {error}");
+                }
             }
         }
         tauri::WindowEvent::Focused(false) if window.label() == POPOVER_WINDOW_LABEL => {

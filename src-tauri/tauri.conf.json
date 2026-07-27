@@ -18,6 +18,9 @@
         "height": 820,
         "minWidth": 560,
         "minHeight": 620,
+        "decorations": true,
+        "titleBarStyle": "Transparent",
+        "hiddenTitle": true,
         "center": true,
         "visible": false
       },
