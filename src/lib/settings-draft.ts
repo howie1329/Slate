@@ -23,9 +23,13 @@ export type SettingsDraftView = {
 };
 
 export function createSettingsDraft(snapshot: PlannerSnapshot): SettingsDraft {
+  const settings = {
+    ...snapshot.settings,
+    weeklyCapacityMinutes: { ...snapshot.settings.weeklyCapacityMinutes },
+  };
   return {
-    baseline: { ...snapshot.settings },
-    values: { ...snapshot.settings },
+    baseline: settings,
+    values: { ...settings, weeklyCapacityMinutes: { ...settings.weeklyCapacityMinutes } },
     availabilityByProvider: { ...snapshot.aiAvailabilityByProvider },
     key: { kind: "unchanged" },
     keyFocused: false,
@@ -58,7 +62,13 @@ export function changeSettings(
 
   return {
     ...draft,
-    values: { ...draft.values, ...patch },
+    values: {
+      ...draft.values,
+      ...patch,
+      weeklyCapacityMinutes: patch.weeklyCapacityMinutes
+        ? { ...patch.weeklyCapacityMinutes }
+        : { ...draft.values.weeklyCapacityMinutes },
+    },
     ...(providerChanged
       ? {
           key: { kind: "unchanged" as const },
@@ -86,11 +96,15 @@ export function resetApiKeyChange(draft: SettingsDraft): SettingsDraft {
 
 export function buildSaveSettingsInput(draft: SettingsDraft): SaveSettingsInput {
   return {
-    settings: { ...draft.values },
+    settings: {
+      ...draft.values,
+      weeklyCapacityMinutes: { ...draft.values.weeklyCapacityMinutes },
+    },
     apiKeyChange:
       draft.key.kind === "replace"
         ? { kind: "replace", apiKey: draft.key.value }
         : { kind: draft.key.kind },
+    source: "settings",
   };
 }
 
@@ -134,5 +148,11 @@ function settingsEqual(first: Settings, second: Settings) {
     && first.aiModel === second.aiModel
     && first.theme === second.theme
     && first.onboardingStatus === second.onboardingStatus
+    && first.capacityMode === second.capacityMode
+    && Object.keys(first.weeklyCapacityMinutes).every(
+      (weekday) =>
+        first.weeklyCapacityMinutes[weekday as keyof typeof first.weeklyCapacityMinutes]
+        === second.weeklyCapacityMinutes[weekday as keyof typeof second.weeklyCapacityMinutes],
+    )
   );
 }

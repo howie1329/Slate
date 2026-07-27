@@ -139,9 +139,8 @@ Slate 1.0.0 satisfies these entry gates. Stage 2 remains a deliberate product de
 Stage 2 introduces a small amount of durable domain infrastructure before its recovery experiences:
 
 - Append-only task and day events that record accepted mutations, their source, and before/after values without turning SQLite into an event-sourced system.
-- A per-day capacity override layered over the existing global default.
+- A capacity mode that uses either one global value or recurring Monday–Sunday values.
 - Date-scoped Anchor Commitments.
-- A recoverable **Released** disposition distinct from completion and destructive deletion.
 - Stable expected-state or record-revision validation for cross-window edits and proposals.
 - One reviewed change-set contract for multi-task recovery: generate a transient diff, validate it against current SQLite state, and apply it atomically only after acceptance.
 
@@ -159,15 +158,15 @@ History collection begins here because later calibration, agent auditing, and re
 #### 1.2 — Close unfinished days
 
 - A short unfinished-commitment review, not a statistical daily report.
-- Explicit choices to schedule for another selected day, return to Backlog, reduce or clarify, release, complete, or leave unchanged.
+- Explicit choices to schedule for another selected day, return to Backlog, reduce or clarify, complete, or leave unchanged.
 - A small number of date-scoped Anchor Commitments that Plan My Day and recovery proposals preserve unless unlocked.
 - A resumable review that never preselects tomorrow or automatically rolls work forward.
 
 #### 1.3 — Recover a changed day
 
-- An explicit, reversible per-day capacity adjustment.
+- Global or recurring weekday capacity settings that determine the effective capacity for each local date.
 - A contextual **My Day Changed** flow that shows what no longer fits.
-- A **Do Less** action that preserves Anchors and proposes which commitments to keep, return, or release.
+- A **Do Less** action that preserves Anchors and proposes which commitments to keep or return.
 - Exact before/after changes and reasons for every proposed move.
 - Atomic acceptance with stale-proposal rejection and no partial writes.
 
@@ -179,7 +178,7 @@ Task shrinking in Stage 2 is manual. One-off AI-generated smaller versions belon
 - No productivity scores, completion percentages, streaks, or mandatory reflection.
 - Anchors do not create a permanent priority hierarchy.
 - Recovery is contextual and temporary, not a permanent major navigation area.
-- Capacity adjustments are explicit, date-specific, and reversible.
+- Capacity settings are explicit, global or recurring by weekday, and reversible.
 - History records accepted product actions only. It never stores credentials, raw prompts, model reasoning, or dismissed proposals.
 
 ### Exit criteria
@@ -187,7 +186,7 @@ Task shrinking in Stage 2 is manual. One-off AI-generated smaller versions belon
 - Capture from another application takes one shortcut and does not require opening the full workspace.
 - An unfinished day can be resolved deliberately in under a minute.
 - A disrupted day can be recovered without rebuilding the plan manually.
-- Users understand why Slate preserved, returned, released, or proposed a task.
+- Users understand why Slate preserved, returned, or proposed a task.
 - Recovery proposals remain reviewable, atomic, and stale-safe across the popover and full window.
 - The event history is sufficient to support later task inspection and calibration without fabricating past state.
 
@@ -229,7 +228,7 @@ Repeated-deferral insights do not appear in the Needs Attention surface until St
 
 ### Domain boundary
 
-- Board lanes are derived from completion, estimate, date, and released state in the existing task model.
+- Board lanes are derived from completion, estimate, and date in the existing task model.
 - Do not add a persistent kanban-status field until real use proves commitment state is insufficient.
 - Capacity validation, expected-state checks, atomic writes, SQLite persistence, and cross-window invalidation remain authoritative.
 - The normal daily loop must remain usable from the popover.
@@ -246,7 +245,7 @@ Repeated-deferral insights do not appear in the Needs Attention surface until St
 
 - Stage 1 1.0 exit criteria are met.
 - Stage 2 daily-resilience foundations and exit criteria are met.
-- Backlog, Today, capacity, Anchors, release, and task lifecycle behavior are trustworthy without the board.
+- Backlog, Today, capacity, Anchors, and task lifecycle behavior are trustworthy without the board.
 - Full-window and popover state share the same authoritative task, history, mutation, and persistence boundaries.
 - Real use shows that users need more visual planning context than the compact workflow provides.
 
@@ -271,7 +270,7 @@ Calibration follows the core daily loop and history foundation directly. It does
 
 - Stage 2 has collected enough task and day events to avoid false precision.
 - Event history distinguishes accepted manual, AI, and recovery changes.
-- Planned minutes, completed planned minutes, estimate revisions, returns, releases, and deferrals have stable definitions.
+- Planned minutes, completed planned minutes, estimate revisions, returns, and deferrals have stable definitions.
 - Any user-facing comparison clearly states that estimates are planning values, not measured time worked.
 
 ### Scope
@@ -295,7 +294,7 @@ Calibration follows the core daily loop and history foundation directly. It does
 ### Exit criteria
 
 - Users can understand why a plan repeatedly fails.
-- Slate helps shrink, clarify, release, or re-estimate work.
+- Slate helps shrink, clarify, return, or re-estimate work.
 - Insights lead to better future plans without increasing pressure to work more.
 - A user can inspect the evidence behind a recommendation.
 
@@ -313,7 +312,7 @@ A task belongs to exactly one Space. A Space may have:
 
 - Name and restrained visual identity.
 - Backlog and Today commitments.
-- Default and date-specific capacity.
+- Global or recurring weekday capacity.
 - A short planning instruction.
 - Anchors, recovery, completed work, and calibration history using the same shared rules.
 
@@ -380,7 +379,7 @@ Each candidate retains its source, external identifier, link, suggested title, e
 
 ### Calendar-informed capacity
 
-Calendar events may propose a date-specific capacity override through the Stage 2 review boundary. Slate does not initially create time blocks, schedule meetings, modify calendars, or claim to understand a person’s entire day.
+Calendar events may later inform a reviewed capacity decision through the Stage 2 change-set boundary. Slate does not initially create time blocks, schedule meetings, modify calendars, or claim to understand a person’s entire day.
 
 ### Security and reliability boundary
 
@@ -408,7 +407,7 @@ Sync and mobile are a separate product and architecture program from integration
 ### Entry criteria
 
 - Real use shows demand for capture, Today, completion, remaining capacity, and lightweight review away from the Mac.
-- Task identity, record revisions, deletion or release tombstones, conflict resolution, and offline recovery have explicit contracts.
+- Task identity, record revisions, deletion tombstones, conflict resolution, and offline recovery have explicit contracts.
 - The local SQLite planner remains authoritative and usable when signed out or offline.
 - The smallest useful companion experience justifies the hosted-service and account complexity.
 
@@ -465,7 +464,7 @@ Every request is authorized against the current stored permission, available sco
 
 - Stage 2 records history; Stage 4 interprets it.
 - Stage 2 owns reviewed multi-task change sets; Stage 3 reuses them for board and batch planning.
-- The per-day capacity override introduced in Stage 2 is reused by Calibration, Spaces, and calendar-informed capacity.
+- The global/weekday capacity model introduced in Stage 2 is reused by Calibration, Spaces, and calendar-informed capacity.
 - Make This Fit begins as a one-off Stage 3 proposal and becomes history-informed only in Stage 4.
 - Spaces are optional and never block Calibration, integrations, MCP, sync, or mobile.
 - Integration candidates and MCP capture may share source attribution, but neither depends on the other.

@@ -38,7 +38,6 @@ pub fn run() {
             persistence::delete_task,
             persistence::reorder_tasks,
             persistence::save_settings,
-            persistence::apply_planner_plan,
             persistence::retry_persistence,
             ai::generate_ai_assist,
             ai::generate_daily_plan,

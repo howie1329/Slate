@@ -10,7 +10,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { useRouteMotion } from "@/components/route-motion";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { Settings } from "@/lib/planner";
+import { WEEKDAYS, type Settings, type Weekday } from "@/lib/planner";
 import { AI_MODELS, AI_PROVIDERS, isAiModel, isAiProvider } from "@/lib/ai-catalog";
 import {
   blurApiKey,
@@ -31,6 +31,15 @@ export const Route = createFileRoute("/settings")({
 });
 
 const APP_VERSION = appPackage.version;
+const WEEKDAY_LABELS: Record<Weekday, string> = {
+  monday: "Monday",
+  tuesday: "Tuesday",
+  wednesday: "Wednesday",
+  thursday: "Thursday",
+  friday: "Friday",
+  saturday: "Saturday",
+  sunday: "Sunday",
+};
 
 function SettingsPage() {
   const planner = usePlannerState();
@@ -111,20 +120,68 @@ function SettingsPage() {
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-3 sm:px-6">
         <div className="mx-auto w-full max-w-xl space-y-4">
           <SettingsGroup description="Used for planning your day." title="Daily capacity">
-            <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor="daily-capacity">
-              <span>Daily capacity</span>
-              <InputGroup className="w-32">
-                <InputGroupInput
-                  className="text-right tabular-nums"
-                  id="daily-capacity"
-                  min="1"
-                  onChange={(event) => updateDraft({ dailyCapacityMinutes: Number(event.target.value) })}
-                  type="number"
-                  value={draft.values.dailyCapacityMinutes}
-                />
-                <InputGroupAddon>minutes</InputGroupAddon>
-              </InputGroup>
+            <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor="capacity-mode">
+              <span>Schedule</span>
+              <Select
+                onValueChange={(value) => {
+                  if (value === "global" || value === "weekly") {
+                    updateDraft({ capacityMode: value });
+                  }
+                }}
+                value={draft.values.capacityMode}
+              >
+                <SelectTrigger aria-label="Capacity schedule" className="w-40 text-xs font-normal" id="capacity-mode">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="global">Same every day</SelectItem>
+                    <SelectItem value="weekly">By weekday</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </label>
+            {draft.values.capacityMode === "global" ? (
+              <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor="daily-capacity">
+                <span>Daily capacity</span>
+                <InputGroup className="w-32">
+                  <InputGroupInput
+                    className="text-right tabular-nums"
+                    id="daily-capacity"
+                    min="1"
+                    onChange={(event) => updateDraft({ dailyCapacityMinutes: Number(event.target.value) })}
+                    type="number"
+                    value={draft.values.dailyCapacityMinutes}
+                  />
+                  <InputGroupAddon>minutes</InputGroupAddon>
+                </InputGroup>
+              </label>
+            ) : (
+              <div aria-label="Weekly capacity" className="space-y-2">
+                {WEEKDAYS.map((weekday) => (
+                  <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor={`capacity-${weekday}`} key={weekday}>
+                    <span>{WEEKDAY_LABELS[weekday]}</span>
+                    <InputGroup className="w-32">
+                      <InputGroupInput
+                        aria-label={`${WEEKDAY_LABELS[weekday]} capacity`}
+                        className="text-right tabular-nums"
+                        id={`capacity-${weekday}`}
+                        min="0"
+                        onChange={(event) => updateDraft({
+                          weeklyCapacityMinutes: {
+                            ...draft.values.weeklyCapacityMinutes,
+                            [weekday]: Number(event.target.value),
+                          },
+                        })}
+                        type="number"
+                        value={draft.values.weeklyCapacityMinutes[weekday]}
+                      />
+                      <InputGroupAddon>minutes</InputGroupAddon>
+                    </InputGroup>
+                  </label>
+                ))}
+              </div>
+            )}
           </SettingsGroup>
 
           <SettingsGroup description="Your key is stored securely in the macOS Keychain." title="AI connection">

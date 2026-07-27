@@ -35,7 +35,7 @@ function TodayWorkspace({ planner }: { planner: PlannerSnapshot }) {
   const { setRouteTransition } = useRouteMotion();
   const { selectedTaskId, selectTask } = useTaskSelection();
 
-  const { settings, tasks, today, orderByScope } = planner;
+  const { tasks, today, orderByScope } = planner;
   const scheduledToday = tasks.filter((task) => task.scheduledDate === today);
   const todayScope = `today:${today}`;
   const activeTasks = orderTasks(
@@ -49,7 +49,7 @@ function TodayWorkspace({ planner }: { planner: PlannerSnapshot }) {
   const hasBacklogTasks = tasks.some(
     (task) => task.completedAt === null && scopeForTask(task, today) !== todayScope,
   );
-  const capacityMinutes = settings.dailyCapacityMinutes;
+  const capacityMinutes = planner.effectiveCapacityMinutes;
   const capacity = calculateCapacityState(activeTasks, capacityMinutes);
   const { overflowTaskId } = capacity;
   const hasTasks = activeTasks.length > 0 || completedTasks.length > 0;
@@ -71,7 +71,7 @@ function TodayWorkspace({ planner }: { planner: PlannerSnapshot }) {
       transition,
     });
     setTaskCompleted.mutate(
-      { id: taskId, completed: task.completedAt === null },
+      { id: taskId, completed: task.completedAt === null, expectedRevision: task.revision },
       { onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update task.") },
     );
   }
@@ -84,7 +84,14 @@ function TodayWorkspace({ planner }: { planner: PlannerSnapshot }) {
 
   function handleReorderTasks(taskIds: string[]) {
     reorderTasks.mutate(
-      { scope: todayScope, taskIds },
+      {
+        scope: todayScope,
+        taskIds,
+        expectedRevisions: taskIds.map((id) => {
+          const task = planner.tasks.find((candidate) => candidate.id === id);
+          return { id, revision: task?.revision ?? 0 };
+        }),
+      },
       { onError: () => toast.error("Could not save task order.") },
     );
   }

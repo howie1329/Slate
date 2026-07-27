@@ -1,5 +1,5 @@
 import { useRef, type CSSProperties } from "react";
-import { DragDropVerticalIcon } from "@hugeicons/core-free-icons";
+import { BookmarkCheck01Icon, DragDropVerticalIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -209,6 +209,11 @@ function TaskRowContent({
             >
               {formatMinutes(task.estimateMinutes)}
             </span>
+            {task.completedAt === null && task.anchorDate !== null ? (
+              <span aria-label="Anchored for today" className="shrink-0 text-primary" title="Anchored for today">
+                <HugeiconsIcon aria-hidden="true" icon={BookmarkCheck01Icon} size={15} strokeWidth={1.7} />
+              </span>
+            ) : null}
           </button>
           {sortable?.showDragHandle ? (
             <button

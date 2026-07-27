@@ -8,7 +8,6 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
-  applyPlannerPlan,
   createTask,
   deleteTask,
   acceptDailyPlan,
@@ -21,7 +20,6 @@ import {
   setTaskCompleted,
   setTaskScheduledDate,
   updateTask,
-  type PlannerPlanAssignment,
   type PlannerSnapshot,
   type AiAssistInput,
   type AiPlanAcceptanceInput,
@@ -31,6 +29,7 @@ import {
   type SetTaskScheduledDateInput,
   type TaskInput,
   type UpdateTaskInput,
+  type DeleteTaskInput,
 } from "@/lib/planner";
 
 export const plannerStateQueryKey = ["plannerState"] as const;
@@ -110,6 +109,7 @@ function usePlannerMutation<TInput>(mutationFn: (input: TInput) => Promise<void>
   return useMutation({
     mutationFn,
     onSuccess: () => invalidatePlannerState(queryClient),
+    onError: () => invalidatePlannerState(queryClient),
   });
 }
 
@@ -130,7 +130,7 @@ export function useSetTaskScheduledDate() {
 }
 
 export function useDeleteTask() {
-  return usePlannerMutation<string>(deleteTask);
+  return usePlannerMutation<DeleteTaskInput>(deleteTask);
 }
 
 export function useReorderTasks() {
@@ -200,10 +200,6 @@ export function useSaveSettings() {
         });
     },
   };
-}
-
-export function useApplyPlannerPlan() {
-  return usePlannerMutation<PlannerPlanAssignment[]>(applyPlannerPlan);
 }
 
 export function useGenerateAiAssist() {

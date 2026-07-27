@@ -220,8 +220,8 @@ function HeaderSummary({ pathname, planner }: HeaderSummaryProps) {
 
   if (pathname === "/today") {
     const capacity = getTodayCapacity(planner);
-    const capacityRatio = planner.settings.dailyCapacityMinutes > 0
-      ? capacity.remainingMinutes / planner.settings.dailyCapacityMinutes
+    const capacityRatio = planner.effectiveCapacityMinutes > 0
+      ? capacity.remainingMinutes / planner.effectiveCapacityMinutes
       : 0;
     const tone = capacity.isOverCapacity
       ? "text-destructive"
@@ -286,8 +286,8 @@ function TodayCapacityProgress({ planner, windowMode }: { planner: PlannerSnapsh
   }
 
   const capacity = getTodayCapacity(planner);
-  const capacityPercentage = planner.settings.dailyCapacityMinutes > 0
-    ? Math.min((capacity.committedMinutes / planner.settings.dailyCapacityMinutes) * 100, 100)
+  const capacityPercentage = planner.effectiveCapacityMinutes > 0
+    ? Math.min((capacity.committedMinutes / planner.effectiveCapacityMinutes) * 100, 100)
     : 0;
   const status = capacity.isOverCapacity
     ? `${capacity.overageMinutes} min over capacity`
@@ -295,7 +295,7 @@ function TodayCapacityProgress({ planner, windowMode }: { planner: PlannerSnapsh
 
   return (
     <div
-      aria-label={`${capacity.committedMinutes} of ${planner.settings.dailyCapacityMinutes} minutes committed`}
+      aria-label={`${capacity.committedMinutes} of ${planner.effectiveCapacityMinutes} minutes committed`}
       aria-valuemax={100}
       aria-valuemin={0}
       aria-valuenow={capacityPercentage}
@@ -317,7 +317,7 @@ function getTodayCapacity(planner: PlannerSnapshot) {
   const todayScope = `today:${planner.today}`;
   const activeTasks = planner.tasks.filter((task) => scopeForTask(task, planner.today) === todayScope);
 
-  return calculateCapacityState(activeTasks, planner.settings.dailyCapacityMinutes);
+  return calculateCapacityState(activeTasks, planner.effectiveCapacityMinutes);
 }
 
 type PersistenceRecoveryProps = {

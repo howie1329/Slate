@@ -22,6 +22,16 @@ const snapshot = {
     aiModel: "openai/gpt-5-mini",
     theme: "light",
     onboardingStatus: "not-started",
+    capacityMode: "global",
+    weeklyCapacityMinutes: {
+      monday: 240,
+      tuesday: 240,
+      wednesday: 240,
+      thursday: 240,
+      friday: 240,
+      saturday: 240,
+      sunday: 240,
+    },
   },
   aiAvailability: "configured",
   aiAvailabilityByProvider: {
@@ -29,6 +39,7 @@ const snapshot = {
     openrouter: "configured",
   },
   today: "2026-07-23",
+  effectiveCapacityMinutes: 240,
 };
 
 describe("Settings draft", () => {

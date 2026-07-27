@@ -60,7 +60,7 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
 
     recordTaskMutation({ kind: "create", transition: createTransitionRef.current });
     createTask.mutate(
-      { title: trimmedTitle, estimateMinutes: null, scheduledDate },
+      { title: trimmedTitle, estimateMinutes: null, scheduledDate, source: "manual" },
       {
         onSuccess: () => setTitle(""),
         onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save task."),

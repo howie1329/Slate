@@ -65,7 +65,7 @@ Slate then:
 1. Preserves locked Anchor Commitments.
 2. Shows which remaining commitments no longer fit.
 3. Produces one transient proposed change set.
-4. Explains each proposed keep, return, or release decision.
+4. Explains each proposed keep or return decision.
 5. Shows the resulting committed and remaining minutes.
 6. Applies the entire accepted proposal atomically.
 
@@ -75,23 +75,22 @@ Slate then:
 
 ### Daily capacity
 
-The existing settings value remains the user’s default daily capacity.
-
-Stage 2 adds an optional date-specific override:
+The existing settings value remains the user’s global daily capacity. Stage 2 adds an optional recurring weekday mode:
 
 ```text
-effective capacity(date) = date override ?? default capacity
+effective capacity(date) = global capacity
+  or the configured capacity for that date’s weekday
 ```
 
-Changing today’s capacity:
+Capacity settings:
 
-- Affects only the selected local calendar date.
-- Is explicit and reversible.
-- Does not change the default setting.
+- Use either one global value or independent Monday–Sunday values.
+- Preserve both global and weekday values when the mode changes.
+- Allow zero weekday capacity for non-working days.
 - Is validated with any proposal that depends on it.
-- Is recorded as an accepted day event.
+- Is recorded as an accepted settings event.
 
-Later calendar integrations may propose an override through the same review boundary. They never write it automatically.
+Later calendar integrations may inform a reviewed capacity decision through the same review boundary. They never write it automatically.
 
 ### Anchor Commitments
 
@@ -104,18 +103,7 @@ An Anchor is a temporary protection for a task on one local date.
 - An unfinished Anchor remains subject to the same explicit end-of-day decision as any other task.
 - If Anchors alone exceed effective capacity, Slate explains the conflict and asks the user to unlock, edit, or deliberately keep the over-capacity plan.
 
-### Released work
-
-Released is a recoverable disposition for work the user intentionally removes from active planning.
-
-- Released work is not completed.
-- Releasing is not destructive deletion.
-- Released tasks do not appear in Today or active Backlog groups and do not count against capacity.
-- Their task record and accepted history remain inspectable.
-- Restoring a released task returns it to Backlog without silently restoring a previous Today commitment.
-- Permanent deletion remains a separate explicit destructive action.
-
-The implementation may represent release with a timestamp or equivalent explicit state. It must not infer release from a missing date or completion value.
+Returning a task to Backlog is the deliberate way to remove it from active Today planning. A missing scheduled date is not a hidden secondary state: the task remains recoverable in Backlog, and permanent deletion remains a separate explicit destructive action.
 
 ### Accepted event history
 
@@ -140,9 +128,9 @@ Initial event kinds include:
 - Returned to Backlog.
 - Completed or reopened.
 - Anchored or unanchored.
-- Released or restored.
+- Returned to Backlog.
 - Permanently deleted using a minimal non-secret tombstone.
-- Daily capacity override changed or cleared.
+- Global/weekday capacity settings changed.
 - Recovery change set accepted.
 - Day review closed, when the user explicitly closes it.
 

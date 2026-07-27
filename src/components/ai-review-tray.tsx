@@ -206,7 +206,7 @@ function AssistResult({ onDismiss, onRedo, proposal }: { onDismiss: () => void; 
     setValidationError(null);
     recordTaskMutation({ kind: "create", transition: "animate" });
     createTask.mutate(
-      { title: nextTitle, estimateMinutes: nextEstimate, scheduledDate },
+      { title: nextTitle, estimateMinutes: nextEstimate, scheduledDate, source: "ai-assist" },
       {
         onSuccess: () => {
           onDismiss();

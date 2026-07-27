@@ -9,6 +9,16 @@ const settings = {
   aiModel: "openai/gpt-5-mini",
   theme: "light",
   onboardingStatus: "not-started",
+  capacityMode: "global",
+  weeklyCapacityMinutes: {
+    monday: 240,
+    tuesday: 240,
+    wednesday: 240,
+    thursday: 240,
+    friday: 240,
+    saturday: 240,
+    sunday: 240,
+  },
 };
 
 describe("Onboarding helpers", () => {
@@ -32,6 +42,7 @@ describe("Onboarding helpers", () => {
           onboardingStatus: "completed",
         },
         apiKeyChange: { kind: "unchanged" },
+        source: "onboarding",
       },
     );
   });

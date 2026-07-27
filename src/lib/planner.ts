@@ -4,6 +4,24 @@ import type { AiModel, AiProvider } from "./ai-catalog";
 export type LocalDate = `${number}-${number}-${number}`;
 export type Theme = "dark" | "light";
 export type OnboardingStatus = "not-started" | "completed" | "skipped";
+export type CapacityMode = "global" | "weekly";
+export type Weekday =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
+export const WEEKDAYS: Weekday[] = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
 export type { AiModel, AiProvider } from "./ai-catalog";
 export type AiAvailability = "configured" | "unconfigured" | "unavailable";
 
@@ -14,6 +32,8 @@ export type Task = {
   scheduledDate: LocalDate | null;
   createdAt: string;
   completedAt: string | null;
+  revision: number;
+  anchorDate: LocalDate | null;
 };
 
 export type Settings = {
@@ -23,6 +43,8 @@ export type Settings = {
   aiModel: AiModel;
   theme: Theme;
   onboardingStatus: OnboardingStatus;
+  capacityMode: CapacityMode;
+  weeklyCapacityMinutes: Record<Weekday, number>;
 };
 
 export type PlannerSnapshot = {
@@ -32,6 +54,7 @@ export type PlannerSnapshot = {
   aiAvailability: AiAvailability;
   aiAvailabilityByProvider: Record<AiProvider, AiAvailability>;
   today: LocalDate;
+  effectiveCapacityMinutes: number;
 };
 
 export type AiAssistInput = {
@@ -53,6 +76,7 @@ export type ApiKeyChange =
 export type SaveSettingsInput = {
   settings: Settings;
   apiKeyChange: ApiKeyChange;
+  source: "settings" | "onboarding";
 };
 
 export type AiPlanItem = {
@@ -62,7 +86,10 @@ export type AiPlanItem = {
   sourceScheduledDate: LocalDate | null;
   scheduledDate: LocalDate;
   position: number;
+  revision: number;
 };
+
+export type TaskRevision = { id: string; revision: number };
 
 export type AiPlanProposal = {
   items: AiPlanItem[];
@@ -71,13 +98,15 @@ export type AiPlanProposal = {
   rationale: string | null;
   emptyReason: "no-capacity" | "no-eligible-tasks" | "no-fitting-plan" | null;
   todayTaskIds: string[];
+  todayTaskRevisions: TaskRevision[];
   expectedDailyCapacityMinutes: number;
   expectedRemainingMinutes: number;
 };
 
 export type AiPlanAcceptanceInput = {
-  items: Array<Pick<AiPlanItem, "id" | "title" | "estimateMinutes" | "sourceScheduledDate">>;
+  items: Array<Pick<AiPlanItem, "id" | "title" | "estimateMinutes" | "sourceScheduledDate" | "revision">>;
   todayTaskIds: string[];
+  todayTaskRevisions: TaskRevision[];
   expectedDailyCapacityMinutes: number;
   expectedRemainingMinutes: number;
 };
@@ -86,17 +115,25 @@ export type TaskInput = {
   title: string;
   estimateMinutes: number | null;
   scheduledDate: LocalDate | null;
+  source: "manual" | "ai-assist" | "onboarding";
 };
 
-export type UpdateTaskInput = TaskInput & { id: string };
-export type SetTaskCompletedInput = { id: string; completed: boolean };
-export type SetTaskScheduledDateInput = { id: string; scheduledDate: LocalDate | null };
-export type ReorderTasksInput = { scope: string; taskIds: string[] };
-export type PlannerPlanAssignment = {
-  taskId: string;
-  scheduledDate: LocalDate;
+export type UpdateTaskInput = Omit<TaskInput, "source"> & {
+  id: string;
+  anchorDate: LocalDate | null;
+  expectedRevision: number;
+};
+export type SetTaskCompletedInput = { id: string; completed: boolean; expectedRevision: number };
+export type SetTaskScheduledDateInput = {
+  id: string;
+  scheduledDate: LocalDate | null;
+  expectedRevision: number;
+};
+export type DeleteTaskInput = { id: string; expectedRevision: number };
+export type ReorderTasksInput = {
   scope: string;
-  position: number;
+  taskIds: string[];
+  expectedRevisions: TaskRevision[];
 };
 
 export function isTauriWindow() {
@@ -135,8 +172,8 @@ export function setTaskScheduledDate(input: SetTaskScheduledDateInput) {
   return plannerInvoke<void>("set_task_scheduled_date", { input });
 }
 
-export function deleteTask(id: string) {
-  return plannerInvoke<void>("delete_task", { id });
+export function deleteTask(input: DeleteTaskInput) {
+  return plannerInvoke<void>("delete_task", { input });
 }
 
 export function reorderTasks(input: ReorderTasksInput) {
@@ -145,10 +182,6 @@ export function reorderTasks(input: ReorderTasksInput) {
 
 export function saveSettings(input: SaveSettingsInput) {
   return plannerInvoke<PlannerSnapshot>("save_settings", { input });
-}
-
-export function applyPlannerPlan(assignments: PlannerPlanAssignment[]) {
-  return plannerInvoke<void>("apply_planner_plan", { input: { assignments } });
 }
 
 export function generateAiAssist(input: AiAssistInput) {

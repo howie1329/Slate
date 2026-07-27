@@ -58,7 +58,7 @@ function BacklogWorkspace({ planner }: { planner: PlannerSnapshot }) {
       transition,
     });
     setTaskCompleted.mutate(
-      { id: taskId, completed: task.completedAt === null },
+      { id: taskId, completed: task.completedAt === null, expectedRevision: task.revision },
       { onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update task.") },
     );
   }
@@ -71,7 +71,14 @@ function BacklogWorkspace({ planner }: { planner: PlannerSnapshot }) {
 
   function handleReorderTasks(scope: string, taskIds: string[]) {
     reorderTasks.mutate(
-      { scope, taskIds },
+      {
+        scope,
+        taskIds,
+        expectedRevisions: taskIds.map((id) => {
+          const task = planner.tasks.find((candidate) => candidate.id === id);
+          return { id, revision: task?.revision ?? 0 };
+        }),
+      },
       { onError: () => toast.error("Could not save task order.") },
     );
   }
