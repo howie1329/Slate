@@ -20,6 +20,7 @@ use crate::shortcut_controller;
 const DATABASE_FILE_NAME: &str = "slate.sqlite";
 const MAX_AI_CONTEXT_TASKS: usize = 50;
 const MAX_AI_CONTEXT_TITLE_CHARS: usize = 240;
+pub(crate) const DEFAULT_QUICK_CAPTURE_SHORTCUT: &str = "CommandOrControl+Shift+Space";
 const MIGRATION_1_PREFIX: &str = r#"
 CREATE TABLE tasks (
   id TEXT PRIMARY KEY NOT NULL,
@@ -129,12 +130,14 @@ CREATE INDEX planner_events_operation_index ON planner_events (operation_id);
 "#
 }
 
-fn migration_4() -> &'static str {
-    r#"
+fn migration_4() -> String {
+    format!(
+        r#"
 ALTER TABLE settings ADD COLUMN quick_capture_enabled INTEGER NOT NULL DEFAULT 1
 CHECK (quick_capture_enabled IN (0, 1));
-ALTER TABLE settings ADD COLUMN quick_capture_shortcut TEXT NOT NULL DEFAULT 'CommandOrControl+Shift+Space';
+ALTER TABLE settings ADD COLUMN quick_capture_shortcut TEXT NOT NULL DEFAULT '{DEFAULT_QUICK_CAPTURE_SHORTCUT}';
 "#
+    )
 }
 
 #[derive(Debug, Serialize)]

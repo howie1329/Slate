@@ -36,7 +36,14 @@ pub fn run() {
             quick_capture::setup(app.handle());
             window_controller::setup(app.handle())?;
             let state = app.state::<persistence::PersistenceState>();
-            let (enabled, shortcut) = persistence::read_quick_capture_settings(&state)?;
+            let (enabled, shortcut) = persistence::read_quick_capture_settings(&state)
+                .unwrap_or_else(|error| {
+                    eprintln!("failed to read quick capture settings; using defaults: {error}");
+                    (
+                        true,
+                        persistence::DEFAULT_QUICK_CAPTURE_SHORTCUT.to_string(),
+                    )
+                });
             shortcut_controller::setup(app.handle(), enabled, &shortcut)?;
             Ok(())
         })
