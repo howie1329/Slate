@@ -47,7 +47,7 @@ Roadmap stages describe dependency order and evidence gates. Versions describe a
 | Release family | Roadmap stage | Product outcome |
 | --- | --- | --- |
 | **1.0** | Stage 1 | A trustworthy, distributable local daily planner. |
-| **1.1–1.x** | Stage 2 | Capture from anywhere, close unfinished days deliberately, and recover when available capacity changes. |
+| **1.1–1.x** | Stage 2 | Capture from anywhere and establish the history, capacity, and mutation foundations for later review work. |
 | **2.0–2.x** | Stage 3 | A capacity-aware full-window planning workspace built over the same task model. |
 | **3.0** | Stage 4 | History-informed calibration that improves estimates and capacity without scoring productivity. |
 | **4.0, only if earned** | Stage 5 | Spaces for genuinely distinct personal planning contexts. |
@@ -74,9 +74,9 @@ Slate 1.0.0 is the shipped baseline for the first usable daily planning loop:
 - Reviewable AI Assist and atomic Plan My Day flows through the Keychain-backed packaged Node sidecar.
 - An ad-hoc-signed Apple Silicon DMG for macOS 13.5 or later, with an explicit first-launch security warning and published checksum.
 
-Stage 1 is complete. The next eligible work is Stage 2 daily resilience, not Spaces, sync, mobile, or integrations. New work remains evidence-gated, and the distinction between the shipped Backlog view and a future richer Log view stays deliberate.
+Stage 1 is complete. The next eligible work is Stage 2 capture and foundation validation, not Spaces, sync, mobile, or integrations. The larger unfinished-day and changed-day review experiences are intentionally deferred to the full-window workspace and remain evidence-gated. The distinction between the shipped Backlog view and a future richer Log view stays deliberate.
 
-The 1.1 implementation slice is global quick capture: a configurable macOS shortcut opens a dedicated 520 × 100 command-bar capture window (360 × 100 minimum), restores an in-process draft, and creates a title-only Backlog task with revision-safe Undo. Clipboard, selected text, application context, AI enrichment, and destination selection remain deferred.
+The 1.1 implementation slice is global quick capture: a configurable macOS shortcut opens a dedicated 520 × 100 command-bar capture window (360 × 100 minimum), restores an in-process draft, and creates a title-only Backlog task with revision-safe Undo. Clipboard, selected text, application context, AI enrichment, and destination selection remain deferred. The unfinished-day and changed-day review concepts are not popover requirements; they are conditional full-window work in Stage 3.
 
 ## Stage 1 — Shipped local daily planner
 
@@ -120,11 +120,11 @@ When a plan is over capacity, Slate should explain the overage and offer recover
 - The release artifact contains production metadata, covers the declared architecture/OS matrix, has valid ad-hoc signatures, and includes checksum and first-launch guidance.
 - `npm run build` and the relevant native tests pass.
 
-## Stage 2 — Make the daily loop resilient (1.1–1.x)
+## Stage 2 — Capture and durable planning foundations (1.1–1.x)
 
 ### Goal
 
-Help Slate capture work outside the popover, close unfinished days deliberately, and recover when available capacity changes without introducing project-management complexity.
+Help Slate capture work outside the popover and establish the durable history, capacity, and stale-safe mutation boundaries that later full-window planning can reuse.
 
 The detailed behavior and data boundaries are defined in [Daily resilience](daily-resilience.md).
 
@@ -132,21 +132,22 @@ The detailed behavior and data boundaries are defined in [Daily resilience](dail
 
 - Stage 1 1.0 exit criteria are met.
 - The ad-hoc-signed packaged app and compact popover have passed release acceptance.
-- Manual task lifecycle, capacity, AI review, and persistence are trustworthy before new history or recovery states expand the model.
+- Manual task lifecycle, capacity, AI review, and persistence are trustworthy before the durable planning foundations expand the model.
 
 Slate 1.0.0 satisfies these entry gates. Stage 2 remains a deliberate product decision rather than an automatic expansion.
 
 ### Foundations
 
-Stage 2 introduces a small amount of durable domain infrastructure before its recovery experiences:
+Stage 2 introduces a small amount of durable domain infrastructure before later review and workspace experiences:
 
 - Append-only task and day events that record accepted mutations, their source, and before/after values without turning SQLite into an event-sourced system.
 - A capacity mode that uses either one global value or recurring Monday–Sunday values.
-- Date-scoped Anchor Commitments.
 - Stable expected-state or record-revision validation for cross-window edits and proposals.
-- One reviewed change-set contract for multi-task recovery: generate a transient diff, validate it against current SQLite state, and apply it atomically only after acceptance.
+- One reviewed change-set contract for multi-task actions: generate a transient diff, validate it against current SQLite state, and apply it atomically only after acceptance.
 
 History collection begins here because later calibration, agent auditing, and repeated-deferral review cannot be reconstructed retroactively. Stage 2 does not expose productivity statistics or aggregate analytics.
+
+Anchor Commitments currently exist as provisional implementation groundwork, but they are not a required Stage 2 user-facing capability. They should be retained only if the conditional 2.3 review work is approved; otherwise the 2.3 cleanup branch removes their active UI, domain logic, events, tests, and persisted state through a forward migration.
 
 ### Release slices
 
@@ -158,39 +159,21 @@ History collection begins here because later calibration, agent auditing, and re
 - Preserve the draft across popover dismissal and focus changes; clear it only after capture, Undo, or explicit discard.
 - Evaluate Share extension, Shortcuts, URL scheme, clipboard, selected-text, or Raycast capture only after the global shortcut proves useful.
 
-#### 1.2 — Close unfinished days
+#### Deferred full-window review work
 
-- A short unfinished-commitment review, not a statistical daily report.
-- Explicit choices to schedule for another selected day, return to Backlog, reduce or clarify, complete, or leave unchanged.
-- A small number of date-scoped Anchor Commitments that Plan My Day and recovery proposals preserve unless unlocked.
-- A resumable review that never preselects tomorrow or automatically rolls work forward.
-
-#### 1.3 — Recover a changed day
-
-- Global or recurring weekday capacity settings that determine the effective capacity for each local date.
-- A contextual **My Day Changed** flow that shows what no longer fits.
-- A **Do Less** action that preserves Anchors and proposes which commitments to keep or return.
-- Exact before/after changes and reasons for every proposed move.
-- Atomic acceptance with stale-proposal rejection and no partial writes.
-
-Task shrinking in Stage 2 is manual. One-off AI-generated smaller versions belong to Stage 3’s Make This Fit capability; history-informed shrink suggestions belong to Stage 4 Calibration.
+The dedicated unfinished-day review and changed-day recovery flows are moved out of Stage 2. Their requirements and evidence gates are defined as conditional 2.3 work in Stage 3. The compact popover keeps the existing task-level controls and capacity explanation; it does not need to contain either full review flow.
 
 ### Guardrails
 
 - No automatic rollover.
 - No productivity scores, completion percentages, streaks, or mandatory reflection.
-- Anchors do not create a permanent priority hierarchy.
-- Recovery is contextual and temporary, not a permanent major navigation area.
 - Capacity settings are explicit, global or recurring by weekday, and reversible.
 - History records accepted product actions only. It never stores credentials, raw prompts, model reasoning, or dismissed proposals.
 
 ### Exit criteria
 
 - Capture from another application takes one shortcut and does not require opening the full workspace.
-- An unfinished day can be resolved deliberately in under a minute.
-- A disrupted day can be recovered without rebuilding the plan manually.
-- Users understand why Slate preserved, returned, or proposed a task.
-- Recovery proposals remain reviewable, atomic, and stale-safe across the popover and full window.
+- Plan My Day and other accepted multi-task actions remain reviewable, atomic, and stale-safe.
 - The event history is sufficient to support later task inspection and calibration without fabricating past state.
 
 ## Stage 3 — Build the full-window planning workspace (2.0–2.x)
@@ -227,7 +210,17 @@ Repeated-deferral insights do not appear in the Needs Attention surface until St
 - Add a reviewable one-off **Make This Fit** action for an oversized or unclear task.
 - Add recent capture, completion, and per-task history inspection backed by the Stage 2 event ledger.
 - Add drag-in capture from selected text, links, or files only as reviewed user capture.
-- Reuse the Stage 2 end-of-day and disrupted-day recovery flows in the larger workspace rather than creating parallel implementations.
+
+### 2.3 — Conditional full-window daily review and recovery
+
+This is an evidence-gated slot, not a prerequisite for 2.0–2.2. It gives the full-window workspace room for deliberate, multi-task review without expanding the compact popover.
+
+The slot contains two independently valuable candidates:
+
+- **Unfinished-day review:** review incomplete Today commitments and explicitly schedule them for a selected date, return them to Backlog, reduce or clarify them, complete them, or leave them unchanged. The review is resumable and never preselects tomorrow.
+- **Changed-day recovery:** if real use shows that manual recovery is repeatedly burdensome, propose a reviewed set of keep/return changes after capacity changes. Preserve Anchors only if that concept still earns its complexity, and apply accepted changes atomically with stale-state rejection.
+
+The entry gate is observed friction in the full-window workflow, not the mere existence of the roadmap slot. If neither candidate is earned, remove any provisional Anchor implementation and related recovery-only documentation rather than leaving dormant product surface or domain state behind.
 
 ### Domain boundary
 
@@ -235,6 +228,7 @@ Repeated-deferral insights do not appear in the Needs Attention surface until St
 - Do not add a persistent kanban-status field until real use proves commitment state is insufficient.
 - Capacity validation, expected-state checks, atomic writes, SQLite persistence, and cross-window invalidation remain authoritative.
 - The normal daily loop must remain usable from the popover.
+- The 2.3 review candidates are full-window experiences and must not become prerequisites for ordinary daily planning.
 
 ### Guardrails
 
@@ -247,8 +241,8 @@ Repeated-deferral insights do not appear in the Needs Attention surface until St
 ### Entry criteria
 
 - Stage 1 1.0 exit criteria are met.
-- Stage 2 daily-resilience foundations and exit criteria are met.
-- Backlog, Today, capacity, Anchors, and task lifecycle behavior are trustworthy without the board.
+- Stage 2 capture and foundation exit criteria are met.
+- Backlog, Today, capacity, and task lifecycle behavior are trustworthy without the board.
 - Full-window and popover state share the same authoritative task, history, mutation, and persistence boundaries.
 - Real use shows that users need more visual planning context than the compact workflow provides.
 
@@ -480,7 +474,7 @@ Before expanding the product, answer these questions with real use:
 - Do users understand Backlog versus Today without onboarding?
 - Does Plan My Day save effort while preserving trust and control?
 - Does global quick capture reduce capture friction without causing accidental commitments?
-- Do users deliberately resolve unfinished days and recover changed days?
+- Does the full-window workspace reveal recurring friction around unfinished-day review or changed-day recovery?
 - Does the full-window workspace make commitment planning clearer without creating project-management overhead?
 - Does Calibration improve future estimates without feeling evaluative?
 - Do multiple Spaces solve a recurring problem or merely add organization overhead?

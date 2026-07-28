@@ -11,7 +11,7 @@ This folder contains the product direction for Slate 2.0–2.x: a spacious plann
 
 1. Read the core direction first.
 2. Use the elevated improvements write-up to prioritize the strongest desktop interactions.
-3. Read the Stage 2 [Daily resilience](../daily-resilience.md) contract for the history, capacity, release, and reviewed-change foundations the workspace reuses.
+3. Read the Stage 2 [Daily resilience](../daily-resilience.md) contract for the history, capacity, task-return, and reviewed-change foundations the workspace reuses. The conditional 2.3 review candidates are defined there as well.
 4. Validate any implementation proposal against the roadmap entry and the product brief.
 
 ## Source of truth

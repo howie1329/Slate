@@ -121,12 +121,13 @@ These are not rejected permanently. They remain outside 1.0 until the determinis
 
 Slate may expand around the same commitment-budget model in the following order:
 
-1. **1.1–1.x — Daily resilience:** global capture, accepted task/day history, per-day capacity overrides, Anchors, unfinished-commitment review, and contextual recovery when the day changes.
-2. **2.0–2.x — Full-window planning workspace:** a visual desktop surface for shaping commitments while preserving the popover as the fast daily planning tool.
-3. **3.0 — Calibration:** respectful, history-informed feedback and conservative suggestions that improve estimates and capacity without scoring productivity.
-4. **4.0, only if earned — Spaces:** distinct planning contexts with their own capacity only when users demonstrate that one planner cannot express their needs.
-5. **5.0 — Outside context:** reviewed, deduplicated candidate actions from systems such as GitHub and Gmail, plus calendar-informed capacity proposals.
-6. **6.0, only if earned — Optional sync and mobile:** explicit identity, conflict, tombstone, and offline-recovery rules followed by a limited mobile companion for a proven multi-device use case.
+1. **1.1–1.x — Capture and foundations:** global capture, accepted task/day history, recurring capacity, stale-safe mutations, and the shared boundaries required by later workspace actions.
+2. **2.0–2.2 — Full-window planning workspace:** a visual desktop surface for shaping commitments while preserving the popover as the fast daily planning tool.
+3. **2.3, conditional — Full-window daily review:** unfinished-commitment review and changed-day recovery only if real use shows that the compact task-level controls are insufficient.
+4. **3.0 — Calibration:** respectful, history-informed feedback and conservative suggestions that improve estimates and capacity without scoring productivity.
+5. **4.0, only if earned — Spaces:** distinct planning contexts with their own capacity only when users demonstrate that one planner cannot express their needs.
+6. **5.0 — Outside context:** reviewed, deduplicated candidate actions from systems such as GitHub and Gmail, plus calendar-informed capacity proposals.
+7. **6.0, only if earned — Optional sync and mobile:** explicit identity, conflict, tombstone, and offline-recovery rules followed by a limited mobile companion for a proven multi-device use case.
 
 **Local agent access** is an independent post-1.x track. A permissioned MCP interface may arrive before later major releases once history, authorization, expected-state validation, and shared domain rules are stable. It does not depend on Spaces, integrations, sync, or mobile.
 

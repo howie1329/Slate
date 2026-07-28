@@ -4,6 +4,8 @@
 
 ## Status
 
+- **Scope update:** The Stage 2 foundation remains useful for Plan My Day, full-window movement, and later Calibration. The unfinished-day review and changed-day recovery experiences originally associated with Stage 2 are now conditional 2.3 full-window candidates and do not block the 2.0–2.2 workspace sequence.
+- **Anchor decision:** Anchor support is provisional groundwork for the conditional 2.3 recovery candidate. Plan My Day does not need Anchor data because existing Today commitments are already fixed; if 2.3 is not earned, remove the active Anchor surface and persistence state through a forward migration instead of leaving dormant behavior.
 - **Priority:** P1 after Slate 1.0 validation
 - **Effort:** L
 - **Risk:** HIGH — SQLite migrations and every task mutation boundary are affected
@@ -12,13 +14,13 @@
 
 ## Objective
 
-Add the smallest durable foundation needed for Stage 2 recovery and later calibration:
+Add the smallest durable foundation needed for Stage 2 capture, current Plan My Day, the later full-window workspace, and Calibration:
 
 1. Append-only Planner Events.
 2. Persisted task revisions and stale-write protection.
 3. A reviewed atomic change-set contract, with Plan My Day as its first consumer.
 4. Global or recurring weekday capacity configuration.
-5. Date-scoped Anchor Commitments.
+5. Provisional Date-scoped Anchor Commitments for a possible later recovery flow.
 
 Released tasks and one-off calendar-date capacity overrides are intentionally excluded. Returning a task to Backlog remains the deliberate way to remove it from active planning.
 
@@ -33,7 +35,7 @@ Released tasks and one-off calendar-date capacity overrides are intentionally ex
 - Anchor management lives in task detail; Today rows show a quiet non-interactive indicator.
 - Stale validation applies to all existing-task writes, including manual edits, completion, scheduling, deletion, ordering, AI acceptance, and reviewed change sets.
 - A dirty task-detail draft is preserved and blocked when another window changes the task. The user must explicitly review the latest state.
-- Plan My Day is refactored to use the shared change-set acceptance path.
+- Plan My Day is refactored to use the shared change-set acceptance path. Its existing Today commitments remain fixed; Anchor state is not an AI planning input.
 - No history UI or public event-query command ships in this plan.
 
 ## Data and API changes
@@ -106,7 +108,7 @@ Add `expectedRevision` to every existing-task mutation input. Add a validated so
 ### Reviewed atomic change sets
 
 - Remove the unused legacy `apply_planner_plan` command and renderer hook.
-- Add a strict reviewed-change-set contract containing source, expected task revisions, expected effective capacity, expected Today state/order, ordered operations, reasons, and before/after totals.
+- Add a strict reviewed-change-set contract containing source, expected task revisions, expected effective capacity, expected Today state/order, ordered operations, reasons, and before/after totals. The current consumer is Plan My Day; future board and conditional 2.3 review actions may reuse it.
 - Keep proposals transient until acceptance.
 - Validate every revision, capacity value, task eligibility, Anchor constraint, and resulting order before writing.
 - Apply all task changes, order changes, revisions, and Planner Events in one transaction; any conflict causes zero writes.
@@ -137,11 +139,11 @@ Write one `capacity-settings-updated` event when mode or capacity values change.
 - Clear the Anchor when a task is completed, returned to Backlog, or scheduled for another date.
 - Do not restore an Anchor when a task is reopened or rescheduled.
 - Include Anchor state in task revisions, event payloads, and change-set validation.
-- Preserve Anchors in Plan My Day and require explicit unlock behavior in future recovery change sets.
+- Plan My Day already preserves existing Today commitments because it never modifies them. Require explicit Anchor unlock behavior only if the conditional 2.3 recovery flow is approved.
 
 ### Documentation
 
-Update `docs/roadmap.md` and `docs/daily-resilience.md` to replace one-off date overrides with recurring weekday capacity, remove Released as a Stage 2 state, and document the final Planner Events, revision, change-set, and Anchor contracts.
+Update `docs/roadmap.md`, `docs/daily-resilience.md`, and the full-window workspace docs to keep recurring weekday capacity and the shared mutation contracts in Stage 2 while moving unfinished-day review and changed-day recovery to conditional 2.3 work.
 
 ## Test and acceptance plan
 
@@ -177,4 +179,3 @@ Update `docs/roadmap.md` and `docs/daily-resilience.md` to replace one-off date 
 - Dirty task drafts survive cross-window refresh and expose the stale/review flow.
 - Anchor controls are keyboard accessible and visibly indicated without relying on color alone.
 - Run `cargo test --manifest-path src-tauri/Cargo.toml` and `npm run build`.
-
