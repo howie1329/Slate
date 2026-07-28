@@ -1,13 +1,19 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Mutex};
 
-use tauri::{AppHandle, Emitter, Runtime};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutEvent, ShortcutState};
 
 use crate::window_controller;
 
 const REGISTRATION_ERROR_EVENT: &str = "quick-capture://registration-error";
 
+#[derive(Default)]
+pub struct QuickCaptureShortcutState {
+    registration_error: Mutex<Option<String>>,
+}
+
 pub fn setup<R: Runtime>(app: &AppHandle<R>, enabled: bool, shortcut: &str) -> tauri::Result<()> {
+    app.manage(QuickCaptureShortcutState::default());
     let handler = move |app: &AppHandle<R>, _shortcut: &Shortcut, event: ShortcutEvent| {
         if event.state() != ShortcutState::Pressed {
             return;
@@ -57,6 +63,7 @@ pub fn rebind<R: Runtime>(
     }
 
     let Some(next) = next else {
+        clear_registration_error(app);
         return Ok(());
     };
 
@@ -72,11 +79,18 @@ pub fn rebind<R: Runtime>(
         return Err(format!("quick-capture-shortcut-conflict: {error}"));
     }
 
+    clear_registration_error(app);
     Ok(())
 }
 
 pub fn report_registration_error<R: Runtime>(app: &AppHandle<R>, error: &str) {
+    store_registration_error(app, error);
     emit_registration_error(app, error);
+}
+
+pub fn get_quick_capture_shortcut_error<R: Runtime>(app: &AppHandle<R>) -> Option<String> {
+    app.try_state::<QuickCaptureShortcutState>()
+        .and_then(|state| state.registration_error.lock().ok()?.clone())
 }
 
 fn parse_shortcut(value: &str) -> Result<Shortcut, String> {
@@ -85,4 +99,20 @@ fn parse_shortcut(value: &str) -> Result<Shortcut, String> {
 
 fn emit_registration_error<R: Runtime>(app: &AppHandle<R>, error: &str) {
     let _ = app.emit(REGISTRATION_ERROR_EVENT, error.to_string());
+}
+
+fn store_registration_error<R: Runtime>(app: &AppHandle<R>, error: &str) {
+    if let Some(state) = app.try_state::<QuickCaptureShortcutState>() {
+        if let Ok(mut stored_error) = state.registration_error.lock() {
+            *stored_error = Some(error.to_string());
+        }
+    }
+}
+
+fn clear_registration_error<R: Runtime>(app: &AppHandle<R>) {
+    if let Some(state) = app.try_state::<QuickCaptureShortcutState>() {
+        if let Ok(mut stored_error) = state.registration_error.lock() {
+            *stored_error = None;
+        }
+    }
 }

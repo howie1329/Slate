@@ -12,7 +12,7 @@ import { useRouteMotion } from "@/components/route-motion";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { WEEKDAYS, type Settings, type Weekday } from "@/lib/planner";
-import { isTauriWindow } from "@/lib/planner";
+import { getQuickCaptureShortcutError, isTauriWindow } from "@/lib/planner";
 import {
   formatShortcut,
   RECOMMENDED_QUICK_CAPTURE_SHORTCUT,
@@ -84,6 +84,13 @@ function SettingsPage() {
         unlisten = stopListening;
       }
     });
+    void getQuickCaptureShortcutError()
+      .then((error) => {
+        if (error) {
+          setShortcutError(formatShortcutError(error));
+        }
+      })
+      .catch(() => {});
 
     return () => {
       disposed = true;

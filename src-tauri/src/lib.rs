@@ -23,6 +23,11 @@ fn hide_quick_capture(app: tauri::AppHandle) -> Result<(), String> {
     window_controller::hide_quick_capture(&app).map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn get_quick_capture_shortcut_error(app: tauri::AppHandle) -> Option<String> {
+    shortcut_controller::get_quick_capture_shortcut_error(&app)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default().plugin(tauri_plugin_shell::init());
@@ -52,6 +57,7 @@ pub fn run() {
             open_full_app,
             hide_popover,
             hide_quick_capture,
+            get_quick_capture_shortcut_error,
             persistence::get_planner_snapshot,
             persistence::create_task,
             persistence::undo_quick_capture,

@@ -162,6 +162,10 @@ export function retryPersistence() {
   return plannerInvoke<void>("retry_persistence");
 }
 
+export function getQuickCaptureShortcutError() {
+  return plannerInvoke<string | null>("get_quick_capture_shortcut_error");
+}
+
 export function createTask(input: TaskInput) {
   return plannerInvoke<CreatedTask>("create_task", { input });
 }
