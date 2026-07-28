@@ -1,8 +1,8 @@
 # Slate Product Brief
 
-> **Status:** Current product contract and shipped 1.0 baseline
+> **Status:** Current product contract and 1.1 release candidate
 >
-> This brief describes the Slate 1.0.x product contract, including the 1.0.1 onboarding release, and the boundaries future work must preserve. The staged expansion plan lives in [the roadmap](roadmap.md).
+> This brief describes the Slate 1.0.x product contract, the 1.0.1 onboarding release, the 1.1.0 quick-capture release candidate, and the boundaries future work must preserve. The staged expansion plan lives in [the roadmap](roadmap.md).
 
 ## Product definition
 
@@ -16,7 +16,7 @@ An individual knowledge worker who captures more work than they can reliably fin
 
 ## Current product state
 
-Slate 1.0.1 is the shipped local planning baseline. It provides:
+Slate 1.1.0 is the current local planning release candidate. It provides:
 
 - A Tauri macOS shell with a menu-bar popover and full application window.
 - Today, Backlog, and Settings routes using the same workspace shell.
@@ -28,11 +28,12 @@ Slate 1.0.1 is the shipped local planning baseline. It provides:
 - macOS Keychain storage for provider API keys.
 - Reviewable AI Assist and Plan My Day flows through the packaged Node sidecar.
 - A short, skippable first-run onboarding flow that explains capacity, Backlog, Today, and task details.
+- Configurable global quick capture with a dedicated compact capture window, title-only Backlog creation, draft preservation, and revision-safe Undo.
 - Cross-window refresh through native planner-change events and TanStack Query invalidation.
 
 AI Assist and Plan My Day ship as reviewable Keychain-backed sidecar flows. The manual workflow remains the product’s source of truth, and AI never commits a task or plan without explicit acceptance.
 
-Global quick capture, end-of-day review, Spaces, integrations, sync, mobile, and MCP remain outside the shipped 1.0 baseline and follow the evidence-gated roadmap. Global quick capture is the focused 1.1 implementation slice.
+End-of-day review, changed-day recovery, Spaces, integrations, sync, mobile, and MCP remain outside the shipped 1.1 baseline and follow the evidence-gated roadmap. The unfinished-day and changed-day review candidates are now conditional full-window 2.3 work.
 
 ### 1.1 global quick capture slice
 

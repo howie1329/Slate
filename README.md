@@ -12,12 +12,13 @@ The repository contains a working local planning foundation:
 - Native task creation, editing, completion, deletion, and date scheduling.
 - Pointer and keyboard task ordering within active Today and Backlog groups.
 - Today capacity and over-capacity state.
+- Configurable global quick capture with a dedicated compact capture window and revision-safe Undo.
 - macOS Keychain storage for provider API keys.
 - Settings-based provider and fixed model selection for AI features.
 - Shared local state between the popover and full window through native change events and TanStack Query invalidation.
 - Light and dark themes and compact task-detail editing above the persistent footer.
 
-Slate 1.0.1 is the current shipped baseline. New users get a short, skippable onboarding flow that explains capacity, Backlog, Today, and the task-detail workflow. AI Assist and Plan My Day are reviewable production flows: provider requests cross the native Keychain boundary through the packaged Node sidecar, Assist creates tasks only after review, and Plan My Day moves selected Backlog tasks to Today only after atomic native acceptance. The release is distributed directly as an ad-hoc-signed Apple Silicon DMG for macOS 13.5 or later. Because it is not notarized, users must explicitly approve its first launch in macOS Privacy & Security.
+Slate 1.1.0 is the current release candidate. New users get a short, skippable onboarding flow that explains capacity, Backlog, Today, and the task-detail workflow. Global quick capture opens a dedicated compact window from a configurable macOS shortcut and creates title-only Backlog tasks with bounded, revision-safe Undo. AI Assist and Plan My Day are reviewable production flows: provider requests cross the native Keychain boundary through the packaged Node sidecar, Assist creates tasks only after review, and Plan My Day moves selected Backlog tasks to Today only after atomic native acceptance. The planned release is distributed directly as an ad-hoc-signed Apple Silicon DMG for macOS 13.5 or later. Because it is not notarized, users must explicitly approve its first launch in macOS Privacy & Security.
 
 The product direction and staged expansion plan live in [the product brief](docs/product-brief.md) and [the roadmap](docs/roadmap.md).
 
