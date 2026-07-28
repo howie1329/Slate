@@ -1,4 +1,5 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, Loading03Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { Link, createFileRoute } from "@tanstack/react-router";
@@ -11,6 +12,12 @@ import { useRouteMotion } from "@/components/route-motion";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { WEEKDAYS, type Settings, type Weekday } from "@/lib/planner";
+import { isTauriWindow } from "@/lib/planner";
+import {
+  formatShortcut,
+  RECOMMENDED_QUICK_CAPTURE_SHORTCUT,
+  shortcutFromKeyboardEvent,
+} from "@/lib/quick-capture";
 import { AI_MODELS, AI_PROVIDERS, isAiModel, isAiProvider } from "@/lib/ai-catalog";
 import {
   blurApiKey,
@@ -46,6 +53,8 @@ function SettingsPage() {
   const saveSettings = useSaveSettings();
   const { setRouteTransition } = useRouteMotion();
   const [draft, setDraft] = useState<SettingsDraft | null>(null);
+  const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
+  const [shortcutError, setShortcutError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!planner.data) {
@@ -58,6 +67,29 @@ function SettingsPage() {
         : createSettingsDraft(planner.data),
     );
   }, [planner.data]);
+
+  useEffect(() => {
+    if (!isTauriWindow()) {
+      return;
+    }
+
+    let unlisten: (() => void) | undefined;
+    let disposed = false;
+    void listen<string>("quick-capture://registration-error", (event) => {
+      setShortcutError(formatShortcutError(event.payload));
+    }).then((stopListening) => {
+      if (disposed) {
+        stopListening();
+      } else {
+        unlisten = stopListening;
+      }
+    });
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
 
   if (!draft || !planner.data) {
     return null;
@@ -83,6 +115,7 @@ function SettingsPage() {
     saveSettings.mutate(buildSaveSettingsInput(draft), {
       onSuccess: (snapshot) => {
         setDraft(createSettingsDraft(snapshot));
+        setShortcutError(null);
         toast.success("Settings saved.");
       },
       onError: (error) => {
@@ -182,6 +215,75 @@ function SettingsPage() {
                 ))}
               </div>
             )}
+          </SettingsGroup>
+
+          <SettingsGroup description="Capture a thought from anywhere into Backlog." title="Quick capture">
+            <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor="quick-capture-enabled">
+              <span>
+                <span className="block">Enable shortcut</span>
+                <span className="mt-0.5 block text-xs font-normal text-muted-foreground">Creates an unestimated Backlog task.</span>
+              </span>
+              <button
+                aria-label="Enable quick capture shortcut"
+                id="quick-capture-enabled"
+                aria-checked={draft.values.quickCaptureEnabled}
+                className="inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-border bg-muted p-0.5 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-[checked=true]:border-primary data-[checked=true]:bg-primary motion-reduce:transition-none"
+                data-checked={draft.values.quickCaptureEnabled}
+                onClick={() => updateDraft({ quickCaptureEnabled: !draft.values.quickCaptureEnabled })}
+                role="switch"
+                type="button"
+              >
+                <span className={`size-3.5 rounded-full bg-background shadow-sm transition-transform motion-reduce:transition-none ${draft.values.quickCaptureEnabled ? "translate-x-4" : "translate-x-0"}`} />
+              </button>
+            </label>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-3 text-menu font-medium">
+                <span id="quick-capture-shortcut-label">Shortcut</span>
+                <Button
+                  aria-describedby="quick-capture-shortcut-label"
+                  aria-label={isRecordingShortcut ? "Press a shortcut" : `Current shortcut ${formatShortcut(draft.values.quickCaptureShortcut)}`}
+                  className={`min-w-32 font-mono text-xs ${isRecordingShortcut ? "border-primary bg-primary/10 text-foreground" : ""}`}
+                  onBlur={() => setIsRecordingShortcut(false)}
+                  onClick={() => setIsRecordingShortcut(true)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      setIsRecordingShortcut(false);
+                      return;
+                    }
+                    if (!isRecordingShortcut) {
+                      return;
+                    }
+                    const shortcut = shortcutFromKeyboardEvent(event.nativeEvent);
+                    if (shortcut) {
+                      event.preventDefault();
+                      updateDraft({ quickCaptureShortcut: shortcut });
+                      setIsRecordingShortcut(false);
+                    }
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  {isRecordingShortcut ? "Press keys…" : formatShortcut(draft.values.quickCaptureShortcut)}
+                </Button>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <p className={`m-0 text-xs ${shortcutError ? "text-destructive" : "text-muted-foreground"}`} role={shortcutError ? "alert" : undefined}>
+                  {shortcutError ?? "Use a modifier and one key."}
+                </p>
+                <Button
+                  onClick={() => {
+                    updateDraft({ quickCaptureShortcut: RECOMMENDED_QUICK_CAPTURE_SHORTCUT });
+                    setShortcutError(null);
+                  }}
+                  size="xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  Reset
+                </Button>
+              </div>
+            </div>
           </SettingsGroup>
 
           <SettingsGroup description="Your key is stored securely in the macOS Keychain." title="AI connection">
@@ -394,4 +496,14 @@ function KeyStatus({
   ) : (
     <span className="text-xs font-medium text-destructive">Required for AI</span>
   );
+}
+
+function formatShortcutError(error: string) {
+  if (error.includes("conflict")) {
+    return "That shortcut is already in use. Choose another one.";
+  }
+  if (error.includes("invalid") || error.includes("unsupported")) {
+    return "Use a modifier plus one supported key.";
+  }
+  return "Could not register the shortcut. Try again.";
 }

@@ -1,8 +1,12 @@
 mod ai;
 mod credentials;
 mod persistence;
+mod quick_capture;
+mod shortcut_controller;
 mod sidecar;
 mod window_controller;
+
+use tauri::Manager;
 
 #[tauri::command]
 fn open_full_app(app: tauri::AppHandle) -> Result<(), String> {
@@ -24,7 +28,12 @@ pub fn run() {
     builder
         .setup(|app| {
             persistence::setup(app.handle())?;
-            Ok(window_controller::setup(app.handle())?)
+            quick_capture::setup(app.handle());
+            window_controller::setup(app.handle())?;
+            let state = app.state::<persistence::PersistenceState>();
+            let (enabled, shortcut) = persistence::read_quick_capture_settings(&state)?;
+            shortcut_controller::setup(app.handle(), enabled, &shortcut)?;
+            Ok(())
         })
         .on_window_event(window_controller::handle_window_event)
         .invoke_handler(tauri::generate_handler![
@@ -32,6 +41,10 @@ pub fn run() {
             hide_popover,
             persistence::get_planner_snapshot,
             persistence::create_task,
+            persistence::undo_quick_capture,
+            quick_capture::get_quick_capture_draft,
+            quick_capture::set_quick_capture_draft,
+            quick_capture::clear_quick_capture_draft,
             persistence::update_task,
             persistence::set_task_completed,
             persistence::set_task_scheduled_date,

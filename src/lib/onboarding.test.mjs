@@ -19,6 +19,8 @@ const settings = {
     saturday: 240,
     sunday: 240,
   },
+  quickCaptureEnabled: true,
+  quickCaptureShortcut: "CommandOrControl+Shift+Space",
 };
 
 describe("Onboarding helpers", () => {

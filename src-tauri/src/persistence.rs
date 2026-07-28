@@ -15,6 +15,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use uuid::Uuid;
 
 use crate::credentials;
+use crate::shortcut_controller;
 
 const DATABASE_FILE_NAME: &str = "slate.sqlite";
 const MAX_AI_CONTEXT_TASKS: usize = 50;
@@ -128,6 +129,14 @@ CREATE INDEX planner_events_operation_index ON planner_events (operation_id);
 "#
 }
 
+fn migration_4() -> &'static str {
+    r#"
+ALTER TABLE settings ADD COLUMN quick_capture_enabled INTEGER NOT NULL DEFAULT 1
+CHECK (quick_capture_enabled IN (0, 1));
+ALTER TABLE settings ADD COLUMN quick_capture_shortcut TEXT NOT NULL DEFAULT 'CommandOrControl+Shift+Space';
+"#
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Task {
@@ -164,6 +173,8 @@ pub struct Settings {
     onboarding_status: String,
     capacity_mode: String,
     weekly_capacity_minutes: WeeklyCapacityMinutes,
+    quick_capture_enabled: bool,
+    quick_capture_shortcut: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -329,9 +340,7 @@ impl Repository {
             .filter_map(|task| task.estimate_minutes)
             .fold(0_i64, i64::saturating_add);
         let effective_capacity = effective_capacity_minutes(&settings, &today)?;
-        let remaining_minutes = effective_capacity
-            .saturating_sub(committed_minutes)
-            .max(0);
+        let remaining_minutes = effective_capacity.saturating_sub(committed_minutes).max(0);
         let candidates = ["log:unscheduled", "log:overdue"]
             .into_iter()
             .flat_map(|scope| ordered_plan_context(&tasks, &order_by_scope, scope, &today))
@@ -400,7 +409,8 @@ impl Repository {
                 "SELECT daily_capacity_minutes, planning_instruction, ai_provider, ai_model, theme, onboarding_status,
                         capacity_mode, monday_capacity_minutes, tuesday_capacity_minutes,
                         wednesday_capacity_minutes, thursday_capacity_minutes,
-                        friday_capacity_minutes, saturday_capacity_minutes, sunday_capacity_minutes
+                        friday_capacity_minutes, saturday_capacity_minutes, sunday_capacity_minutes,
+                        quick_capture_enabled, quick_capture_shortcut
                  FROM settings WHERE id = 1",
                 [],
                 |row| {
@@ -421,6 +431,8 @@ impl Repository {
                             saturday: row.get(12)?,
                             sunday: row.get(13)?,
                         },
+                        quick_capture_enabled: row.get(14)?,
+                        quick_capture_shortcut: row.get(15)?,
                     })
                 },
             )
@@ -437,14 +449,15 @@ impl Repository {
             settings.weekly_capacity_minutes.tuesday,
             settings.weekly_capacity_minutes.wednesday,
             settings.weekly_capacity_minutes.thursday,
-        settings.weekly_capacity_minutes.friday,
-        settings.weekly_capacity_minutes.saturday,
-        settings.weekly_capacity_minutes.sunday,
-    )?;
+            settings.weekly_capacity_minutes.friday,
+            settings.weekly_capacity_minutes.saturday,
+            settings.weekly_capacity_minutes.sunday,
+            &settings.quick_capture_shortcut,
+        )?;
         Ok(settings)
     }
 
-    fn create_task(&mut self, input: TaskInput) -> Result<(), String> {
+    fn create_task(&mut self, input: TaskInput) -> Result<CreatedTask, String> {
         validate_task_input(&input)?;
         let transaction = self.connection.transaction().map_err(database_error)?;
         let id = Uuid::new_v4().to_string();
@@ -463,6 +476,7 @@ impl Repository {
             )
             .map_err(database_error)?;
         let after = task_state(&transaction, &id)?;
+        let revision = after.revision;
         let after_json = serde_json::to_value(after).map_err(json_error)?;
         insert_event(
             &transaction,
@@ -473,11 +487,16 @@ impl Repository {
             None,
             Some(&after_json),
         )?;
-        transaction.commit().map_err(database_error)
+        transaction.commit().map_err(database_error)?;
+        Ok(CreatedTask { id, revision })
     }
 
     fn update_task(&mut self, input: UpdateTaskInput) -> Result<(), String> {
-        validate_task_fields(&input.title, input.estimate_minutes, input.scheduled_date.as_deref())?;
+        validate_task_fields(
+            &input.title,
+            input.estimate_minutes,
+            input.scheduled_date.as_deref(),
+        )?;
         let transaction = self.connection.transaction().map_err(database_error)?;
         let before = task_state(&transaction, &input.id)?;
         ensure_expected_revision(&before, input.expected_revision)?;
@@ -503,7 +522,11 @@ impl Repository {
                 return Err("anchor-limit".into());
             }
         }
-        let previous_scope = active_scope(before.estimate_minutes, before.scheduled_date.as_deref(), &today);
+        let previous_scope = active_scope(
+            before.estimate_minutes,
+            before.scheduled_date.as_deref(),
+            &today,
+        );
         let destination_scope = active_scope(
             input.estimate_minutes,
             input.scheduled_date.as_deref(),
@@ -579,8 +602,11 @@ impl Repository {
             )
             .map_err(database_error)?;
         if !input.completed {
-            let destination_scope =
-                active_scope(before.estimate_minutes, before.scheduled_date.as_deref(), &local_today());
+            let destination_scope = active_scope(
+                before.estimate_minutes,
+                before.scheduled_date.as_deref(),
+                &local_today(),
+            );
             move_task_to_scope_start(&transaction, &input.id, &destination_scope)?;
         }
         let after = task_state(&transaction, &input.id)?;
@@ -589,7 +615,11 @@ impl Repository {
         insert_event(
             &transaction,
             Some(&input.id),
-            if input.completed { "task-completed" } else { "task-reopened" },
+            if input.completed {
+                "task-completed"
+            } else {
+                "task-reopened"
+            },
             "manual",
             &Uuid::new_v4().to_string(),
             Some(&before_json),
@@ -604,9 +634,16 @@ impl Repository {
         let before = task_state(&transaction, &input.id)?;
         ensure_expected_revision(&before, input.expected_revision)?;
         let today = local_today();
-        let previous_scope = active_scope(before.estimate_minutes, before.scheduled_date.as_deref(), &today);
-        let destination_scope =
-            active_scope(before.estimate_minutes, input.scheduled_date.as_deref(), &today);
+        let previous_scope = active_scope(
+            before.estimate_minutes,
+            before.scheduled_date.as_deref(),
+            &today,
+        );
+        let destination_scope = active_scope(
+            before.estimate_minutes,
+            input.scheduled_date.as_deref(),
+            &today,
+        );
         transaction
             .execute(
                 "UPDATE tasks SET scheduled_date = ?1, anchor_date = NULL, revision = revision + 1
@@ -662,6 +699,57 @@ impl Repository {
         transaction.commit().map_err(database_error)
     }
 
+    fn undo_quick_capture(&mut self, input: UndoQuickCaptureInput) -> Result<(), String> {
+        let transaction = self.connection.transaction().map_err(database_error)?;
+        let task = task_state(&transaction, &input.id).map_err(|error| {
+            if error == "Task not found." {
+                "stale-quick-capture".into()
+            } else {
+                error
+            }
+        })?;
+        if task.revision != input.expected_revision {
+            return Err("stale-quick-capture".into());
+        }
+        if task.completed_at.is_some()
+            || task.scheduled_date.is_some()
+            || task.estimate_minutes.is_some()
+            || task.anchor_date.is_some()
+        {
+            return Err("quick-capture-not-undoable".into());
+        }
+        let created_by_quick_capture: Option<String> = transaction
+            .query_row(
+                "SELECT source FROM planner_events
+                 WHERE task_id = ?1 AND kind = 'task-created'
+                 ORDER BY occurred_at ASC, id ASC LIMIT 1",
+                [&input.id],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(database_error)?;
+        if created_by_quick_capture.as_deref() != Some("manual-quick-capture") {
+            return Err("quick-capture-not-undoable".into());
+        }
+        let before_json = serde_json::to_value(&task).map_err(json_error)?;
+        insert_event(
+            &transaction,
+            Some(&input.id),
+            "task-deleted",
+            "manual-quick-capture-undo",
+            &Uuid::new_v4().to_string(),
+            Some(&before_json),
+            None,
+        )?;
+        transaction
+            .execute(
+                "DELETE FROM tasks WHERE id = ?1 AND revision = ?2",
+                params![input.id, input.expected_revision],
+            )
+            .map_err(database_error)?;
+        transaction.commit().map_err(database_error)
+    }
+
     fn reorder_tasks(&mut self, input: ReorderTasksInput) -> Result<(), String> {
         validate_scope(&input.scope)?;
         ensure_unique_ids(&input.task_ids)?;
@@ -689,7 +777,9 @@ impl Repository {
             let before = task_state(&transaction, task_id)?;
             ensure_expected_revision(
                 &before,
-                *expected.get(task_id.as_str()).ok_or_else(|| "stale-task-order".to_string())?,
+                *expected
+                    .get(task_id.as_str())
+                    .ok_or_else(|| "stale-task-order".to_string())?,
             )?;
             before_states.push(before);
         }
@@ -702,7 +792,7 @@ impl Repository {
                     "INSERT INTO task_orders (scope, task_id, position) VALUES (?1, ?2, ?3)",
                     params![input.scope, task_id, position as i64],
                 )
-            .map_err(database_error)?;
+                .map_err(database_error)?;
         }
         let operation_id = Uuid::new_v4().to_string();
         for (position, before) in before_states.into_iter().enumerate() {
@@ -710,7 +800,7 @@ impl Repository {
                 .execute(
                     "UPDATE tasks SET revision = revision + 1 WHERE id = ?1 AND revision = ?2",
                     params![before.id, before.revision],
-            )
+                )
                 .map_err(database_error)?;
             let after = task_state(&transaction, &before.id)?;
             let before_position = current_ids
@@ -748,7 +838,8 @@ impl Repository {
             || previous.capacity_mode != input.capacity_mode
             || previous.weekly_capacity_minutes.monday != input.weekly_capacity_minutes.monday
             || previous.weekly_capacity_minutes.tuesday != input.weekly_capacity_minutes.tuesday
-            || previous.weekly_capacity_minutes.wednesday != input.weekly_capacity_minutes.wednesday
+            || previous.weekly_capacity_minutes.wednesday
+                != input.weekly_capacity_minutes.wednesday
             || previous.weekly_capacity_minutes.thursday != input.weekly_capacity_minutes.thursday
             || previous.weekly_capacity_minutes.friday != input.weekly_capacity_minutes.friday
             || previous.weekly_capacity_minutes.saturday != input.weekly_capacity_minutes.saturday
@@ -762,7 +853,8 @@ impl Repository {
                      monday_capacity_minutes = ?8, tuesday_capacity_minutes = ?9,
                      wednesday_capacity_minutes = ?10, thursday_capacity_minutes = ?11,
                      friday_capacity_minutes = ?12, saturday_capacity_minutes = ?13,
-                     sunday_capacity_minutes = ?14
+                     sunday_capacity_minutes = ?14, quick_capture_enabled = ?15,
+                     quick_capture_shortcut = ?16
                  WHERE id = 1",
                 params![
                     input.daily_capacity_minutes,
@@ -779,6 +871,8 @@ impl Repository {
                     input.weekly_capacity_minutes.friday,
                     input.weekly_capacity_minutes.saturday,
                     input.weekly_capacity_minutes.sunday,
+                    input.quick_capture_enabled,
+                    input.quick_capture_shortcut,
                 ],
             )
             .map_err(database_error)?;
@@ -883,20 +977,18 @@ impl Repository {
             || current_today_revisions
                 .iter()
                 .map(|revision| (&revision.id, revision.revision))
-                .ne(
-                    change_set
-                        .expected_today_task_revisions
-                        .iter()
-                        .map(|revision| (&revision.id, revision.revision)),
-                )
+                .ne(change_set
+                    .expected_today_task_revisions
+                    .iter()
+                    .map(|revision| (&revision.id, revision.revision)))
         {
             return Err("stale-plan".into());
         }
 
         let mut total_minutes = 0_i64;
         for operation in &change_set.operations {
-            let current = task_state(&transaction, &operation.id)
-                .map_err(|_| "stale-plan".to_string())?;
+            let current =
+                task_state(&transaction, &operation.id).map_err(|_| "stale-plan".to_string())?;
 
             if current.revision != operation.revision
                 || current.title != operation.title
@@ -926,10 +1018,13 @@ impl Repository {
 
         let operation_id = Uuid::new_v4().to_string();
         for operation in &change_set.operations {
-            let before = task_state(&transaction, &operation.id)
-                .map_err(|_| "stale-plan".to_string())?;
+            let before =
+                task_state(&transaction, &operation.id).map_err(|_| "stale-plan".to_string())?;
             transaction
-                .execute("DELETE FROM task_orders WHERE task_id = ?1", [&operation.id])
+                .execute(
+                    "DELETE FROM task_orders WHERE task_id = ?1",
+                    [&operation.id],
+                )
                 .map_err(database_error)?;
             transaction
                 .execute(
@@ -938,8 +1033,8 @@ impl Repository {
                     params![today, operation.id, operation.revision],
                 )
                 .map_err(database_error)?;
-            let after = task_state(&transaction, &operation.id)
-                .map_err(|_| "stale-plan".to_string())?;
+            let after =
+                task_state(&transaction, &operation.id).map_err(|_| "stale-plan".to_string())?;
             let before_json = serde_json::to_value(before).map_err(json_error)?;
             let after_json = serde_json::to_value(after).map_err(json_error)?;
             insert_event(
@@ -979,6 +1074,18 @@ pub fn setup(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+pub(crate) fn read_quick_capture_settings(
+    state: &PersistenceState,
+) -> Result<(bool, String), String> {
+    with_repository(state, |repository| {
+        let settings = repository.settings()?;
+        Ok((
+            settings.quick_capture_enabled,
+            settings.quick_capture_shortcut,
+        ))
+    })
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TaskInput {
@@ -986,6 +1093,20 @@ pub struct TaskInput {
     estimate_minutes: Option<i64>,
     scheduled_date: Option<String>,
     source: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatedTask {
+    id: String,
+    revision: i64,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UndoQuickCaptureInput {
+    id: String,
+    expected_revision: i64,
 }
 
 #[derive(Deserialize)]
@@ -1048,6 +1169,8 @@ pub struct UpdateSettingsInput {
     onboarding_status: String,
     capacity_mode: String,
     weekly_capacity_minutes: WeeklyCapacityMinutes,
+    quick_capture_enabled: bool,
+    quick_capture_shortcut: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1130,8 +1253,19 @@ pub fn create_task(
     app: AppHandle,
     state: State<PersistenceState>,
     input: TaskInput,
+) -> Result<CreatedTask, String> {
+    let created = with_repository(&state, |repository| repository.create_task(input))?;
+    emit_change(&app, &state)?;
+    Ok(created)
+}
+
+#[tauri::command]
+pub fn undo_quick_capture(
+    app: AppHandle,
+    state: State<PersistenceState>,
+    input: UndoQuickCaptureInput,
 ) -> Result<(), String> {
-    with_repository(&state, |repository| repository.create_task(input))?;
+    with_repository(&state, |repository| repository.undo_quick_capture(input))?;
     emit_change(&app, &state)
 }
 
@@ -1195,19 +1329,60 @@ pub fn save_settings(
 ) -> Result<PlannerSnapshot, String> {
     validate_save_settings_input(&input)?;
 
-    match &input.api_key_change {
-        ApiKeyChange::Unchanged => {}
-        ApiKeyChange::Replace { api_key } => {
-            credentials::write_api_key(&input.settings.ai_provider, api_key)?;
-        }
-        ApiKeyChange::Remove => {
-            credentials::remove_api_key(&input.settings.ai_provider)?;
+    let previous_settings = with_repository(&state, |repository| repository.settings())?;
+    let shortcut_changed = previous_settings.quick_capture_enabled
+        != input.settings.quick_capture_enabled
+        || previous_settings.quick_capture_shortcut != input.settings.quick_capture_shortcut;
+    if shortcut_changed {
+        if let Err(error) = shortcut_controller::rebind(
+            &app,
+            previous_settings.quick_capture_enabled,
+            &previous_settings.quick_capture_shortcut,
+            input.settings.quick_capture_enabled,
+            &input.settings.quick_capture_shortcut,
+        ) {
+            shortcut_controller::report_registration_error(&app, &error);
+            return Err(error);
         }
     }
 
-    with_repository(&state, |repository| {
+    let next_quick_capture_enabled = input.settings.quick_capture_enabled;
+    let next_quick_capture_shortcut = input.settings.quick_capture_shortcut.clone();
+    let credential_result = match &input.api_key_change {
+        ApiKeyChange::Unchanged => Ok(()),
+        ApiKeyChange::Replace { api_key } => {
+            credentials::write_api_key(&input.settings.ai_provider, api_key)
+        }
+        ApiKeyChange::Remove => credentials::remove_api_key(&input.settings.ai_provider),
+    };
+    if let Err(error) = credential_result {
+        if shortcut_changed {
+            let _ = shortcut_controller::rebind(
+                &app,
+                next_quick_capture_enabled,
+                &next_quick_capture_shortcut,
+                previous_settings.quick_capture_enabled,
+                &previous_settings.quick_capture_shortcut,
+            );
+        }
+        return Err(error);
+    }
+
+    let result = with_repository(&state, |repository| {
         repository.update_settings(input.settings, &input.source)
-    })?;
+    });
+    if let Err(error) = result {
+        if shortcut_changed {
+            let _ = shortcut_controller::rebind(
+                &app,
+                next_quick_capture_enabled,
+                &next_quick_capture_shortcut,
+                previous_settings.quick_capture_enabled,
+                &previous_settings.quick_capture_shortcut,
+            );
+        }
+        return Err(error);
+    }
     let snapshot = planner_snapshot(&state)?;
     emit_change(&app, &state)?;
     Ok(snapshot)
@@ -1282,6 +1457,15 @@ fn apply_migrations(connection: &Connection) -> Result<(), String> {
             .execute_batch(&format!(
                 "BEGIN IMMEDIATE; {} PRAGMA user_version = 3; COMMIT;",
                 migration_3()
+            ))
+            .map_err(database_error)?;
+    }
+
+    if version < 4 {
+        connection
+            .execute_batch(&format!(
+                "BEGIN IMMEDIATE; {} PRAGMA user_version = 4; COMMIT;",
+                migration_4()
             ))
             .map_err(database_error)?;
     }
@@ -1475,7 +1659,9 @@ fn normalize_anchor_date(
         || scheduled_date != Some(today)
         || anchor_date != today
     {
-        return Err("Anchors are only available for estimated active tasks scheduled today.".into());
+        return Err(
+            "Anchors are only available for estimated active tasks scheduled today.".into(),
+        );
     }
     Ok(Some(anchor_date.to_string()))
 }
@@ -1507,7 +1693,9 @@ fn scope_task_ids(
     let mut ids = Vec::new();
     for row in rows {
         let (id, estimate, scheduled_date, completed_at) = row.map_err(database_error)?;
-        if completed_at.is_none() && active_scope(estimate, scheduled_date.as_deref(), today) == scope {
+        if completed_at.is_none()
+            && active_scope(estimate, scheduled_date.as_deref(), today) == scope
+        {
             ids.push(id);
         }
     }
@@ -1641,8 +1829,20 @@ fn move_task_to_scope_start(
 }
 
 fn validate_task_input(input: &TaskInput) -> Result<(), String> {
-    validate_task_fields(&input.title, input.estimate_minutes, input.scheduled_date.as_deref())?;
-    if !matches!(input.source.as_str(), "manual" | "ai-assist" | "onboarding") {
+    validate_task_fields(
+        &input.title,
+        input.estimate_minutes,
+        input.scheduled_date.as_deref(),
+    )?;
+    if input.source == "manual-quick-capture"
+        && (input.estimate_minutes.is_some() || input.scheduled_date.is_some())
+    {
+        return Err("Quick capture tasks cannot have an estimate or scheduled date.".into());
+    }
+    if !matches!(
+        input.source.as_str(),
+        "manual" | "ai-assist" | "onboarding" | "manual-quick-capture"
+    ) {
         return Err("Task source is invalid.".into());
     }
     Ok(())
@@ -1703,6 +1903,7 @@ fn validate_settings(input: &UpdateSettingsInput) -> Result<(), String> {
         input.weekly_capacity_minutes.friday,
         input.weekly_capacity_minutes.saturday,
         input.weekly_capacity_minutes.sunday,
+        &input.quick_capture_shortcut,
     )
 }
 
@@ -1721,6 +1922,7 @@ fn validate_settings_values(
     friday_capacity_minutes: i64,
     saturday_capacity_minutes: i64,
     sunday_capacity_minutes: i64,
+    quick_capture_shortcut: &str,
 ) -> Result<(), String> {
     if daily_capacity_minutes <= 0 {
         return Err("Daily capacity must be a positive number of minutes.".into());
@@ -1743,6 +1945,7 @@ fn validate_settings_values(
     if !matches!(capacity_mode, "global" | "weekly") {
         return Err("Capacity mode is invalid.".into());
     }
+    validate_shortcut(quick_capture_shortcut)?;
     if [
         monday_capacity_minutes,
         tuesday_capacity_minutes,
@@ -1756,6 +1959,63 @@ fn validate_settings_values(
     .any(|minutes| minutes < 0)
     {
         return Err("Weekly capacity cannot be negative.".into());
+    }
+    Ok(())
+}
+
+fn validate_shortcut(shortcut: &str) -> Result<(), String> {
+    let parts = shortcut.split('+').collect::<Vec<_>>();
+    if parts.len() < 2 || parts.iter().any(|part| part.trim().is_empty()) {
+        return Err("Quick capture shortcut is invalid.".into());
+    }
+    let modifiers = [
+        "Command",
+        "Control",
+        "CommandOrControl",
+        "Alt",
+        "Option",
+        "Shift",
+        "Super",
+    ];
+    let key = parts.last().copied().unwrap_or_default();
+    if modifiers.iter().any(|modifier| *modifier == key) {
+        return Err("Quick capture shortcut needs a key.".into());
+    }
+    if parts[..parts.len() - 1]
+        .iter()
+        .any(|modifier| !modifiers.iter().any(|allowed| allowed == modifier))
+    {
+        return Err("Quick capture shortcut is invalid.".into());
+    }
+    if parts[..parts.len() - 1]
+        .iter()
+        .collect::<std::collections::HashSet<_>>()
+        .len()
+        != parts.len() - 1
+    {
+        return Err("Quick capture shortcut is invalid.".into());
+    }
+    if key.chars().count() != 1
+        && !matches!(
+            key,
+            "Space"
+                | "Enter"
+                | "Tab"
+                | "Escape"
+                | "Backspace"
+                | "Delete"
+                | "Home"
+                | "End"
+                | "PageUp"
+                | "PageDown"
+                | "Up"
+                | "Down"
+                | "Left"
+                | "Right"
+        )
+        && !key.starts_with('F')
+    {
+        return Err("Quick capture shortcut key is unsupported.".into());
     }
     Ok(())
 }
@@ -1949,16 +2209,21 @@ mod tests {
             240
         );
         repository
-            .update_settings(UpdateSettingsInput {
-                daily_capacity_minutes: 240,
-                planning_instruction: "Protect focus time.".into(),
-                ai_provider: "openrouter".into(),
-                ai_model: "anthropic/claude-sonnet-4.5".into(),
-                theme: "light".into(),
-                onboarding_status: "not-started".into(),
-                capacity_mode: "global".into(),
-                weekly_capacity_minutes: test_weekly_capacity(),
-            }, "settings")
+            .update_settings(
+                UpdateSettingsInput {
+                    daily_capacity_minutes: 240,
+                    planning_instruction: "Protect focus time.".into(),
+                    ai_provider: "openrouter".into(),
+                    ai_model: "anthropic/claude-sonnet-4.5".into(),
+                    theme: "light".into(),
+                    onboarding_status: "not-started".into(),
+                    capacity_mode: "global".into(),
+                    weekly_capacity_minutes: test_weekly_capacity(),
+                    quick_capture_enabled: true,
+                    quick_capture_shortcut: "CommandOrControl+Shift+Space".into(),
+                },
+                "settings",
+            )
             .expect("update settings");
         drop(repository);
 
@@ -1968,6 +2233,11 @@ mod tests {
         assert_eq!(settings.ai_model, "anthropic/claude-sonnet-4.5");
         assert_eq!(settings.planning_instruction, "Protect focus time.");
         assert_eq!(settings.onboarding_status, "not-started");
+        assert!(settings.quick_capture_enabled);
+        assert_eq!(
+            settings.quick_capture_shortcut,
+            "CommandOrControl+Shift+Space"
+        );
         drop(reopened);
         fs::remove_dir_all(directory).expect("remove temporary test directory");
     }
@@ -2002,16 +2272,21 @@ mod tests {
 
         let mut repository = Repository::open(path.clone()).expect("open database");
         repository
-            .update_settings(UpdateSettingsInput {
-                daily_capacity_minutes: 240,
-                planning_instruction: String::new(),
-                ai_provider: credentials::default_provider().into(),
-                ai_model: credentials::default_model().into(),
-                theme: "light".into(),
-                onboarding_status: "completed".into(),
-                capacity_mode: "global".into(),
-                weekly_capacity_minutes: test_weekly_capacity(),
-            }, "onboarding")
+            .update_settings(
+                UpdateSettingsInput {
+                    daily_capacity_minutes: 240,
+                    planning_instruction: String::new(),
+                    ai_provider: credentials::default_provider().into(),
+                    ai_model: credentials::default_model().into(),
+                    theme: "light".into(),
+                    onboarding_status: "completed".into(),
+                    capacity_mode: "global".into(),
+                    weekly_capacity_minutes: test_weekly_capacity(),
+                    quick_capture_enabled: true,
+                    quick_capture_shortcut: "CommandOrControl+Shift+Space".into(),
+                },
+                "onboarding",
+            )
             .expect("save completed status");
         drop(repository);
 
@@ -2021,16 +2296,21 @@ mod tests {
             "completed"
         );
         reopened
-            .update_settings(UpdateSettingsInput {
-                daily_capacity_minutes: 240,
-                planning_instruction: String::new(),
-                ai_provider: credentials::default_provider().into(),
-                ai_model: credentials::default_model().into(),
-                theme: "light".into(),
-                onboarding_status: "skipped".into(),
-                capacity_mode: "global".into(),
-                weekly_capacity_minutes: test_weekly_capacity(),
-            }, "onboarding")
+            .update_settings(
+                UpdateSettingsInput {
+                    daily_capacity_minutes: 240,
+                    planning_instruction: String::new(),
+                    ai_provider: credentials::default_provider().into(),
+                    ai_model: credentials::default_model().into(),
+                    theme: "light".into(),
+                    onboarding_status: "skipped".into(),
+                    capacity_mode: "global".into(),
+                    weekly_capacity_minutes: test_weekly_capacity(),
+                    quick_capture_enabled: true,
+                    quick_capture_shortcut: "CommandOrControl+Shift+Space".into(),
+                },
+                "onboarding",
+            )
             .expect("save skipped status");
         drop(reopened);
 
@@ -2077,6 +2357,8 @@ mod tests {
             onboarding_status: "not-started".into(),
             capacity_mode: "global".into(),
             weekly_capacity_minutes: test_weekly_capacity(),
+            quick_capture_enabled: true,
+            quick_capture_shortcut: "CommandOrControl+Shift+Space".into(),
         };
 
         assert!(validate_save_settings_input(&SaveSettingsInput {
@@ -2152,6 +2434,17 @@ mod tests {
             }),
             Err("Planning instruction must be 2,000 characters or fewer.".into())
         );
+
+        let mut invalid_shortcut = valid_settings();
+        invalid_shortcut.quick_capture_shortcut = "Shift+Shift+K".into();
+        assert_eq!(
+            validate_save_settings_input(&SaveSettingsInput {
+                settings: invalid_shortcut,
+                api_key_change: ApiKeyChange::Unchanged,
+                source: "settings".into(),
+            }),
+            Err("Quick capture shortcut is invalid.".into())
+        );
     }
 
     #[test]
@@ -2173,7 +2466,9 @@ mod tests {
                     "friday": 240,
                     "saturday": 240,
                     "sunday": 240
-                }
+                },
+                "quickCaptureEnabled": true,
+                "quickCaptureShortcut": "CommandOrControl+Shift+Space"
             },
             "apiKeyChange": {
                 "kind": "replace",
@@ -2220,6 +2515,114 @@ mod tests {
                 source: "manual".into(),
             })
             .is_err());
+        assert!(database
+            .repository
+            .create_task(TaskInput {
+                title: "Scheduled quick capture".into(),
+                estimate_minutes: None,
+                scheduled_date: Some("2026-07-27".into()),
+                source: "manual-quick-capture".into(),
+            })
+            .is_err());
+    }
+
+    #[test]
+    fn quick_capture_returns_revision_and_undo_keeps_event_history() {
+        let mut database = TestDatabase::new();
+        let created = database
+            .repository
+            .create_task(TaskInput {
+                title: "Capture this thought".into(),
+                estimate_minutes: None,
+                scheduled_date: None,
+                source: "manual-quick-capture".into(),
+            })
+            .expect("create quick capture");
+        assert_eq!(created.revision, 1);
+        let task = database
+            .repository
+            .tasks()
+            .expect("load quick capture")
+            .into_iter()
+            .find(|task| task.id == created.id)
+            .expect("quick capture task");
+        assert_eq!(task.estimate_minutes, None);
+        assert_eq!(task.scheduled_date, None);
+
+        database
+            .repository
+            .undo_quick_capture(UndoQuickCaptureInput {
+                id: created.id.clone(),
+                expected_revision: created.revision,
+            })
+            .expect("undo quick capture");
+
+        assert!(database
+            .repository
+            .tasks()
+            .expect("tasks after undo")
+            .into_iter()
+            .all(|task| task.id != created.id));
+        let events: Vec<(String, String)> = database
+            .repository
+            .connection
+            .prepare(
+                "SELECT kind, source FROM planner_events
+                 WHERE task_id = ?1 ORDER BY occurred_at ASC, id ASC",
+            )
+            .expect("prepare quick capture events")
+            .query_map([&created.id], |row| Ok((row.get(0)?, row.get(1)?)))
+            .expect("query quick capture events")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("collect quick capture events");
+        assert!(events.contains(&("task-created".into(), "manual-quick-capture".into())));
+        assert!(events.contains(&("task-deleted".into(), "manual-quick-capture-undo".into())));
+    }
+
+    #[test]
+    fn quick_capture_undo_rejects_an_edited_task_without_writing() {
+        let mut database = TestDatabase::new();
+        let created = database
+            .repository
+            .create_task(TaskInput {
+                title: "Edit before undo".into(),
+                estimate_minutes: None,
+                scheduled_date: None,
+                source: "manual-quick-capture".into(),
+            })
+            .expect("create quick capture");
+        database
+            .repository
+            .update_task(UpdateTaskInput {
+                id: created.id.clone(),
+                title: "Edited capture".into(),
+                estimate_minutes: None,
+                scheduled_date: None,
+                anchor_date: None,
+                expected_revision: created.revision,
+            })
+            .expect("edit quick capture");
+
+        assert_eq!(
+            database
+                .repository
+                .undo_quick_capture(UndoQuickCaptureInput {
+                    id: created.id.clone(),
+                    expected_revision: created.revision,
+                }),
+            Err("stale-quick-capture".into())
+        );
+        assert_eq!(
+            database
+                .repository
+                .tasks()
+                .expect("tasks after stale undo")
+                .into_iter()
+                .find(|task| task.id == created.id)
+                .expect("edited task")
+                .title,
+            "Edited capture"
+        );
     }
 
     #[test]
@@ -2696,6 +3099,8 @@ mod tests {
                     onboarding_status: settings.onboarding_status,
                     capacity_mode: settings.capacity_mode,
                     weekly_capacity_minutes: settings.weekly_capacity_minutes,
+                    quick_capture_enabled: settings.quick_capture_enabled,
+                    quick_capture_shortcut: settings.quick_capture_shortcut,
                 },
                 "settings",
             )

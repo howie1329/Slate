@@ -4,6 +4,8 @@
 >
 > **Updated:** 2026-07-25
 
+The 1.1 implementation begins with the focused global quick-capture slice described below. The rest of this document remains directional until the corresponding recovery flows are implemented.
+
 ## Purpose
 
 Slate 1.0 establishes a trustworthy local capture-to-commit-to-completion loop. The 1.x resilience releases extend that loop in three ways:
@@ -30,12 +32,14 @@ The first release:
 
 - Accepts a title and saves immediately to Backlog.
 - Does not require an estimate, date, AI provider, or network connection.
-- Returns focus to the previous application after capture or dismissal.
+- Reuses the existing popover and its focus-loss dismissal behavior.
 - Confirms the destination and offers a short undo opportunity.
 - Records `manual-quick-capture` as the source of the accepted task.
-- Preserves an interrupted draft until it is explicitly dismissed or captured.
+- Preserves an interrupted draft through focus loss and popover dismissal until it is explicitly discarded or captured.
+- Uses the existing popover and sends no task to Today: estimate and scheduled date remain empty.
+- Limits Undo to the unchanged task revision and records `manual-quick-capture-undo` when it succeeds.
 
-The first release does not silently attach selected text, clipboard contents, application names, URLs, or files. Those inputs may be offered later as removable reviewed context after the basic shortcut proves useful.
+The first release does not silently attach selected text, clipboard contents, application names, URLs, or files, and it does not add AI cleanup, estimates, dates, tags, or a destination picker. Those inputs may be offered later as removable reviewed context after the basic shortcut proves useful.
 
 User-authored quick capture creates a task directly. External integrations create candidates instead; those are separate trust levels and must not share an ambiguous persistence path.
 

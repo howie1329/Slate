@@ -149,6 +149,8 @@ function settingsEqual(first: Settings, second: Settings) {
     && first.theme === second.theme
     && first.onboardingStatus === second.onboardingStatus
     && first.capacityMode === second.capacityMode
+    && first.quickCaptureEnabled === second.quickCaptureEnabled
+    && first.quickCaptureShortcut === second.quickCaptureShortcut
     && Object.keys(first.weeklyCapacityMinutes).every(
       (weekday) =>
         first.weeklyCapacityMinutes[weekday as keyof typeof first.weeklyCapacityMinutes]

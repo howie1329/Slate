@@ -2,7 +2,7 @@
 
 > **Status:** Directional roadmap
 >
-> **Updated:** 2026-07-26
+> **Updated:** 2026-07-27
 >
 > This document describes the order in which Slate should earn new capabilities. It is not a fixed release schedule. Each stage should be validated against the product thesis before the next stage expands the model.
 
@@ -75,6 +75,8 @@ Slate 1.0.0 is the shipped baseline for the first usable daily planning loop:
 - An ad-hoc-signed Apple Silicon DMG for macOS 13.5 or later, with an explicit first-launch security warning and published checksum.
 
 Stage 1 is complete. The next eligible work is Stage 2 daily resilience, not Spaces, sync, mobile, or integrations. New work remains evidence-gated, and the distinction between the shipped Backlog view and a future richer Log view stays deliberate.
+
+The 1.1 implementation slice is global quick capture: a configurable macOS shortcut opens the existing popover, restores an in-process draft, and creates a title-only Backlog task with revision-safe Undo. Clipboard, selected text, application context, AI enrichment, and destination selection remain deferred.
 
 ## Stage 1 — Shipped local daily planner
 
@@ -152,7 +154,8 @@ History collection begins here because later calibration, agent auditing, and re
 
 - Global quick capture through a configurable macOS shortcut.
 - Immediate manual capture to Backlog without requiring an estimate, date, AI provider, or full-window interruption.
-- Clear source attribution and a short undo opportunity.
+- Clear `manual-quick-capture` source attribution and a five-second, revision-safe undo opportunity recorded as `manual-quick-capture-undo`.
+- Preserve the draft across popover dismissal and focus changes; clear it only after capture, Undo, or explicit discard.
 - Evaluate Share extension, Shortcuts, URL scheme, clipboard, selected-text, or Raycast capture only after the global shortcut proves useful.
 
 #### 1.2 — Close unfinished days

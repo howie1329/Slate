@@ -32,7 +32,13 @@ Slate 1.0.1 is the shipped local planning baseline. It provides:
 
 AI Assist and Plan My Day ship as reviewable Keychain-backed sidecar flows. The manual workflow remains the product’s source of truth, and AI never commits a task or plan without explicit acceptance.
 
-Global quick capture, end-of-day review, Spaces, integrations, sync, mobile, and MCP remain outside the shipped 1.0 baseline and follow the evidence-gated roadmap.
+Global quick capture, end-of-day review, Spaces, integrations, sync, mobile, and MCP remain outside the shipped 1.0 baseline and follow the evidence-gated roadmap. Global quick capture is the focused 1.1 implementation slice.
+
+### 1.1 global quick capture slice
+
+The configurable `CommandOrControl+Shift+Space` shortcut opens Slate’s existing compact popover and focuses the capture input. A title is saved immediately as an unestimated, unscheduled Backlog task with source `manual-quick-capture`; it never commits work to Today. The in-process draft survives focus loss and popover dismissal, and an explicit discard clears it.
+
+The returned task revision bounds a five-second Undo action. Undo succeeds only while the task remains unchanged, incomplete, unscheduled, and unestimated, and records a `manual-quick-capture-undo` deletion event in the same SQLite transaction. Clipboard, selected-text, application, URL, file, AI enrichment, and destination-picker capture remain deferred.
 
 ## Product surfaces
 

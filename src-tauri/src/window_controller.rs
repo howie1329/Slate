@@ -2,7 +2,7 @@ use tauri::{
     image::Image,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, PhysicalPosition, Position, Rect, Runtime, WebviewWindow,
+    AppHandle, Emitter, Manager, PhysicalPosition, Position, Rect, Runtime, WebviewWindow,
 };
 #[cfg(target_os = "macos")]
 use tauri_nspanel::{
@@ -90,6 +90,24 @@ pub fn toggle_popover<R: Runtime>(app: &AppHandle<R>, tray_rect: Rect) -> tauri:
 
 pub fn hide_popover<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     popover_window(app)?.hide()
+}
+
+pub fn open_quick_capture<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
+    let popover = popover_window(app)?;
+    #[cfg(target_os = "macos")]
+    {
+        let panel = app
+            .get_webview_panel(POPOVER_WINDOW_LABEL)
+            .map_err(|_| missing_window_error(POPOVER_WINDOW_LABEL))?;
+        panel.show_and_make_key();
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        popover.show()?;
+        popover.set_focus()?;
+    }
+    popover.emit("quick-capture://opened", ())?;
+    Ok(())
 }
 
 pub fn open_full_app<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {

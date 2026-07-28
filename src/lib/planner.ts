@@ -45,6 +45,8 @@ export type Settings = {
   onboardingStatus: OnboardingStatus;
   capacityMode: CapacityMode;
   weeklyCapacityMinutes: Record<Weekday, number>;
+  quickCaptureEnabled: boolean;
+  quickCaptureShortcut: string;
 };
 
 export type PlannerSnapshot = {
@@ -115,8 +117,12 @@ export type TaskInput = {
   title: string;
   estimateMinutes: number | null;
   scheduledDate: LocalDate | null;
-  source: "manual" | "ai-assist" | "onboarding";
+  source: "manual" | "ai-assist" | "onboarding" | "manual-quick-capture";
 };
+
+export type CreatedTask = { id: string; revision: number };
+export type UndoQuickCaptureInput = { id: string; expectedRevision: number };
+export type QuickCaptureDraft = { title: string; updatedAt: string };
 
 export type UpdateTaskInput = Omit<TaskInput, "source"> & {
   id: string;
@@ -157,7 +163,23 @@ export function retryPersistence() {
 }
 
 export function createTask(input: TaskInput) {
-  return plannerInvoke<void>("create_task", { input });
+  return plannerInvoke<CreatedTask>("create_task", { input });
+}
+
+export function undoQuickCapture(input: UndoQuickCaptureInput) {
+  return plannerInvoke<void>("undo_quick_capture", { input });
+}
+
+export function getQuickCaptureDraft() {
+  return plannerInvoke<QuickCaptureDraft | null>("get_quick_capture_draft");
+}
+
+export function setQuickCaptureDraft(title: string) {
+  return plannerInvoke<void>("set_quick_capture_draft", { title });
+}
+
+export function clearQuickCaptureDraft() {
+  return plannerInvoke<void>("clear_quick_capture_draft");
 }
 
 export function updateTask(input: UpdateTaskInput) {

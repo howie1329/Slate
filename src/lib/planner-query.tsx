@@ -19,6 +19,7 @@ import {
   saveSettings,
   setTaskCompleted,
   setTaskScheduledDate,
+  undoQuickCapture,
   updateTask,
   type PlannerSnapshot,
   type AiAssistInput,
@@ -30,6 +31,7 @@ import {
   type TaskInput,
   type UpdateTaskInput,
   type DeleteTaskInput,
+  type UndoQuickCaptureInput,
 } from "@/lib/planner";
 
 export const plannerStateQueryKey = ["plannerState"] as const;
@@ -103,7 +105,7 @@ function invalidatePlannerState(queryClient: QueryClient) {
   );
 }
 
-function usePlannerMutation<TInput>(mutationFn: (input: TInput) => Promise<void>) {
+function usePlannerMutation<TInput, TOutput = void>(mutationFn: (input: TInput) => Promise<TOutput>) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -114,7 +116,11 @@ function usePlannerMutation<TInput>(mutationFn: (input: TInput) => Promise<void>
 }
 
 export function useCreateTask() {
-  return usePlannerMutation<TaskInput>(createTask);
+  return usePlannerMutation<TaskInput, Awaited<ReturnType<typeof createTask>>>(createTask);
+}
+
+export function useUndoQuickCapture() {
+  return usePlannerMutation<UndoQuickCaptureInput>(undoQuickCapture);
 }
 
 export function useUpdateTask() {
