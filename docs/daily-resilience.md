@@ -32,11 +32,11 @@ The first release:
 
 - Accepts a title and saves immediately to Backlog.
 - Does not require an estimate, date, AI provider, or network connection.
-- Reuses the existing popover and its focus-loss dismissal behavior.
+- Uses a dedicated compact capture window with focus-loss dismissal behavior.
 - Confirms the destination and offers a short undo opportunity.
 - Records `manual-quick-capture` as the source of the accepted task.
-- Preserves an interrupted draft through focus loss and popover dismissal until it is explicitly discarded or captured.
-- Uses the existing popover and sends no task to Today: estimate and scheduled date remain empty.
+- Preserves an interrupted draft through focus loss and capture-window dismissal until it is explicitly discarded or captured.
+- Uses the dedicated capture window and sends no task to Today: estimate and scheduled date remain empty.
 - Limits Undo to the unchanged task revision and records `manual-quick-capture-undo` when it succeeds.
 
 The first release does not silently attach selected text, clipboard contents, application names, URLs, or files, and it does not add AI cleanup, estimates, dates, tags, or a destination picker. Those inputs may be offered later as removable reviewed context after the basic shortcut proves useful.

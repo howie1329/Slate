@@ -4,6 +4,7 @@
 
 ## Status
 
+- **Status:** Implemented on 2026-07-28.
 - **Priority:** P1 follow-up to Plan 024
 - **Effort:** M
 - **Risk:** MEDIUM — a third Tauri webview, macOS panel focus, window dismissal, and shared renderer/native state must remain deterministic

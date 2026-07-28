@@ -2,7 +2,8 @@ use tauri::{
     image::Image,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, PhysicalPosition, Position, Rect, Runtime, WebviewWindow,
+    AppHandle, Emitter, EventTarget, Manager, PhysicalPosition, Position, Rect, Runtime,
+    WebviewWindow,
 };
 #[cfg(target_os = "macos")]
 use tauri_nspanel::{
@@ -22,6 +23,7 @@ tauri_panel! {
 
 pub const MAIN_WINDOW_LABEL: &str = "main";
 pub const POPOVER_WINDOW_LABEL: &str = "popover";
+pub const QUICK_CAPTURE_WINDOW_LABEL: &str = "quick-capture";
 
 const OPEN_FULL_APP_MENU_ID: &str = "open-full-app";
 const QUIT_MENU_ID: &str = "quit";
@@ -33,6 +35,8 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 
     let popover = popover_window(app)?;
     configure_macos_popover(&popover)?;
+    let quick_capture = quick_capture_window(app)?;
+    configure_macos_quick_capture(&quick_capture)?;
 
     let open_full_app_item = MenuItem::with_id(
         app,
@@ -93,21 +97,30 @@ pub fn hide_popover<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 }
 
 pub fn open_quick_capture<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
-    let popover = popover_window(app)?;
+    let quick_capture = quick_capture_window(app)?;
+    position_quick_capture(app, &quick_capture)?;
     #[cfg(target_os = "macos")]
     {
         let panel = app
-            .get_webview_panel(POPOVER_WINDOW_LABEL)
-            .map_err(|_| missing_window_error(POPOVER_WINDOW_LABEL))?;
+            .get_webview_panel(QUICK_CAPTURE_WINDOW_LABEL)
+            .map_err(|_| missing_window_error(QUICK_CAPTURE_WINDOW_LABEL))?;
         panel.show_and_make_key();
     }
     #[cfg(not(target_os = "macos"))]
     {
-        popover.show()?;
-        popover.set_focus()?;
+        quick_capture.show()?;
+        quick_capture.set_focus()?;
     }
-    popover.emit("quick-capture://opened", ())?;
+    quick_capture.emit_to(
+        EventTarget::webview_window(QUICK_CAPTURE_WINDOW_LABEL),
+        "quick-capture://opened",
+        (),
+    )?;
     Ok(())
+}
+
+pub fn hide_quick_capture<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
+    quick_capture_window(app)?.hide()
 }
 
 pub fn open_full_app<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
@@ -126,7 +139,10 @@ pub fn open_full_app<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 pub fn handle_window_event<R: Runtime>(window: &tauri::Window<R>, event: &tauri::WindowEvent) {
     match event {
         tauri::WindowEvent::CloseRequested { api, .. }
-            if matches!(window.label(), MAIN_WINDOW_LABEL | POPOVER_WINDOW_LABEL) =>
+            if matches!(
+                window.label(),
+                MAIN_WINDOW_LABEL | POPOVER_WINDOW_LABEL | QUICK_CAPTURE_WINDOW_LABEL
+            ) =>
         {
             api.prevent_close();
             if let Err(error) = window.hide() {
@@ -142,9 +158,14 @@ pub fn handle_window_event<R: Runtime>(window: &tauri::Window<R>, event: &tauri:
                 }
             }
         }
-        tauri::WindowEvent::Focused(false) if window.label() == POPOVER_WINDOW_LABEL => {
+        tauri::WindowEvent::Focused(false)
+            if matches!(
+                window.label(),
+                POPOVER_WINDOW_LABEL | QUICK_CAPTURE_WINDOW_LABEL
+            ) =>
+        {
             if let Err(error) = window.hide() {
-                eprintln!("failed to hide Slate popover after focus loss: {error}");
+                eprintln!("failed to hide transient Slate window after focus loss: {error}");
             }
         }
         _ => {}
@@ -159,6 +180,11 @@ fn main_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>
 fn popover_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>> {
     app.get_webview_window(POPOVER_WINDOW_LABEL)
         .ok_or_else(|| missing_window_error(POPOVER_WINDOW_LABEL))
+}
+
+fn quick_capture_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>> {
+    app.get_webview_window(QUICK_CAPTURE_WINDOW_LABEL)
+        .ok_or_else(|| missing_window_error(QUICK_CAPTURE_WINDOW_LABEL))
 }
 
 fn missing_window_error(label: &str) -> tauri::Error {
@@ -188,6 +214,38 @@ fn position_popover<R: Runtime>(
     );
 
     popover.set_position(PhysicalPosition::new(x, y))
+}
+
+fn position_quick_capture<R: Runtime>(
+    app: &AppHandle<R>,
+    quick_capture: &WebviewWindow<R>,
+) -> tauri::Result<()> {
+    let cursor = app.cursor_position()?;
+    let monitor = app
+        .monitor_from_point(cursor.x, cursor.y)?
+        .or(app.primary_monitor()?);
+    let Some(monitor) = monitor else {
+        return Ok(());
+    };
+
+    let window_size = quick_capture.outer_size()?;
+    let work_area = monitor.work_area();
+    let max_x =
+        work_area.position.x + work_area.size.width.saturating_sub(window_size.width) as i32;
+    let max_y =
+        work_area.position.y + work_area.size.height.saturating_sub(window_size.height) as i32;
+    let x = clamp_to_work_area(
+        cursor.x as i32 - window_size.width as i32 / 2,
+        work_area.position.x,
+        max_x,
+    );
+    let y = clamp_to_work_area(
+        cursor.y as i32 - window_size.height as i32 / 2,
+        work_area.position.y,
+        max_y,
+    );
+
+    quick_capture.set_position(PhysicalPosition::new(x, y))
 }
 
 fn monitor_for_tray<R: Runtime>(
@@ -235,6 +293,24 @@ fn configure_macos_popover<R: Runtime>(popover: &WebviewWindow<R>) -> tauri::Res
 }
 
 #[cfg(target_os = "macos")]
+fn configure_macos_quick_capture<R: Runtime>(
+    quick_capture: &WebviewWindow<R>,
+) -> tauri::Result<()> {
+    let panel = quick_capture.to_panel::<SlatePopoverPanel<R>>()?;
+    panel.set_level(PanelLevel::Floating.value());
+    panel.set_style_mask(StyleMask::empty().into());
+    panel.set_collection_behavior(
+        CollectionBehavior::new()
+            .full_screen_auxiliary()
+            .can_join_all_spaces()
+            .into(),
+    );
+    panel.set_hides_on_deactivate(false);
+
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
 fn show_popover<R: Runtime>(app: &AppHandle<R>, _: &WebviewWindow<R>) -> tauri::Result<()> {
     let panel = app
         .get_webview_panel(POPOVER_WINDOW_LABEL)
@@ -252,6 +328,11 @@ fn configure_macos_popover<R: Runtime>(_: &WebviewWindow<R>) -> tauri::Result<()
 fn show_popover<R: Runtime>(_: &AppHandle<R>, popover: &WebviewWindow<R>) -> tauri::Result<()> {
     popover.show()?;
     popover.set_focus()
+}
+
+#[cfg(not(target_os = "macos"))]
+fn configure_macos_quick_capture<R: Runtime>(_: &WebviewWindow<R>) -> tauri::Result<()> {
+    Ok(())
 }
 
 fn menu_bar_icon() -> Image<'static> {

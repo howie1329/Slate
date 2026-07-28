@@ -6,6 +6,7 @@ import { Link, Outlet, createRootRoute, useRouterState } from "@tanstack/react-r
 import { motion } from "motion/react";
 import { useAiReview } from "@/components/ai-review";
 import { OnboardingFlow } from "@/components/onboarding-flow";
+import { QuickCaptureWindow } from "@/components/quick-capture-window";
 import { TaskComposerFooter } from "@/components/task-composer-footer";
 import { RouteMotionProvider, useRouteMotion, type RouteMotionTransition } from "@/components/route-motion";
 import { TaskMotionProvider } from "@/components/task-motion";
@@ -56,6 +57,10 @@ function SlateShell() {
     dismissAiReview();
     setRouteTransition("instant");
   }, [clearSelection, dismissAiReview, pathname, setRouteTransition]);
+
+  if (windowMode === "quick-capture") {
+    return <QuickCaptureWindow />;
+  }
 
   function handleOpenFullApp() {
     void openFullApp();

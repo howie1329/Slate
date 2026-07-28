@@ -18,6 +18,11 @@ fn hide_popover(app: tauri::AppHandle) -> Result<(), String> {
     window_controller::hide_popover(&app).map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn hide_quick_capture(app: tauri::AppHandle) -> Result<(), String> {
+    window_controller::hide_quick_capture(&app).map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default().plugin(tauri_plugin_shell::init());
@@ -39,6 +44,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             open_full_app,
             hide_popover,
+            hide_quick_capture,
             persistence::get_planner_snapshot,
             persistence::create_task,
             persistence::undo_quick_capture,

@@ -4,6 +4,7 @@
 
 ## Status
 
+- **Status:** Implemented; the dedicated-window follow-up in Plan 025 supersedes the original popover-surface choice while preserving this plan’s task, draft, event, and Undo contracts.
 - **Priority:** P1 Stage 2 follow-up
 - **Effort:** M
 - **Risk:** MEDIUM — native shortcut registration, popover focus, and reversible task creation cross the Rust/renderer boundary

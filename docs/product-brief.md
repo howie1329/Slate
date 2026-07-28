@@ -36,7 +36,7 @@ Global quick capture, end-of-day review, Spaces, integrations, sync, mobile, and
 
 ### 1.1 global quick capture slice
 
-The configurable `CommandOrControl+Shift+Space` shortcut opens Slate’s existing compact popover and focuses the capture input. A title is saved immediately as an unestimated, unscheduled Backlog task with source `manual-quick-capture`; it never commits work to Today. The in-process draft survives focus loss and popover dismissal, and an explicit discard clears it.
+The configurable `CommandOrControl+Shift+Space` shortcut opens Slate’s dedicated compact capture window and focuses the capture input. A title is saved immediately as an unestimated, unscheduled Backlog task with source `manual-quick-capture`; it never commits work to Today. The in-process draft survives focus loss and capture-window dismissal, and an explicit discard clears it.
 
 The returned task revision bounds a five-second Undo action. Undo succeeds only while the task remains unchanged, incomplete, unscheduled, and unestimated, and records a `manual-quick-capture-undo` deletion event in the same SQLite transaction. Clipboard, selected-text, application, URL, file, AI enrichment, and destination-picker capture remain deferred.
 

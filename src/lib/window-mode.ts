@@ -2,7 +2,7 @@ import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
-export type WindowMode = "full" | "popover";
+export type WindowMode = "full" | "popover" | "quick-capture";
 
 function isTauriWindow() {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -14,7 +14,11 @@ function currentWindowMode(): WindowMode {
   }
 
   try {
-    return getCurrentWindow().label === "popover" ? "popover" : "full";
+    const label = getCurrentWindow().label;
+    if (label === "popover" || label === "quick-capture") {
+      return label;
+    }
+    return "full";
   } catch {
     return "full";
   }
@@ -40,4 +44,12 @@ export async function hidePopover() {
   }
 
   await invoke("hide_popover");
+}
+
+export async function hideQuickCapture() {
+  if (!isTauriWindow()) {
+    return;
+  }
+
+  await invoke("hide_quick_capture");
 }

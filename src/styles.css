@@ -149,7 +149,9 @@
   }
 
   html:has([data-window-mode="popover"]),
-  body:has([data-window-mode="popover"]) {
+  body:has([data-window-mode="popover"]),
+  html:has([data-window-mode="quick-capture"]),
+  body:has([data-window-mode="quick-capture"]) {
     background: transparent;
   }
 }

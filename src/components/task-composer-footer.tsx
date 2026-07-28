@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, Loading03Icon, SentIcon, Settings01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
+import { Loading03Icon, SentIcon, Settings01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
 import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence } from "motion/react";
 import { toast } from "sonner";
@@ -14,11 +13,10 @@ import { TaskDetailPanel } from "@/components/task-detail-panel";
 import { useRouteMotion } from "@/components/route-motion";
 import { useTaskMotion, type TaskMotionTransition } from "@/components/task-motion";
 import { useTaskSelection } from "@/components/task-selection";
-import { clearQuickCaptureDraft, getQuickCaptureDraft, isTauriWindow, setQuickCaptureDraft } from "@/lib/planner";
 import type { LocalDate } from "@/lib/planner";
 import { taskComposerInputId } from "@/lib/task-composer";
 import type { WindowMode } from "@/lib/window-mode";
-import { useCreateTask, usePlannerState, useUndoQuickCapture } from "@/lib/planner-query";
+import { useCreateTask, usePlannerState } from "@/lib/planner-query";
 
 type TaskComposerFooterProps = {
   scheduledDate: LocalDate | null;
@@ -28,58 +26,17 @@ type TaskComposerFooterProps = {
 export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFooterProps) {
   const navigate = useNavigate();
   const createTask = useCreateTask();
-  const undoQuickCapture = useUndoQuickCapture();
   const planner = usePlannerState();
   const { clearTaskMutation, recordTaskMutation, taskMutation } = useTaskMotion();
   const { setRouteTransition } = useRouteMotion();
   const { clearSelection, selectedTaskId, selectedTaskTransition } = useTaskSelection();
   const aiReview = useAiReview();
   const [title, setTitle] = useState("");
-  const [isQuickCapture, setIsQuickCapture] = useState(false);
   const createTransitionRef = useRef<TaskMotionTransition>("instant");
-  const draftTimerRef = useRef<number | undefined>(undefined);
   const hasTitle = title.trim().length > 0;
   const aiUnavailable = planner.data?.aiAvailability !== "configured";
   const aiKeyMissing = planner.data?.aiAvailability === "unconfigured";
   const aiButtonDisabled = aiUnavailable || aiReview.state.kind === "assist-loading" || aiReview.state.kind === "plan-loading" || aiReview.state.kind === "plan-accepting";
-
-  useEffect(() => {
-    if (!isTauriWindow()) {
-      return;
-    }
-
-    let unlisten: (() => void) | undefined;
-    let disposed = false;
-    void listen("quick-capture://opened", () => {
-      clearSelection("instant");
-      aiReview.dismiss();
-      setIsQuickCapture(true);
-      void getQuickCaptureDraft().then((draft) => {
-        setTitle(draft?.title ?? "");
-        window.setTimeout(() => document.getElementById(taskComposerInputId)?.focus(), 0);
-      }).catch(() => {
-        setTitle("");
-        window.setTimeout(() => document.getElementById(taskComposerInputId)?.focus(), 0);
-      });
-    }).then((stopListening) => {
-      if (disposed) {
-        stopListening();
-      } else {
-        unlisten = stopListening;
-      }
-    });
-
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, [aiReview, clearSelection]);
-
-  useEffect(() => () => {
-    if (draftTimerRef.current !== undefined) {
-      window.clearTimeout(draftTimerRef.current);
-    }
-  }, []);
 
   function handleAiAction() {
     clearSelection("instant");
@@ -101,47 +58,17 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
       return;
     }
 
-    const quickCapture = isQuickCapture;
     recordTaskMutation({ kind: "create", transition: createTransitionRef.current });
     createTask.mutate(
       {
         title: trimmedTitle,
         estimateMinutes: null,
-        scheduledDate: quickCapture ? null : scheduledDate,
-        source: quickCapture ? "manual-quick-capture" : "manual",
+        scheduledDate,
+        source: "manual",
       },
       {
-        onSuccess: (created) => {
+        onSuccess: () => {
           setTitle("");
-          if (!quickCapture) {
-            return;
-          }
-          setIsQuickCapture(false);
-          void clearQuickCaptureDraft();
-          toast.success("Captured to Backlog.", {
-            duration: 5000,
-            action: {
-              label: "Undo",
-              onClick: () => {
-                undoQuickCapture.mutate(
-                  { id: created.id, expectedRevision: created.revision },
-                  {
-                    onSuccess: () => {
-                      void clearQuickCaptureDraft();
-                      toast.success("Capture undone.");
-                    },
-                    onError: async (error) => {
-                      const message = error instanceof Error ? error.message : String(error);
-                      await planner.refetch();
-                      toast.error(message.includes("stale-quick-capture")
-                        ? "This capture changed and can’t be undone."
-                        : "This capture can’t be undone.");
-                    },
-                  },
-                );
-              },
-            },
-          });
         },
         onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save task."),
       },
@@ -150,24 +77,6 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
 
   function handleTitleChange(value: string) {
     setTitle(value);
-    if (!isQuickCapture) {
-      return;
-    }
-    if (draftTimerRef.current !== undefined) {
-      window.clearTimeout(draftTimerRef.current);
-    }
-    draftTimerRef.current = window.setTimeout(() => {
-      void setQuickCaptureDraft(value);
-    }, 250);
-  }
-
-  function handleDiscardQuickCapture() {
-    if (draftTimerRef.current !== undefined) {
-      window.clearTimeout(draftTimerRef.current);
-    }
-    setTitle("");
-    setIsQuickCapture(false);
-    void clearQuickCaptureDraft();
   }
 
   function handleOpenSettings(event?: { detail?: number }) {
@@ -224,12 +133,12 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
         onSubmit={handleSubmit}
       >
         <Input
-          aria-label={isQuickCapture ? "Quick capture title" : "New task"}
+          aria-label="New task"
           className="h-10 text-menu"
           disabled={createTask.isPending}
           id={taskComposerInputId}
           onChange={(event) => handleTitleChange(event.target.value)}
-          placeholder={isQuickCapture ? "Capture to Backlog" : "Add a task"}
+          placeholder="Add a task"
           value={title}
         />
         <Button
@@ -247,20 +156,7 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
             strokeWidth={1.8}
           />
         </Button>
-        {isQuickCapture && hasTitle ? (
-          <Button
-            aria-label="Discard quick capture"
-            className="size-8 rounded-md"
-            onClick={handleDiscardQuickCapture}
-            size="icon"
-            title="Discard quick capture"
-            type="button"
-            variant="outline"
-          >
-            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.8} />
-          </Button>
-        ) : null}
-        {!isQuickCapture && aiUnavailable ? (
+        {aiUnavailable ? (
           <Tooltip>
             <TooltipTrigger
               render={
@@ -295,7 +191,7 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
               {aiKeyMissing ? "Add a provider key in Settings to use AI" : "Retry Keychain access to use AI"}
             </TooltipContent>
           </Tooltip>
-        ) : !isQuickCapture ? (
+        ) : (
           <Button
             aria-label={aiReview.state.kind === "assist-loading" ? "Generating AI Assist proposal" : aiReview.state.kind === "plan-loading" ? "Generating Plan My Day proposal" : hasTitle ? "Use AI Assist" : "Plan my day with AI"}
             className="size-8 rounded-md"
@@ -312,7 +208,7 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
               strokeWidth={1.8}
             />
           </Button>
-        ) : null}
+        )}
         <Button
           aria-label="Open settings"
           className="size-8 rounded-md"
