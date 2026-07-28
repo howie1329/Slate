@@ -2,7 +2,7 @@
 
 > **Status:** Directional roadmap
 >
-> **Updated:** 2026-07-27
+> **Updated:** 2026-07-28
 >
 > This document describes the order in which Slate should earn new capabilities. It is not a fixed release schedule. Each stage should be validated against the product thesis before the next stage expands the model.
 
@@ -76,7 +76,7 @@ Slate 1.0.0 is the shipped baseline for the first usable daily planning loop:
 
 Stage 1 is complete. The next eligible work is Stage 2 daily resilience, not Spaces, sync, mobile, or integrations. New work remains evidence-gated, and the distinction between the shipped Backlog view and a future richer Log view stays deliberate.
 
-The 1.1 implementation slice is global quick capture: a configurable macOS shortcut opens a dedicated compact capture window, restores an in-process draft, and creates a title-only Backlog task with revision-safe Undo. Clipboard, selected text, application context, AI enrichment, and destination selection remain deferred.
+The 1.1 implementation slice is global quick capture: a configurable macOS shortcut opens a dedicated 520 × 100 command-bar capture window (360 × 100 minimum), restores an in-process draft, and creates a title-only Backlog task with revision-safe Undo. Clipboard, selected text, application context, AI enrichment, and destination selection remain deferred.
 
 ## Stage 1 — Shipped local daily planner
 

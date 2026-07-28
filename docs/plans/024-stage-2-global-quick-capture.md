@@ -11,6 +11,8 @@
 - **Category:** macOS native integration / capture / task lifecycle
 - **Planned at:** 2026-07-27
 
+> **Historical note:** Plan 025 supersedes this plan’s original popover-surface decision. The task, draft, event, and Undo contracts below remain authoritative.
+
 ## Objective
 
 Let a user capture a thought from anywhere on macOS in one short interaction:
@@ -26,7 +28,7 @@ The feature must feel faster than opening Slate manually while preserving the sa
 ## Product decisions
 
 - The recommended default shortcut is `CommandOrControl+Shift+Space`, displayed as `⌘⇧Space` on macOS.
-- The existing popover and persistent footer are reused. The shortcut opens the popover and focuses the capture input; a second capture window is not introduced in 1.1.
+- The original implementation reused the existing popover and persistent footer. This surface decision is superseded by Plan 025, which introduced the dedicated `quick-capture` window; the persistent footer remains unchanged.
 - Global quick capture always creates a Backlog task with no estimate and no scheduled date.
 - The accepted event source is `manual-quick-capture`.
 - Undo uses a separate source, `manual-quick-capture-undo`, and is valid only while the created task is unchanged.
@@ -291,7 +293,7 @@ Files: `docs/roadmap.md`, `docs/product-brief.md`, `docs/daily-resilience.md`, a
 - Automatic title cleanup, estimates, dates, AI Assist, or Plan My Day integration.
 - Capturing the active application, URL, file, or window context.
 - Notifications, launch-at-login, shortcut suggestions, or multiple shortcut profiles.
-- A separate capture window or custom AppKit capture panel.
+- A custom AppKit capture panel beyond the dedicated Tauri `quick-capture` window introduced by Plan 025.
 - History UI or an event query command.
 - Cloud sync or cross-device shortcut synchronization.
 

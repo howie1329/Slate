@@ -2,7 +2,7 @@
 
 > **Status:** Directional product definition for Slate 1.1–1.x
 >
-> **Updated:** 2026-07-25
+> **Updated:** 2026-07-28
 
 The 1.1 implementation begins with the focused global quick-capture slice described below. The rest of this document remains directional until the corresponding recovery flows are implemented.
 
@@ -31,6 +31,7 @@ A configurable global shortcut opens a compact capture surface over the user’s
 The first release:
 
 - Accepts a title and saves immediately to Backlog.
+- Presents a two-line command bar at 520 × 100 with a 360 × 100 minimum: title/Add on the first row, destination/status and bounded recovery actions on the second.
 - Does not require an estimate, date, AI provider, or network connection.
 - Uses a dedicated compact capture window with focus-loss dismissal behavior.
 - Confirms the destination and offers a short undo opportunity.

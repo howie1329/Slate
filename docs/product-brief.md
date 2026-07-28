@@ -38,6 +38,8 @@ Global quick capture, end-of-day review, Spaces, integrations, sync, mobile, and
 
 The configurable `CommandOrControl+Shift+Space` shortcut opens Slate’s dedicated compact capture window and focuses the capture input. A title is saved immediately as an unestimated, unscheduled Backlog task with source `manual-quick-capture`; it never commits work to Today. The in-process draft survives focus loss and capture-window dismissal, and an explicit discard clears it.
 
+The capture window is a two-line command bar: a 40px title field with a separate Add action, followed by a quiet Backlog/status line. It opens at 520 × 100 and supports a 360 × 100 minimum without inheriting the planner popover’s 360 × 520 geometry.
+
 The returned task revision bounds a five-second Undo action. Undo succeeds only while the task remains unchanged, incomplete, unscheduled, and unestimated, and records a `manual-quick-capture-undo` deletion event in the same SQLite transaction. Clipboard, selected-text, application, URL, file, AI enrichment, and destination-picker capture remain deferred.
 
 ## Product surfaces

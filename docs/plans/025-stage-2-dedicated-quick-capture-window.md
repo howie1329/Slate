@@ -53,15 +53,15 @@ The dedicated surface should feel like a fast command panel, not a miniature Tod
 
 ### Window configuration
 
-Add a hidden `quick-capture` webview window to `src-tauri/tauri.conf.json` with a compact launcher geometry, for example:
+The implemented hidden `quick-capture` webview window in `src-tauri/tauri.conf.json` uses this compact launcher geometry:
 
-- Initial size around 520 × 180.
-- Minimum size around 360 × 140.
+- Initial size 520 × 100.
+- Minimum size 360 × 100.
 - Undecorated, non-resizable, transparent, shadowed, and skipped from the taskbar.
 - Initially hidden and created once during app setup.
 - No normal title-bar or application navigation chrome.
 
-The exact dimensions should be validated against the final UI at the minimum size. The window must not inherit the planner popover’s 360 × 520 minimum simply because both are compact surfaces.
+The dimensions match the final two-line command-bar UI. The window does not inherit the planner popover’s 360 × 520 minimum simply because both are compact surfaces.
 
 ### macOS panel behavior
 
@@ -111,12 +111,13 @@ The dedicated surface may still use the planner query boundary for theme and mut
 
 Add a focused component such as `src/components/quick-capture-window.tsx` using the existing UI primitives and tokens:
 
-- One clearly labelled title input with an intentionally short placeholder such as “Capture a thought”.
+- One clearly labelled title input with an intentionally short placeholder such as “Capture a thought”, paired with a separate 40px Add action in the primary row.
 - Enter submits when the trimmed title is non-empty.
 - A compact submit affordance that reflects pending state without moving the layout.
 - An explicit Discard action only when a draft exists.
-- A quiet secondary line indicating “Backlog” or “No estimate or date” only if it improves confidence without adding dashboard language.
+- A quiet 20px secondary line indicating “Backlog · no estimate or date” without adding dashboard language.
 - A confirmation state such as “Added to Backlog” with an Undo button and five-second bounded availability.
+- Pending creation reuses the secondary line for concise “Adding to Backlog…” feedback.
 - No AI sparkle action, route navigation, settings button, task details, date picker, estimate control, tags, or clipboard affordance.
 
 Use Slate’s existing warm-neutral surfaces, muted teal commitment signal, sans-serif operational text, visible focus ring, compact radii, and flat/transient elevation rules. The panel should read as a calm utility launcher rather than a card inside the planner. Respect `MotionConfig reducedMotion="user"`; keep any entrance/exit motion short and non-essential.
@@ -185,6 +186,7 @@ Files: `src/components/task-composer-footer.tsx`, focused interaction helpers
 Files: `src/styles.css` or existing UI primitives only if required
 
 - Verify the dedicated window at its minimum size in light and dark themes.
+- Verify the 520 × 100 default and 360 × 100 minimum geometry in light and dark themes.
 - Verify keyboard-only flow, visible focus, labelled input, Escape dismissal, Discard, Enter submission, pending state, and Undo.
 - Keep motion reduced and avoid adding a decorative animation system.
 - Confirm the main planner popover remains usable at 360 × 520 after the footer cleanup.
@@ -247,6 +249,7 @@ Files: `docs/roadmap.md`, `docs/product-brief.md`, `docs/daily-resilience.md`, `
 
 - The global shortcut opens a dedicated, reusable capture window rather than the planner popover.
 - The dedicated surface is one focused title-to-Backlog interaction with draft preservation and revision-safe Undo.
+- The dedicated surface remains a compact two-line command bar at 520 × 100 and 360 × 100.
 - Tray, full-app, manual footer capture, AI review, Settings, SQLite events, and cross-window planner refresh remain unchanged in behavior.
 - The dedicated window is keyboard-operable, accessible, theme-aware, reduced-motion-safe, and usable at its minimum size.
 - `cargo test --manifest-path src-tauri/Cargo.toml`, `npm run build`, and renderer helper tests pass.
