@@ -1998,7 +1998,7 @@ fn validate_shortcut(shortcut: &str) -> Result<(), String> {
     {
         return Err("Quick capture shortcut is invalid.".into());
     }
-    if key.chars().count() != 1
+    if (key.chars().count() != 1 || key == "F")
         && !matches!(
             key,
             "Space"
@@ -2016,7 +2016,32 @@ fn validate_shortcut(shortcut: &str) -> Result<(), String> {
                 | "Left"
                 | "Right"
         )
-        && !key.starts_with('F')
+        && !matches!(
+            key,
+            "F1" | "F2"
+                | "F3"
+                | "F4"
+                | "F5"
+                | "F6"
+                | "F7"
+                | "F8"
+                | "F9"
+                | "F10"
+                | "F11"
+                | "F12"
+                | "F13"
+                | "F14"
+                | "F15"
+                | "F16"
+                | "F17"
+                | "F18"
+                | "F19"
+                | "F20"
+                | "F21"
+                | "F22"
+                | "F23"
+                | "F24"
+        )
     {
         return Err("Quick capture shortcut key is unsupported.".into());
     }
@@ -2448,6 +2473,19 @@ mod tests {
             }),
             Err("Quick capture shortcut is invalid.".into())
         );
+    }
+
+    #[test]
+    fn accepts_only_supported_function_keys() {
+        for shortcut in ["Shift+A", "Shift+F1", "Shift+F24"] {
+            assert!(validate_shortcut(shortcut).is_ok());
+        }
+        for shortcut in ["Shift+F", "Shift+Foo", "Shift+F25", "Shift+F99"] {
+            assert_eq!(
+                validate_shortcut(shortcut),
+                Err("Quick capture shortcut key is unsupported.".into())
+            );
+        }
     }
 
     #[test]
