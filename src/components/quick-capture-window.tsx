@@ -181,7 +181,7 @@ export function QuickCaptureWindow() {
   return (
     <main
       aria-label="Quick capture"
-      className="flex h-dvh min-h-0 flex-col overflow-hidden rounded-[14px] bg-background px-3 py-3 text-foreground ring-1 ring-border/70"
+      className="flex h-dvh min-h-0 flex-col justify-center overflow-hidden rounded-[14px] bg-background px-3 py-3 text-foreground ring-1 ring-border/70"
       data-window-mode="quick-capture"
       onKeyDown={(event) => {
         if (event.key === "Escape" && !event.defaultPrevented) {
@@ -220,18 +220,22 @@ export function QuickCaptureWindow() {
 
       <div
         aria-live="polite"
-        className="flex min-h-6 items-center justify-between gap-2 pt-2 text-menu-label"
+        className="flex min-h-5 items-center justify-between gap-2 pt-2 text-menu-label"
         id="quick-capture-status"
         role={error ? "alert" : "status"}
       >
         {error ? (
-          <span className="min-w-0 truncate text-destructive">{error}</span>
+          <span className="min-w-0 truncate text-destructive" title={error}>
+            {error}
+          </span>
+        ) : createTask.isPending ? (
+          <span className="min-w-0 truncate text-muted-foreground">Adding to Backlog…</span>
         ) : confirmation ? (
-          <span className="flex min-w-0 items-center gap-2 truncate text-primary">
+          <span className="flex min-w-0 items-center gap-1 text-primary">
             <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-primary" />
-            <span className="truncate">Added to Backlog</span>
+            <span className="min-w-0 truncate">Added to Backlog</span>
             <Button
-              className="h-6 shrink-0 px-1.5 text-menu-label text-primary"
+              className="h-5 shrink-0 px-1 text-menu-label text-primary"
               disabled={undoQuickCapture.isPending}
               onClick={handleUndo}
               type="button"
@@ -241,11 +245,11 @@ export function QuickCaptureWindow() {
             </Button>
           </span>
         ) : (
-          <span className="truncate text-muted-foreground">Backlog · no estimate or date</span>
+          <span className="min-w-0 truncate text-muted-foreground">Backlog · no estimate or date</span>
         )}
         {title.trim() && !createTask.isPending && !undoQuickCapture.isPending ? (
           <Button
-            className="h-6 shrink-0 px-1.5 text-menu-label text-muted-foreground"
+            className="h-5 shrink-0 px-1 text-menu-label text-muted-foreground"
             onClick={handleDiscard}
             type="button"
             variant="ghost"
