@@ -354,7 +354,7 @@ fn configure_macos_quick_capture<R: Runtime>(
 ) -> tauri::Result<()> {
     let panel = quick_capture.to_panel::<SlatePopoverPanel<R>>()?;
     quick_capture.set_always_on_top(true)?;
-    panel.set_level(PanelLevel::ScreenSaver.value());
+    panel.set_level(PanelLevel::PopUpMenu.value());
     panel.set_floating_panel(true);
     panel.set_becomes_key_only_if_needed(false);
     panel.set_style_mask(StyleMask::empty().into());
