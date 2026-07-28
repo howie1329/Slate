@@ -1,3 +1,6 @@
+#[cfg(target_os = "macos")]
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use tauri::{
     image::Image,
     menu::{Menu, MenuItem},
@@ -7,6 +10,8 @@ use tauri::{
 };
 #[cfg(target_os = "macos")]
 use tauri_nspanel::{
+    objc2::MainThreadMarker as ObjcMainThreadMarker,
+    objc2_app_kit::{NSApplication, NSWindowCollectionBehavior},
     tauri_panel, CollectionBehavior, ManagerExt, PanelLevel, StyleMask, WebviewWindowExt,
 };
 
@@ -29,9 +34,18 @@ const OPEN_FULL_APP_MENU_ID: &str = "open-full-app";
 const QUIT_MENU_ID: &str = "quit";
 const POPOVER_MARGIN: i32 = 12;
 
+#[cfg(target_os = "macos")]
+#[derive(Default)]
+struct QuickCaptureFocusState {
+    has_received_focus: AtomicBool,
+}
+
 pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     #[cfg(target_os = "macos")]
-    app.set_activation_policy(tauri::ActivationPolicy::Accessory)?;
+    {
+        app.set_activation_policy(tauri::ActivationPolicy::Accessory)?;
+        app.manage(QuickCaptureFocusState::default());
+    }
 
     let popover = popover_window(app)?;
     configure_macos_popover(&popover)?;
@@ -98,9 +112,16 @@ pub fn hide_popover<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 
 pub fn open_quick_capture<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let quick_capture = quick_capture_window(app)?;
+    #[cfg(target_os = "macos")]
+    if !quick_capture.is_focused()? {
+        app.state::<QuickCaptureFocusState>()
+            .has_received_focus
+            .store(false, Ordering::Release);
+    }
     position_quick_capture(app, &quick_capture)?;
     #[cfg(target_os = "macos")]
     {
+        activate_macos_app();
         let panel = app
             .get_webview_panel(QUICK_CAPTURE_WINDOW_LABEL)
             .map_err(|_| missing_window_error(QUICK_CAPTURE_WINDOW_LABEL))?;
@@ -158,18 +179,51 @@ pub fn handle_window_event<R: Runtime>(window: &tauri::Window<R>, event: &tauri:
                 }
             }
         }
-        tauri::WindowEvent::Focused(false)
-            if matches!(
-                window.label(),
-                POPOVER_WINDOW_LABEL | QUICK_CAPTURE_WINDOW_LABEL
-            ) =>
-        {
+        tauri::WindowEvent::Focused(false) if window.label() == POPOVER_WINDOW_LABEL => {
             if let Err(error) = window.hide() {
                 eprintln!("failed to hide transient Slate window after focus loss: {error}");
             }
         }
+        #[cfg(target_os = "macos")]
+        tauri::WindowEvent::Focused(true) if window.label() == QUICK_CAPTURE_WINDOW_LABEL => {
+            window
+                .app_handle()
+                .state::<QuickCaptureFocusState>()
+                .has_received_focus
+                .store(true, Ordering::Release);
+        }
+        #[cfg(target_os = "macos")]
+        tauri::WindowEvent::Focused(false) if window.label() == QUICK_CAPTURE_WINDOW_LABEL => {
+            let should_hide = window
+                .app_handle()
+                .state::<QuickCaptureFocusState>()
+                .has_received_focus
+                .swap(false, Ordering::AcqRel);
+            if should_hide {
+                if let Err(error) = window.hide() {
+                    eprintln!("failed to hide quick capture window after focus loss: {error}");
+                }
+            }
+        }
+        #[cfg(not(target_os = "macos"))]
+        tauri::WindowEvent::Focused(false) if window.label() == QUICK_CAPTURE_WINDOW_LABEL => {
+            if let Err(error) = window.hide() {
+                eprintln!("failed to hide quick capture window after focus loss: {error}");
+            }
+        }
         _ => {}
     }
+}
+
+#[cfg(target_os = "macos")]
+fn activate_macos_app() {
+    let Some(main_thread) = ObjcMainThreadMarker::new() else {
+        eprintln!("failed to activate Slate for quick capture: not on the main thread");
+        return;
+    };
+    let application = NSApplication::sharedApplication(main_thread);
+    #[allow(deprecated)]
+    application.activateIgnoringOtherApps(true);
 }
 
 fn main_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>> {
@@ -297,14 +351,19 @@ fn configure_macos_quick_capture<R: Runtime>(
     quick_capture: &WebviewWindow<R>,
 ) -> tauri::Result<()> {
     let panel = quick_capture.to_panel::<SlatePopoverPanel<R>>()?;
-    panel.set_level(PanelLevel::Floating.value());
+    quick_capture.set_always_on_top(true)?;
+    panel.set_level(PanelLevel::ScreenSaver.value());
+    panel.set_floating_panel(true);
+    panel.set_becomes_key_only_if_needed(false);
     panel.set_style_mask(StyleMask::empty().into());
-    panel.set_collection_behavior(
-        CollectionBehavior::new()
-            .full_screen_auxiliary()
-            .can_join_all_spaces()
-            .into(),
-    );
+    let behavior = CollectionBehavior::new()
+        .full_screen_auxiliary()
+        .can_join_all_spaces()
+        .transient()
+        .ignores_cycle()
+        .value()
+        | NSWindowCollectionBehavior::CanJoinAllApplications;
+    panel.set_collection_behavior(behavior);
     panel.set_hides_on_deactivate(false);
 
     Ok(())
