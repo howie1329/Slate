@@ -147,14 +147,16 @@ pub fn hide_quick_capture<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 pub fn open_full_app<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     hide_popover(app)?;
 
-    #[cfg(target_os = "macos")]
-    app.set_activation_policy(tauri::ActivationPolicy::Regular)?;
-
     let main = main_window(app)?;
     main.unminimize()?;
     main.show()?;
     main.set_focus()?;
-    main.set_fullscreen(true)
+    main.set_fullscreen(true)?;
+
+    #[cfg(target_os = "macos")]
+    app.set_activation_policy(tauri::ActivationPolicy::Regular)?;
+
+    Ok(())
 }
 
 pub fn handle_window_event<R: Runtime>(window: &tauri::Window<R>, event: &tauri::WindowEvent) {
