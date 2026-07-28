@@ -265,6 +265,7 @@ function SettingsPage() {
                     if (shortcut) {
                       event.preventDefault();
                       updateDraft({ quickCaptureShortcut: shortcut });
+                      setShortcutError(null);
                       setIsRecordingShortcut(false);
                     }
                   }}
