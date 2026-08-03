@@ -33,6 +33,8 @@ pub const QUICK_CAPTURE_WINDOW_LABEL: &str = "quick-capture";
 const OPEN_FULL_APP_MENU_ID: &str = "open-full-app";
 const QUIT_MENU_ID: &str = "quit";
 const POPOVER_MARGIN: i32 = 12;
+const SHELL_CORNER_RADIUS: f64 = 18.0;
+const QUICK_CAPTURE_CORNER_RADIUS: f64 = 14.0;
 
 #[cfg(target_os = "macos")]
 #[derive(Default)]
@@ -47,6 +49,8 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         app.manage(QuickCaptureFocusState::default());
     }
 
+    let main = main_window(app)?;
+    configure_macos_main_window(&main)?;
     let popover = popover_window(app)?;
     configure_macos_popover(&popover)?;
     let quick_capture = quick_capture_window(app)?;
@@ -264,7 +268,12 @@ fn position_popover<R: Runtime>(
         work_area.position.y + work_area.size.height.saturating_sub(popover_size.height) as i32;
     let x = clamp_to_work_area(max_x - POPOVER_MARGIN, work_area.position.x, max_x);
     let y = clamp_to_work_area(
-        work_area.position.y + POPOVER_MARGIN,
+        work_area.position.y
+            + work_area
+                .size
+                .height
+                .saturating_sub(popover_size.height)
+                .div_ceil(2) as i32,
         work_area.position.y,
         max_y,
     );
@@ -333,6 +342,37 @@ fn clamp_to_work_area(value: i32, min: i32, max: i32) -> i32 {
 }
 
 #[cfg(target_os = "macos")]
+fn configure_macos_main_window<R: Runtime>(window: &WebviewWindow<R>) -> tauri::Result<()> {
+    let ns_window = window.ns_window()?;
+
+    unsafe {
+        let native_window = tauri_nspanel::objc2::rc::Retained::<
+            tauri_nspanel::objc2_foundation::NSObject,
+        >::retain(
+            ns_window as *mut tauri_nspanel::objc2_foundation::NSObject
+        )
+        .ok_or_else(|| {
+            tauri::Error::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "failed to retain Slate's main NSWindow",
+            ))
+        })?;
+        let content_view: tauri_nspanel::objc2::rc::Retained<
+            tauri_nspanel::objc2_foundation::NSObject,
+        > = tauri_nspanel::objc2::msg_send![&*native_window, contentView];
+        let _: () = tauri_nspanel::objc2::msg_send![&*content_view, setWantsLayer: true];
+        let content_layer: tauri_nspanel::objc2::rc::Retained<
+            tauri_nspanel::objc2_foundation::NSObject,
+        > = tauri_nspanel::objc2::msg_send![&*content_view, layer];
+        let _: () =
+            tauri_nspanel::objc2::msg_send![&*content_layer, setCornerRadius: SHELL_CORNER_RADIUS];
+        let _: () = tauri_nspanel::objc2::msg_send![&*content_layer, setMasksToBounds: true];
+    }
+
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
 fn configure_macos_popover<R: Runtime>(popover: &WebviewWindow<R>) -> tauri::Result<()> {
     let panel = popover.to_panel::<SlatePopoverPanel<R>>()?;
     panel.set_level(PanelLevel::Floating.value());
@@ -344,6 +384,7 @@ fn configure_macos_popover<R: Runtime>(popover: &WebviewWindow<R>) -> tauri::Res
             .into(),
     );
     panel.set_hides_on_deactivate(false);
+    panel.set_corner_radius(SHELL_CORNER_RADIUS);
 
     Ok(())
 }
@@ -367,6 +408,7 @@ fn configure_macos_quick_capture<R: Runtime>(
         | NSWindowCollectionBehavior::CanJoinAllApplications;
     panel.set_collection_behavior(behavior);
     panel.set_hides_on_deactivate(false);
+    panel.set_corner_radius(QUICK_CAPTURE_CORNER_RADIUS);
 
     Ok(())
 }
@@ -377,6 +419,11 @@ fn show_popover<R: Runtime>(app: &AppHandle<R>, _: &WebviewWindow<R>) -> tauri::
         .get_webview_panel(POPOVER_WINDOW_LABEL)
         .map_err(|_| missing_window_error(POPOVER_WINDOW_LABEL))?;
     panel.show_and_make_key();
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn configure_macos_main_window<R: Runtime>(_: &WebviewWindow<R>) -> tauri::Result<()> {
     Ok(())
 }
 
