@@ -445,16 +445,30 @@ fn configure_macos_quick_capture<R: Runtime>(_: &WebviewWindow<R>) -> tauri::Res
 
 fn menu_bar_icon() -> Image<'static> {
     const SIZE: u32 = 18;
+    const GLYPH: [&[u8; 12]; 12] = [
+        b"  ########  ",
+        b" ########## ",
+        b" ###        ",
+        b" ###        ",
+        b"  ######### ",
+        b" ########## ",
+        b"       ###  ",
+        b"       ###  ",
+        b"       ###  ",
+        b" ########## ",
+        b"########### ",
+        b" #########  ",
+    ];
     let mut pixels = vec![0; (SIZE * SIZE * 4) as usize];
 
-    for y in 3..15 {
-        for x in 3..15 {
-            let is_stroke =
-                (y == 3 || y == 8 || y == 14) || (x == 3 && y < 9) || (x == 14 && y > 7);
-            if !is_stroke {
+    for (glyph_y, row) in GLYPH.iter().enumerate() {
+        for (glyph_x, pixel) in row.iter().enumerate() {
+            if *pixel != b'#' {
                 continue;
             }
 
+            let x = glyph_x as u32 + 3;
+            let y = glyph_y as u32 + 3;
             let index = ((y * SIZE + x) * 4) as usize;
             pixels[index..index + 4].copy_from_slice(&[0, 0, 0, 255]);
         }
