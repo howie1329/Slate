@@ -27,8 +27,8 @@
       {
         "label": "popover",
         "title": "Slate",
-        "width": 440,
-        "height": 640,
+        "width": 400,
+        "height": 680,
         "minWidth": 360,
         "minHeight": 520,
         "decorations": false,
