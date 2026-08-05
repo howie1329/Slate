@@ -12,6 +12,25 @@ Mac App Store distribution is not supported because the native popover shell dep
 
 The bundled Node sidecar sets the macOS 13.5 floor. The Tauri app plist, Rust deployment target, and sidecar build are checked against the same version during the release workflow. Intel and universal artifacts remain out of scope until Slate can build and test the complete app and sidecar stack on `x86_64`.
 
+## Icon assets
+
+The canonical full-bleed app-icon source is `src-tauri/assets/slate-icon-source.png`, a 1024×1024 PNG used for the Dock, DMG, and application bundle. The transparent-corner companion at `src-tauri/assets/slate-icon-transparent.png` is intended for contexts that need alpha around the rounded mark; it is not the source for the full-bleed bundle icons.
+
+The committed macOS bundle outputs live in `src-tauri/icons/slate/` and are referenced by `src-tauri/tauri.conf.json`:
+
+- `32x32.png`
+- `128x128.png`
+- `128x128@2x.png`
+- `icon.icns`
+
+Regenerate them after changing the mark with:
+
+```sh
+npm run tauri -- icon -o src-tauri/icons/slate src-tauri/assets/slate-icon-source.png
+```
+
+The menu-bar icon is intentionally separate from the app icon. It is an 18×18 monochrome template glyph generated in `src-tauri/src/window_controller.rs`, so macOS can tint it correctly in light and dark menu bars.
+
 ## Security tradeoff
 
 Ad-hoc signing protects the internal code-signing structure of the app bundle, but it does not identify the publisher and is not a substitute for Apple notarization. macOS Gatekeeper will warn users that Apple cannot verify the app.

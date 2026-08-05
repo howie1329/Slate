@@ -112,6 +112,15 @@ The visual system is restrained rather than decorative. Near-neutral surfaces es
 - One restrained accent used for commitment, selection, focus, and meaningful status.
 - State changes communicated through text, shape, and hierarchy as well as color.
 
+## Native identity
+
+Slate’s application mark is a rounded warm-ivory tile over a charcoal underlayer, set on a deep-teal field, with a large negative-space **S**. The mark is deliberately simple so it remains recognizable in the Dock, DMG, and small previews.
+
+- The full-bleed 1024px source is `src-tauri/assets/slate-icon-source.png`.
+- `src-tauri/assets/slate-icon-transparent.png` preserves the mark while making only the outer corners transparent for non-bundle uses.
+- Generated macOS bundle outputs live in `src-tauri/icons/slate/` and are the files referenced by `src-tauri/tauri.conf.json`.
+- The menu-bar icon is a separate 18×18 monochrome template glyph in `src-tauri/src/window_controller.rs`. Do not reuse the full-color app icon in the menu bar; macOS tints the template glyph for light and dark menu bars.
+
 ## Colors
 
 The palette is a warm-neutral desktop canvas with a muted teal commitment signal and a red destructive state. The same semantic roles drive light and dark themes; components should use CSS variables rather than literal values.

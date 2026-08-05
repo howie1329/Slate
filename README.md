@@ -45,6 +45,18 @@ npm run dev:desktop
 `npm run dev:desktop` starts Vite on port 1420 and launches the native Slate tray app. The popover opens from the macOS menu bar; the full app is available through Open Full App.
 The sidecar is an independently locked package, so install and build it once before desktop development; `npm run ensure:sidecar` then rejects a missing or stale binary.
 
+### Native icon assets
+
+The canonical full-bleed app-icon source is `src-tauri/assets/slate-icon-source.png`. The transparent-corner variant is kept at `src-tauri/assets/slate-icon-transparent.png`; the menu-bar icon remains a separate monochrome template glyph in the native tray controller.
+
+Regenerate the committed macOS bundle outputs after changing the app mark:
+
+```bash
+npm run tauri -- icon -o src-tauri/icons/slate src-tauri/assets/slate-icon-source.png
+```
+
+Keep the four macOS files referenced by `src-tauri/tauri.conf.json`: `32x32.png`, `128x128.png`, `128x128@2x.png`, and `icon.icns`.
+
 ## Validation and release builds
 
 ```bash
@@ -78,6 +90,8 @@ src/
   lib/                Renderer/native planner boundary and query hooks
   styles.css          Global Tailwind entry point and visual tokens
 src-tauri/
+  assets/             Canonical native app-icon sources
+  icons/slate/        Generated macOS bundle icons
   src/                Native persistence, credentials, window, and tray behavior
 docs/
   product-brief.md    Product definition and 1.0 contract
