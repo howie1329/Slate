@@ -2,7 +2,7 @@
 
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { CheckmarkCircle02Icon, InformationCircleIcon, Alert02Icon, MultiplicationSignCircleIcon, Loading03Icon } from "@hugeicons/core-free-icons"
+import { InformationCircleIcon, Alert02Icon, MultiplicationSignCircleIcon, Loading03Icon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { useTheme } from "@/components/theme-provider"
 
 const Toaster = ({ ...props }: ToasterProps) => {
@@ -12,9 +12,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme}
       className="toaster group"
+      expand={false}
       icons={{
         success: (
-          <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="size-4" />
+          <span aria-hidden="true" className="cn-toast-success-icon">
+            <HugeiconsIcon icon={Tick02Icon} strokeWidth={2.4} />
+          </span>
         ),
         info: (
           <HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="size-4" />
@@ -37,9 +40,18 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--border-radius": "var(--radius)",
         } as React.CSSProperties
       }
+      position="bottom-center"
+      offset={{ bottom: 16 }}
+      mobileOffset={{ bottom: 16 }}
+      visibleToasts={1}
       toastOptions={{
+        unstyled: true,
         classNames: {
           toast: "cn-toast",
+          content: "cn-toast-content",
+          description: "cn-toast-description",
+          icon: "cn-toast-icon",
+          title: "cn-toast-title",
         },
       }}
       {...props}

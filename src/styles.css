@@ -157,6 +157,100 @@
 }
 
 @layer components {
+  .toaster[data-sonner-toaster] .cn-toast {
+    left: 50%;
+    right: auto;
+    width: max-content;
+    max-width: min(20rem, calc(100vw - 2rem));
+    min-height: 36px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transform: var(--y) translateX(-50%);
+    border: 1px solid color-mix(in oklch, var(--foreground) 12%, transparent);
+    border-radius: 999px;
+    background: color-mix(in oklch, var(--popover) 90%, transparent);
+    box-shadow: 0 4px 12px color-mix(in oklch, var(--foreground) 12%, transparent);
+    backdrop-filter: blur(12px);
+    color: var(--popover-foreground);
+    font-family: var(--font-sans);
+    font-size: var(--text-menu);
+    line-height: var(--text-menu--line-height);
+    transition: transform 220ms cubic-bezier(0.23, 1, 0.32, 1), opacity 180ms ease-out;
+  }
+
+  .toaster[data-sonner-toaster] .cn-toast[data-removed="true"] {
+    transition-duration: 160ms, 140ms;
+  }
+
+  .toaster[data-sonner-toaster] .cn-toast:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .cn-toast-content {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .cn-toast-title {
+    max-width: min(16rem, calc(100vw - 5rem));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+
+  .cn-toast-description {
+    max-width: min(16rem, calc(100vw - 5rem));
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  .cn-toast-icon {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cn-toast-success-icon {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--foreground);
+    color: var(--background);
+  }
+
+  .cn-toast-success-icon svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .toaster[data-sonner-toaster] .cn-toast[data-type="error"] .cn-toast-icon {
+    color: var(--destructive);
+  }
+
+  .toaster[data-sonner-toaster] .cn-toast[data-type="warning"] .cn-toast-icon {
+    color: var(--capacity-caution);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .toaster[data-sonner-toaster] .cn-toast {
+      transition: none;
+    }
+  }
+
   [data-window-mode="full"] .slate-workspace > section {
     @apply px-8;
   }
