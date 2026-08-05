@@ -26,10 +26,26 @@ type EditingField = "estimate" | "title" | null;
 
 const panelEnterEase = [0.23, 1, 0.32, 1] as const;
 
+const panelContentVariants = {
+  hidden: {
+    opacity: 0,
+    transform: "translateY(3px)",
+  },
+  visible: {
+    opacity: 1,
+    transform: "translateY(0)",
+    transition: {
+      duration: 0.16,
+      delay: 0.03,
+      ease: panelEnterEase,
+    },
+  },
+};
+
 const panelVariants = {
   hidden: {
     opacity: 0,
-    transform: "translateY(10px)",
+    transform: "translateY(8px)",
   },
   visible: {
     opacity: 1,
@@ -249,7 +265,12 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
           </Button>
         </div>
       ) : null}
-      <div className={`mx-auto flex min-h-12 w-full max-w-xl min-w-0 items-center gap-1 px-4 py-2 sm:px-6 ${windowMode === "full" ? "max-w-3xl px-8" : ""}`}>
+      <motion.div
+        animate="visible"
+        className={`mx-auto flex min-h-12 w-full max-w-xl min-w-0 items-center gap-1 px-4 py-2 sm:px-6 ${windowMode === "full" ? "max-w-3xl px-8" : ""}`}
+        initial={transition === "animate" ? "hidden" : false}
+        variants={panelContentVariants}
+      >
         <div className="min-w-0 flex-1">
           {editingField === "title" ? (
             <Input
@@ -420,7 +441,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
             </Button>
           )}
         </div>
-      </div>
+      </motion.div>
       <span aria-live="polite" className="sr-only">
         {deleteArmed ? "Delete confirmation. Choose Keep task or Confirm delete task." : ""}
       </span>
