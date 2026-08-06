@@ -24,6 +24,8 @@ Read the relevant companion guidance before making changes:
 - `src/lib/`: renderer/native planner boundary, query hooks, task grouping, and window behavior.
 - `src/router.tsx`: router setup; `src/routeTree.gen.ts` is generated and must not be hand-edited.
 - `src/styles.css`: Tailwind entry point and global design tokens.
+- `src-tauri/assets/`: canonical native app-icon source assets.
+- `src-tauri/icons/slate/`: generated macOS bundle icons referenced by `tauri.conf.json`.
 - `src-tauri/src/`: native persistence, credentials, window, and tray behavior.
 - `src-tauri/tauri.conf.json`: native window and bundle configuration.
 - `docs/`: product documentation and implementation plans.
@@ -50,6 +52,7 @@ For a native release bundle, use `npm run tauri -- build`. The package currently
 - Backlog contains captured but uncommitted work; Today contains deliberate commitments.
 - Preserve the compact menu-bar popover. Essential daily behavior must remain usable at the configured minimum window size.
 - Keep native behavior, persistence, credentials, and permissions scoped to `src-tauri/`.
+- Keep the full-color app icon separate from the monochrome menu-bar template icon; regenerate bundle outputs from the canonical source when the mark changes.
 - Treat SQLite as the local source of truth and use the existing native command boundary for privileged operations.
 - Keep API keys in macOS Keychain. Never put secrets in planner snapshots, renderer state, SQLite, logs, or change events.
 - AI and integrations must propose changes for review; they must not silently alter commitments.

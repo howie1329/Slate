@@ -6,6 +6,7 @@ import {
   Cancel01Icon,
   Clock01Icon,
   Delete02Icon,
+  BookmarkCheck01Icon,
   Loading03Icon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
@@ -25,10 +26,26 @@ type EditingField = "estimate" | "title" | null;
 
 const panelEnterEase = [0.23, 1, 0.32, 1] as const;
 
+const panelContentVariants = {
+  hidden: {
+    opacity: 0,
+    transform: "translateY(3px)",
+  },
+  visible: {
+    opacity: 1,
+    transform: "translateY(0)",
+    transition: {
+      duration: 0.16,
+      delay: 0.03,
+      ease: panelEnterEase,
+    },
+  },
+};
+
 const panelVariants = {
   hidden: {
     opacity: 0,
-    transform: "translateY(10px)",
+    transform: "translateY(8px)",
   },
   visible: {
     opacity: 1,
@@ -75,8 +92,11 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
   const [title, setTitle] = useState("");
   const [estimate, setEstimate] = useState("");
   const [scheduledDate, setScheduledDate] = useState<LocalDate | null>(null);
+  const [anchorDate, setAnchorDate] = useState<LocalDate | null>(null);
   const [editingField, setEditingField] = useState<EditingField>(null);
   const [deleteArmed, setDeleteArmed] = useState(false);
+  const [isStale, setIsStale] = useState(false);
+  const draftRevisionRef = useRef<number | null>(null);
   const keepTaskButtonRef = useRef<HTMLButtonElement>(null);
   const interactionTransitionRef = useRef<TaskSelectionTransition>(transition);
 
@@ -85,9 +105,19 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       return;
     }
 
+    const draftIsFromAnotherRevision =
+      draftRevisionRef.current !== null && draftRevisionRef.current !== task.revision;
+    if (draftIsFromAnotherRevision && isDirty) {
+      setIsStale(true);
+      return;
+    }
+
     setTitle(task.title);
     setEstimate(task.estimateMinutes?.toString() ?? "");
     setScheduledDate(task.scheduledDate);
+    setAnchorDate(task.anchorDate);
+    draftRevisionRef.current = task.revision;
+    setIsStale(false);
     setEditingField(null);
     setDeleteArmed(false);
   }, [task]);
@@ -103,9 +133,10 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
     selectedTask !== null &&
     (title !== selectedTask.title ||
       normalizedEstimate !== (selectedTask.estimateMinutes?.toString() ?? "") ||
-      scheduledDate !== selectedTask.scheduledDate);
+      scheduledDate !== selectedTask.scheduledDate ||
+      anchorDate !== selectedTask.anchorDate);
   const isSaving = updateTask.isPending || deleteTask.isPending;
-  const controlsDisabled = isSaving || deleteArmed;
+  const controlsDisabled = isSaving || deleteArmed || isStale;
 
   if (!selectedTask) {
     return null;
@@ -124,6 +155,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
   function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (deleteArmed) return;
+    if (isStale || draftRevisionRef.current === null) return;
 
     const estimateMinutes = parseEstimate();
     const trimmedTitle = title.trim();
@@ -146,7 +178,14 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       transition: interactionTransitionRef.current,
     });
     updateTask.mutate(
-      { id: activeTask.id, title: trimmedTitle, estimateMinutes, scheduledDate },
+      {
+        id: activeTask.id,
+        title: trimmedTitle,
+        estimateMinutes,
+        scheduledDate,
+        anchorDate,
+        expectedRevision: draftRevisionRef.current,
+      },
       {
         onSuccess: () => {
           clearSelection(interactionTransitionRef.current);
@@ -155,6 +194,16 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
         onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update task."),
       },
     );
+  }
+
+  function reviewLatest() {
+    if (!task) return;
+    setTitle(task.title);
+    setEstimate(task.estimateMinutes?.toString() ?? "");
+    setScheduledDate(task.scheduledDate);
+    setAnchorDate(task.anchorDate);
+    draftRevisionRef.current = task.revision;
+    setIsStale(false);
   }
 
   function handleDelete(event: React.MouseEvent<HTMLButtonElement>) {
@@ -174,7 +223,8 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       taskId: activeTask.id,
       transition: interactionTransitionRef.current,
     });
-    deleteTask.mutate(activeTask.id, {
+    if (draftRevisionRef.current === null) return;
+    deleteTask.mutate({ id: activeTask.id, expectedRevision: draftRevisionRef.current }, {
       onSuccess: () => {
         clearSelection(interactionTransitionRef.current);
         toast.success("Task deleted.");
@@ -207,7 +257,20 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       onSubmit={handleSave}
       variants={panelVariants}
     >
-      <div className={`mx-auto flex min-h-12 w-full max-w-xl min-w-0 items-center gap-1 px-4 py-2 sm:px-6 ${windowMode === "full" ? "max-w-3xl px-8" : ""}`}>
+      {isStale ? (
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--task-detail-border)] px-4 py-2 text-xs sm:px-6">
+          <span className="text-[var(--task-detail-muted)]">This task changed in another window.</span>
+          <Button className="h-7 shrink-0 px-2 text-xs" onClick={reviewLatest} type="button" variant="outline">
+            Review latest
+          </Button>
+        </div>
+      ) : null}
+      <motion.div
+        animate="visible"
+        className={`mx-auto flex min-h-12 w-full max-w-xl min-w-0 items-center gap-1 px-4 py-2 sm:px-6 ${windowMode === "full" ? "max-w-3xl px-8" : ""}`}
+        initial={transition === "animate" ? "hidden" : false}
+        variants={panelContentVariants}
+      >
         <div className="min-w-0 flex-1">
           {editingField === "title" ? (
             <Input
@@ -313,6 +376,22 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
             </PopoverContent>
           </Popover>
 
+          {activeTask.completedAt === null && activeTask.estimateMinutes !== null && activeTask.scheduledDate === planner.data?.today ? (
+            <Button
+              aria-label={anchorDate === planner.data.today ? "Remove Anchor for today" : "Anchor task for today"}
+              aria-pressed={anchorDate === planner.data.today}
+              className={anchorDate === planner.data.today ? "text-primary" : "text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"}
+              disabled={controlsDisabled}
+              onClick={() => setAnchorDate(anchorDate === planner.data?.today ? null : planner.data?.today ?? null)}
+              size="icon-sm"
+              title={anchorDate === planner.data.today ? "Remove Anchor for today" : "Anchor for today"}
+              type="button"
+              variant="ghost"
+            >
+              <HugeiconsIcon aria-hidden="true" icon={BookmarkCheck01Icon} strokeWidth={1.7} />
+            </Button>
+          ) : null}
+
           <Button
             aria-label={deleteArmed ? (deleteTask.isPending ? "Deleting task" : "Confirm delete task") : "Delete task"}
             aria-pressed={deleteArmed}
@@ -362,7 +441,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
             </Button>
           )}
         </div>
-      </div>
+      </motion.div>
       <span aria-live="polite" className="sr-only">
         {deleteArmed ? "Delete confirmation. Choose Keep task or Confirm delete task." : ""}
       </span>

@@ -7,8 +7,9 @@ export function buildOnboardingSettingsInput(
   patch: Partial<Pick<Settings, "dailyCapacityMinutes" | "onboardingStatus">>,
 ): SaveSettingsInput {
   return {
-    settings: { ...settings, ...patch },
+    settings: { ...settings, ...patch, capacityMode: "global" },
     apiKeyChange: { kind: "unchanged" },
+    source: "onboarding",
   };
 }
 

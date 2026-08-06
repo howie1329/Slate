@@ -6,7 +6,7 @@ use crate::{
     credentials,
     persistence::{
         self, AiAssistTaskContext, AiPlanContext, DailyPlanAcceptanceInput,
-        DailyPlanAcceptanceItem, PersistenceState,
+        DailyPlanAcceptanceItem, PersistenceState, TaskRevision,
     },
     sidecar,
 };
@@ -40,6 +40,7 @@ pub struct AiPlanItem {
     pub source_scheduled_date: Option<String>,
     pub scheduled_date: String,
     pub position: i64,
+    pub revision: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -51,6 +52,7 @@ pub struct AiPlanProposal {
     pub rationale: Option<String>,
     pub empty_reason: Option<String>,
     pub today_task_ids: Vec<String>,
+    pub today_task_revisions: Vec<TaskRevision>,
     pub expected_daily_capacity_minutes: i64,
     pub expected_remaining_minutes: i64,
 }
@@ -170,6 +172,7 @@ pub struct AiPlanAcceptanceInput {
     today_task_ids: Vec<String>,
     expected_daily_capacity_minutes: i64,
     expected_remaining_minutes: i64,
+    today_task_revisions: Vec<TaskRevision>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -179,6 +182,7 @@ struct AiPlanAcceptanceItem {
     title: String,
     estimate_minutes: i64,
     source_scheduled_date: Option<String>,
+    revision: i64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -275,9 +279,11 @@ pub fn accept_daily_plan(
                 title: item.title,
                 estimate_minutes: item.estimate_minutes,
                 source_scheduled_date: item.source_scheduled_date,
+                revision: item.revision,
             })
             .collect(),
         today_task_ids: input.today_task_ids,
+        today_task_revisions: input.today_task_revisions,
         expected_daily_capacity_minutes: input.expected_daily_capacity_minutes,
         expected_remaining_minutes: input.expected_remaining_minutes,
     };
@@ -332,6 +338,7 @@ fn empty_plan_proposal(context: &AiPlanContext, reason: &str) -> AiPlanProposal 
         rationale: None,
         empty_reason: Some(reason.to_string()),
         today_task_ids: context.today_task_ids.clone(),
+        today_task_revisions: context.today_task_revisions.clone(),
         expected_daily_capacity_minutes: context.daily_capacity_minutes,
         expected_remaining_minutes: context.remaining_minutes,
     }
@@ -387,6 +394,7 @@ fn parse_plan_response(response: &str, context: &AiPlanContext) -> Result<AiPlan
             source_scheduled_date: candidate.scheduled_date.clone(),
             scheduled_date: context.today.clone(),
             position: context.today_task_ids.len() as i64 + items.len() as i64,
+            revision: candidate.revision,
         });
     }
 
@@ -405,6 +413,7 @@ fn parse_plan_response(response: &str, context: &AiPlanContext) -> Result<AiPlan
             None
         },
         today_task_ids: context.today_task_ids.clone(),
+        today_task_revisions: context.today_task_revisions.clone(),
         expected_daily_capacity_minutes: context.daily_capacity_minutes,
         expected_remaining_minutes: context.remaining_minutes,
     })
@@ -503,6 +512,7 @@ mod tests {
             remaining_minutes: 120,
             today_tasks: Vec::new(),
             today_task_ids: vec!["today-task".into()],
+            today_task_revisions: vec![TaskRevision { id: "today-task".into(), revision: 1 }],
             candidates: vec![AiPlanTaskContext {
                 id: "backlog-task".into(),
                 title: "Backlog task".into(),
@@ -511,6 +521,7 @@ mod tests {
                 scheduled_date: None,
                 source_scope: "log:unscheduled".into(),
                 backlog_position: 0,
+                revision: 1,
             }],
             planning_instruction: String::new(),
         }
@@ -602,6 +613,7 @@ mod tests {
             scheduled_date: None,
             source_scope: "log:unscheduled".into(),
             backlog_position: 0,
+            revision: 1,
         };
 
         let serialized =

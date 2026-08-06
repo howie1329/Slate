@@ -1,11 +1,17 @@
+#[cfg(target_os = "macos")]
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use tauri::{
     image::Image,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, PhysicalPosition, Position, Rect, Runtime, WebviewWindow,
+    AppHandle, Emitter, EventTarget, Manager, PhysicalPosition, Position, Rect, Runtime,
+    WebviewWindow,
 };
 #[cfg(target_os = "macos")]
 use tauri_nspanel::{
+    objc2::MainThreadMarker as ObjcMainThreadMarker,
+    objc2_app_kit::{NSApplication, NSWindowCollectionBehavior},
     tauri_panel, CollectionBehavior, ManagerExt, PanelLevel, StyleMask, WebviewWindowExt,
 };
 
@@ -22,17 +28,33 @@ tauri_panel! {
 
 pub const MAIN_WINDOW_LABEL: &str = "main";
 pub const POPOVER_WINDOW_LABEL: &str = "popover";
+pub const QUICK_CAPTURE_WINDOW_LABEL: &str = "quick-capture";
 
 const OPEN_FULL_APP_MENU_ID: &str = "open-full-app";
 const QUIT_MENU_ID: &str = "quit";
 const POPOVER_MARGIN: i32 = 12;
+const SHELL_CORNER_RADIUS: f64 = 18.0;
+const QUICK_CAPTURE_CORNER_RADIUS: f64 = 14.0;
+
+#[cfg(target_os = "macos")]
+#[derive(Default)]
+struct QuickCaptureFocusState {
+    has_received_focus: AtomicBool,
+}
 
 pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     #[cfg(target_os = "macos")]
-    app.set_activation_policy(tauri::ActivationPolicy::Accessory)?;
+    {
+        app.set_activation_policy(tauri::ActivationPolicy::Accessory)?;
+        app.manage(QuickCaptureFocusState::default());
+    }
 
+    let main = main_window(app)?;
+    configure_macos_main_window(&main)?;
     let popover = popover_window(app)?;
     configure_macos_popover(&popover)?;
+    let quick_capture = quick_capture_window(app)?;
+    configure_macos_quick_capture(&quick_capture)?;
 
     let open_full_app_item = MenuItem::with_id(
         app,
@@ -92,32 +114,122 @@ pub fn hide_popover<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     popover_window(app)?.hide()
 }
 
+pub fn open_quick_capture<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
+    let quick_capture = quick_capture_window(app)?;
+    #[cfg(target_os = "macos")]
+    if !quick_capture.is_focused()? {
+        app.state::<QuickCaptureFocusState>()
+            .has_received_focus
+            .store(false, Ordering::Release);
+    }
+    position_quick_capture(app, &quick_capture)?;
+    #[cfg(target_os = "macos")]
+    {
+        activate_macos_app();
+        let panel = app
+            .get_webview_panel(QUICK_CAPTURE_WINDOW_LABEL)
+            .map_err(|_| missing_window_error(QUICK_CAPTURE_WINDOW_LABEL))?;
+        panel.show_and_make_key();
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        quick_capture.show()?;
+        quick_capture.set_focus()?;
+    }
+    quick_capture.emit_to(
+        EventTarget::webview_window(QUICK_CAPTURE_WINDOW_LABEL),
+        "quick-capture://opened",
+        (),
+    )?;
+    Ok(())
+}
+
+pub fn hide_quick_capture<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
+    quick_capture_window(app)?.hide()
+}
+
 pub fn open_full_app<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     hide_popover(app)?;
 
     let main = main_window(app)?;
     main.unminimize()?;
     main.show()?;
-    main.set_focus()
+    main.set_focus()?;
+    main.set_fullscreen(true)?;
+
+    #[cfg(target_os = "macos")]
+    app.set_activation_policy(tauri::ActivationPolicy::Regular)?;
+
+    Ok(())
 }
 
 pub fn handle_window_event<R: Runtime>(window: &tauri::Window<R>, event: &tauri::WindowEvent) {
     match event {
         tauri::WindowEvent::CloseRequested { api, .. }
-            if matches!(window.label(), MAIN_WINDOW_LABEL | POPOVER_WINDOW_LABEL) =>
+            if matches!(
+                window.label(),
+                MAIN_WINDOW_LABEL | POPOVER_WINDOW_LABEL | QUICK_CAPTURE_WINDOW_LABEL
+            ) =>
         {
             api.prevent_close();
             if let Err(error) = window.hide() {
                 eprintln!("failed to hide Slate window after close request: {error}");
             }
+            #[cfg(target_os = "macos")]
+            if window.label() == MAIN_WINDOW_LABEL {
+                if let Err(error) = window
+                    .app_handle()
+                    .set_activation_policy(tauri::ActivationPolicy::Accessory)
+                {
+                    eprintln!("failed to restore Slate's menu-bar activation policy: {error}");
+                }
+            }
         }
         tauri::WindowEvent::Focused(false) if window.label() == POPOVER_WINDOW_LABEL => {
             if let Err(error) = window.hide() {
-                eprintln!("failed to hide Slate popover after focus loss: {error}");
+                eprintln!("failed to hide transient Slate window after focus loss: {error}");
+            }
+        }
+        #[cfg(target_os = "macos")]
+        tauri::WindowEvent::Focused(true) if window.label() == QUICK_CAPTURE_WINDOW_LABEL => {
+            window
+                .app_handle()
+                .state::<QuickCaptureFocusState>()
+                .has_received_focus
+                .store(true, Ordering::Release);
+        }
+        #[cfg(target_os = "macos")]
+        tauri::WindowEvent::Focused(false) if window.label() == QUICK_CAPTURE_WINDOW_LABEL => {
+            let should_hide = window
+                .app_handle()
+                .state::<QuickCaptureFocusState>()
+                .has_received_focus
+                .swap(false, Ordering::AcqRel);
+            if should_hide {
+                if let Err(error) = window.hide() {
+                    eprintln!("failed to hide quick capture window after focus loss: {error}");
+                }
+            }
+        }
+        #[cfg(not(target_os = "macos"))]
+        tauri::WindowEvent::Focused(false) if window.label() == QUICK_CAPTURE_WINDOW_LABEL => {
+            if let Err(error) = window.hide() {
+                eprintln!("failed to hide quick capture window after focus loss: {error}");
             }
         }
         _ => {}
     }
+}
+
+#[cfg(target_os = "macos")]
+fn activate_macos_app() {
+    let Some(main_thread) = ObjcMainThreadMarker::new() else {
+        eprintln!("failed to activate Slate for quick capture: not on the main thread");
+        return;
+    };
+    let application = NSApplication::sharedApplication(main_thread);
+    #[allow(deprecated)]
+    application.activateIgnoringOtherApps(true);
 }
 
 fn main_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>> {
@@ -128,6 +240,11 @@ fn main_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>
 fn popover_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>> {
     app.get_webview_window(POPOVER_WINDOW_LABEL)
         .ok_or_else(|| missing_window_error(POPOVER_WINDOW_LABEL))
+}
+
+fn quick_capture_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>> {
+    app.get_webview_window(QUICK_CAPTURE_WINDOW_LABEL)
+        .ok_or_else(|| missing_window_error(QUICK_CAPTURE_WINDOW_LABEL))
 }
 
 fn missing_window_error(label: &str) -> tauri::Error {
@@ -151,12 +268,49 @@ fn position_popover<R: Runtime>(
         work_area.position.y + work_area.size.height.saturating_sub(popover_size.height) as i32;
     let x = clamp_to_work_area(max_x - POPOVER_MARGIN, work_area.position.x, max_x);
     let y = clamp_to_work_area(
-        work_area.position.y + POPOVER_MARGIN,
+        work_area.position.y
+            + work_area
+                .size
+                .height
+                .saturating_sub(popover_size.height)
+                .div_ceil(2) as i32,
         work_area.position.y,
         max_y,
     );
 
     popover.set_position(PhysicalPosition::new(x, y))
+}
+
+fn position_quick_capture<R: Runtime>(
+    app: &AppHandle<R>,
+    quick_capture: &WebviewWindow<R>,
+) -> tauri::Result<()> {
+    let cursor = app.cursor_position()?;
+    let monitor = app
+        .monitor_from_point(cursor.x, cursor.y)?
+        .or(app.primary_monitor()?);
+    let Some(monitor) = monitor else {
+        return Ok(());
+    };
+
+    let window_size = quick_capture.outer_size()?;
+    let work_area = monitor.work_area();
+    let max_x =
+        work_area.position.x + work_area.size.width.saturating_sub(window_size.width) as i32;
+    let max_y =
+        work_area.position.y + work_area.size.height.saturating_sub(window_size.height) as i32;
+    let x = clamp_to_work_area(
+        cursor.x as i32 - window_size.width as i32 / 2,
+        work_area.position.x,
+        max_x,
+    );
+    let y = clamp_to_work_area(
+        cursor.y as i32 - window_size.height as i32 / 2,
+        work_area.position.y,
+        max_y,
+    );
+
+    quick_capture.set_position(PhysicalPosition::new(x, y))
 }
 
 fn monitor_for_tray<R: Runtime>(
@@ -188,6 +342,37 @@ fn clamp_to_work_area(value: i32, min: i32, max: i32) -> i32 {
 }
 
 #[cfg(target_os = "macos")]
+fn configure_macos_main_window<R: Runtime>(window: &WebviewWindow<R>) -> tauri::Result<()> {
+    let ns_window = window.ns_window()?;
+
+    unsafe {
+        let native_window = tauri_nspanel::objc2::rc::Retained::<
+            tauri_nspanel::objc2_foundation::NSObject,
+        >::retain(
+            ns_window as *mut tauri_nspanel::objc2_foundation::NSObject
+        )
+        .ok_or_else(|| {
+            tauri::Error::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "failed to retain Slate's main NSWindow",
+            ))
+        })?;
+        let content_view: tauri_nspanel::objc2::rc::Retained<
+            tauri_nspanel::objc2_foundation::NSObject,
+        > = tauri_nspanel::objc2::msg_send![&*native_window, contentView];
+        let _: () = tauri_nspanel::objc2::msg_send![&*content_view, setWantsLayer: true];
+        let content_layer: tauri_nspanel::objc2::rc::Retained<
+            tauri_nspanel::objc2_foundation::NSObject,
+        > = tauri_nspanel::objc2::msg_send![&*content_view, layer];
+        let _: () =
+            tauri_nspanel::objc2::msg_send![&*content_layer, setCornerRadius: SHELL_CORNER_RADIUS];
+        let _: () = tauri_nspanel::objc2::msg_send![&*content_layer, setMasksToBounds: true];
+    }
+
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
 fn configure_macos_popover<R: Runtime>(popover: &WebviewWindow<R>) -> tauri::Result<()> {
     let panel = popover.to_panel::<SlatePopoverPanel<R>>()?;
     panel.set_level(PanelLevel::Floating.value());
@@ -199,6 +384,31 @@ fn configure_macos_popover<R: Runtime>(popover: &WebviewWindow<R>) -> tauri::Res
             .into(),
     );
     panel.set_hides_on_deactivate(false);
+    panel.set_corner_radius(SHELL_CORNER_RADIUS);
+
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn configure_macos_quick_capture<R: Runtime>(
+    quick_capture: &WebviewWindow<R>,
+) -> tauri::Result<()> {
+    let panel = quick_capture.to_panel::<SlatePopoverPanel<R>>()?;
+    quick_capture.set_always_on_top(true)?;
+    panel.set_level(PanelLevel::PopUpMenu.value());
+    panel.set_floating_panel(true);
+    panel.set_becomes_key_only_if_needed(false);
+    panel.set_style_mask(StyleMask::empty().into());
+    let behavior = CollectionBehavior::new()
+        .full_screen_auxiliary()
+        .can_join_all_spaces()
+        .transient()
+        .ignores_cycle()
+        .value()
+        | NSWindowCollectionBehavior::CanJoinAllApplications;
+    panel.set_collection_behavior(behavior);
+    panel.set_hides_on_deactivate(false);
+    panel.set_corner_radius(QUICK_CAPTURE_CORNER_RADIUS);
 
     Ok(())
 }
@@ -213,6 +423,11 @@ fn show_popover<R: Runtime>(app: &AppHandle<R>, _: &WebviewWindow<R>) -> tauri::
 }
 
 #[cfg(not(target_os = "macos"))]
+fn configure_macos_main_window<R: Runtime>(_: &WebviewWindow<R>) -> tauri::Result<()> {
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
 fn configure_macos_popover<R: Runtime>(_: &WebviewWindow<R>) -> tauri::Result<()> {
     Ok(())
 }
@@ -223,18 +438,37 @@ fn show_popover<R: Runtime>(_: &AppHandle<R>, popover: &WebviewWindow<R>) -> tau
     popover.set_focus()
 }
 
+#[cfg(not(target_os = "macos"))]
+fn configure_macos_quick_capture<R: Runtime>(_: &WebviewWindow<R>) -> tauri::Result<()> {
+    Ok(())
+}
+
 fn menu_bar_icon() -> Image<'static> {
     const SIZE: u32 = 18;
+    const GLYPH: [&[u8; 12]; 12] = [
+        b"  ########  ",
+        b" ########## ",
+        b" ###        ",
+        b" ###        ",
+        b"  ######### ",
+        b" ########## ",
+        b"       ###  ",
+        b"       ###  ",
+        b"       ###  ",
+        b" ########## ",
+        b"########### ",
+        b" #########  ",
+    ];
     let mut pixels = vec![0; (SIZE * SIZE * 4) as usize];
 
-    for y in 3..15 {
-        for x in 3..15 {
-            let is_stroke =
-                (y == 3 || y == 8 || y == 14) || (x == 3 && y < 9) || (x == 14 && y > 7);
-            if !is_stroke {
+    for (glyph_y, row) in GLYPH.iter().enumerate() {
+        for (glyph_x, pixel) in row.iter().enumerate() {
+            if *pixel != b'#' {
                 continue;
             }
 
+            let x = glyph_x as u32 + 3;
+            let y = glyph_y as u32 + 3;
             let index = ((y * SIZE + x) * 4) as usize;
             pixels[index..index + 4].copy_from_slice(&[0, 0, 0, 255]);
         }

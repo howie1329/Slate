@@ -154,13 +154,15 @@ export function AiReviewProvider({ children }: { children: ReactNode }) {
       setState({ kind: "plan-accepting", requestId, proposal });
       acceptDailyPlan.mutate(
         {
-          items: proposal.items.map(({ id, title, estimateMinutes, sourceScheduledDate }) => ({
+          items: proposal.items.map(({ id, title, estimateMinutes, sourceScheduledDate, revision }) => ({
             id,
             title,
             estimateMinutes,
             sourceScheduledDate,
+            revision,
           })),
           todayTaskIds: proposal.todayTaskIds,
+          todayTaskRevisions: proposal.todayTaskRevisions,
           expectedDailyCapacityMinutes: proposal.expectedDailyCapacityMinutes,
           expectedRemainingMinutes: proposal.expectedRemainingMinutes,
         },

@@ -1,4 +1,5 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, Loading03Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { Link, createFileRoute } from "@tanstack/react-router";
@@ -10,7 +11,13 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { useRouteMotion } from "@/components/route-motion";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { Settings } from "@/lib/planner";
+import { WEEKDAYS, type Settings, type Weekday } from "@/lib/planner";
+import { getQuickCaptureShortcutError, isTauriWindow } from "@/lib/planner";
+import {
+  formatShortcut,
+  RECOMMENDED_QUICK_CAPTURE_SHORTCUT,
+  shortcutFromKeyboardEvent,
+} from "@/lib/quick-capture";
 import { AI_MODELS, AI_PROVIDERS, isAiModel, isAiProvider } from "@/lib/ai-catalog";
 import {
   blurApiKey,
@@ -31,12 +38,23 @@ export const Route = createFileRoute("/settings")({
 });
 
 const APP_VERSION = appPackage.version;
+const WEEKDAY_LABELS: Record<Weekday, string> = {
+  monday: "Monday",
+  tuesday: "Tuesday",
+  wednesday: "Wednesday",
+  thursday: "Thursday",
+  friday: "Friday",
+  saturday: "Saturday",
+  sunday: "Sunday",
+};
 
 function SettingsPage() {
   const planner = usePlannerState();
   const saveSettings = useSaveSettings();
   const { setRouteTransition } = useRouteMotion();
   const [draft, setDraft] = useState<SettingsDraft | null>(null);
+  const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
+  const [shortcutError, setShortcutError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!planner.data) {
@@ -49,6 +67,36 @@ function SettingsPage() {
         : createSettingsDraft(planner.data),
     );
   }, [planner.data]);
+
+  useEffect(() => {
+    if (!isTauriWindow()) {
+      return;
+    }
+
+    let unlisten: (() => void) | undefined;
+    let disposed = false;
+    void listen<string>("quick-capture://registration-error", (event) => {
+      setShortcutError(formatShortcutError(event.payload));
+    }).then((stopListening) => {
+      if (disposed) {
+        stopListening();
+      } else {
+        unlisten = stopListening;
+      }
+    });
+    void getQuickCaptureShortcutError()
+      .then((error) => {
+        if (error) {
+          setShortcutError(formatShortcutError(error));
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
 
   if (!draft || !planner.data) {
     return null;
@@ -74,6 +122,7 @@ function SettingsPage() {
     saveSettings.mutate(buildSaveSettingsInput(draft), {
       onSuccess: (snapshot) => {
         setDraft(createSettingsDraft(snapshot));
+        setShortcutError(null);
         toast.success("Settings saved.");
       },
       onError: (error) => {
@@ -111,20 +160,138 @@ function SettingsPage() {
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-3 sm:px-6">
         <div className="mx-auto w-full max-w-xl space-y-4">
           <SettingsGroup description="Used for planning your day." title="Daily capacity">
-            <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor="daily-capacity">
-              <span>Daily capacity</span>
-              <InputGroup className="w-32">
-                <InputGroupInput
-                  className="text-right tabular-nums"
-                  id="daily-capacity"
-                  min="1"
-                  onChange={(event) => updateDraft({ dailyCapacityMinutes: Number(event.target.value) })}
-                  type="number"
-                  value={draft.values.dailyCapacityMinutes}
-                />
-                <InputGroupAddon>minutes</InputGroupAddon>
-              </InputGroup>
+            <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor="capacity-mode">
+              <span>Schedule</span>
+              <Select
+                onValueChange={(value) => {
+                  if (value === "global" || value === "weekly") {
+                    updateDraft({ capacityMode: value });
+                  }
+                }}
+                value={draft.values.capacityMode}
+              >
+                <SelectTrigger aria-label="Capacity schedule" className="w-40 text-xs font-normal" id="capacity-mode">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="global">Same every day</SelectItem>
+                    <SelectItem value="weekly">By weekday</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </label>
+            {draft.values.capacityMode === "global" ? (
+              <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor="daily-capacity">
+                <span>Daily capacity</span>
+                <InputGroup className="w-32">
+                  <InputGroupInput
+                    className="text-right tabular-nums"
+                    id="daily-capacity"
+                    min="1"
+                    onChange={(event) => updateDraft({ dailyCapacityMinutes: Number(event.target.value) })}
+                    type="number"
+                    value={draft.values.dailyCapacityMinutes}
+                  />
+                  <InputGroupAddon>minutes</InputGroupAddon>
+                </InputGroup>
+              </label>
+            ) : (
+              <div aria-label="Weekly capacity" className="space-y-2">
+                {WEEKDAYS.map((weekday) => (
+                  <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor={`capacity-${weekday}`} key={weekday}>
+                    <span>{WEEKDAY_LABELS[weekday]}</span>
+                    <InputGroup className="w-32">
+                      <InputGroupInput
+                        aria-label={`${WEEKDAY_LABELS[weekday]} capacity`}
+                        className="text-right tabular-nums"
+                        id={`capacity-${weekday}`}
+                        min="0"
+                        onChange={(event) => updateDraft({
+                          weeklyCapacityMinutes: {
+                            ...draft.values.weeklyCapacityMinutes,
+                            [weekday]: Number(event.target.value),
+                          },
+                        })}
+                        type="number"
+                        value={draft.values.weeklyCapacityMinutes[weekday]}
+                      />
+                      <InputGroupAddon>minutes</InputGroupAddon>
+                    </InputGroup>
+                  </label>
+                ))}
+              </div>
+            )}
+          </SettingsGroup>
+
+          <SettingsGroup description="Capture a thought from anywhere into Backlog." title="Quick capture">
+            <label className="flex items-center justify-between gap-4 text-menu font-medium" htmlFor="quick-capture-enabled">
+              <span>
+                <span className="block">Enable shortcut</span>
+                <span className="mt-0.5 block text-xs font-normal text-muted-foreground">Creates an unestimated Backlog task.</span>
+              </span>
+              <button
+                aria-label="Enable quick capture shortcut"
+                id="quick-capture-enabled"
+                aria-checked={draft.values.quickCaptureEnabled}
+                className="inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-border bg-muted p-0.5 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-[checked=true]:border-primary data-[checked=true]:bg-primary motion-reduce:transition-none"
+                data-checked={draft.values.quickCaptureEnabled}
+                onClick={() => updateDraft({ quickCaptureEnabled: !draft.values.quickCaptureEnabled })}
+                role="switch"
+                type="button"
+              >
+                <span className={`size-3.5 rounded-full bg-background shadow-sm transition-transform motion-reduce:transition-none ${draft.values.quickCaptureEnabled ? "translate-x-4" : "translate-x-0"}`} />
+              </button>
+            </label>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-3 text-menu font-medium">
+                <span id="quick-capture-shortcut-label">Shortcut</span>
+                <Button
+                  aria-describedby="quick-capture-shortcut-label"
+                  aria-label={isRecordingShortcut ? "Press a shortcut" : `Current shortcut ${formatShortcut(draft.values.quickCaptureShortcut)}`}
+                  className={`min-w-32 font-mono text-xs ${isRecordingShortcut ? "border-primary bg-primary/10 text-foreground" : ""}`}
+                  onBlur={() => setIsRecordingShortcut(false)}
+                  onClick={() => setIsRecordingShortcut(true)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      setIsRecordingShortcut(false);
+                      return;
+                    }
+                    if (!isRecordingShortcut) {
+                      return;
+                    }
+                    const shortcut = shortcutFromKeyboardEvent(event.nativeEvent);
+                    if (shortcut) {
+                      event.preventDefault();
+                      updateDraft({ quickCaptureShortcut: shortcut });
+                      setShortcutError(null);
+                      setIsRecordingShortcut(false);
+                    }
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  {isRecordingShortcut ? "Press keys…" : formatShortcut(draft.values.quickCaptureShortcut)}
+                </Button>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <p className={`m-0 text-xs ${shortcutError ? "text-destructive" : "text-muted-foreground"}`} role={shortcutError ? "alert" : undefined}>
+                  {shortcutError ?? "Use a modifier and one key."}
+                </p>
+                <Button
+                  onClick={() => {
+                    updateDraft({ quickCaptureShortcut: RECOMMENDED_QUICK_CAPTURE_SHORTCUT });
+                    setShortcutError(null);
+                  }}
+                  size="xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  Reset
+                </Button>
+              </div>
+            </div>
           </SettingsGroup>
 
           <SettingsGroup description="Your key is stored securely in the macOS Keychain." title="AI connection">
@@ -337,4 +504,14 @@ function KeyStatus({
   ) : (
     <span className="text-xs font-medium text-destructive">Required for AI</span>
   );
+}
+
+function formatShortcutError(error: string) {
+  if (error.includes("conflict")) {
+    return "That shortcut is already in use. Choose another one.";
+  }
+  if (error.includes("invalid") || error.includes("unsupported")) {
+    return "Use a modifier plus one supported key.";
+  }
+  return "Could not register the shortcut. Try again.";
 }

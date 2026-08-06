@@ -8,7 +8,6 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
-  applyPlannerPlan,
   createTask,
   deleteTask,
   acceptDailyPlan,
@@ -20,8 +19,8 @@ import {
   saveSettings,
   setTaskCompleted,
   setTaskScheduledDate,
+  undoQuickCapture,
   updateTask,
-  type PlannerPlanAssignment,
   type PlannerSnapshot,
   type AiAssistInput,
   type AiPlanAcceptanceInput,
@@ -31,6 +30,8 @@ import {
   type SetTaskScheduledDateInput,
   type TaskInput,
   type UpdateTaskInput,
+  type DeleteTaskInput,
+  type UndoQuickCaptureInput,
 } from "@/lib/planner";
 
 export const plannerStateQueryKey = ["plannerState"] as const;
@@ -104,17 +105,22 @@ function invalidatePlannerState(queryClient: QueryClient) {
   );
 }
 
-function usePlannerMutation<TInput>(mutationFn: (input: TInput) => Promise<void>) {
+function usePlannerMutation<TInput, TOutput = void>(mutationFn: (input: TInput) => Promise<TOutput>) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn,
     onSuccess: () => invalidatePlannerState(queryClient),
+    onError: () => invalidatePlannerState(queryClient),
   });
 }
 
 export function useCreateTask() {
-  return usePlannerMutation<TaskInput>(createTask);
+  return usePlannerMutation<TaskInput, Awaited<ReturnType<typeof createTask>>>(createTask);
+}
+
+export function useUndoQuickCapture() {
+  return usePlannerMutation<UndoQuickCaptureInput>(undoQuickCapture);
 }
 
 export function useUpdateTask() {
@@ -130,7 +136,7 @@ export function useSetTaskScheduledDate() {
 }
 
 export function useDeleteTask() {
-  return usePlannerMutation<string>(deleteTask);
+  return usePlannerMutation<DeleteTaskInput>(deleteTask);
 }
 
 export function useReorderTasks() {
@@ -200,10 +206,6 @@ export function useSaveSettings() {
         });
     },
   };
-}
-
-export function useApplyPlannerPlan() {
-  return usePlannerMutation<PlannerPlanAssignment[]>(applyPlannerPlan);
 }
 
 export function useGenerateAiAssist() {

@@ -116,7 +116,7 @@ Return-to-Backlog and ordering remain inside the documented Stage 1 contract. Th
 
 ### Defer Stage 2 resilience features until the 1.0 exit criteria pass
 
-End-of-day review and My Day Changed are grounded roadmap work, but they should not compete with unfinished core behavior, verification, and packaged-build readiness.
+End-of-day review and My Day Changed remain conditional roadmap work, now placed in the full-window 2.3 slot. They should not compete with unfinished core behavior, verification, and packaged-build readiness.
 
 ## Recommended sequencing
 
@@ -140,4 +140,3 @@ End-of-day review and My Day Changed are grounded roadmap work, but they should 
 - Simulated Keychain denial or outage behavior.
 - Live cross-window conflict scenarios.
 - Cargo advisory scanning; `cargo-audit` was not installed.
-

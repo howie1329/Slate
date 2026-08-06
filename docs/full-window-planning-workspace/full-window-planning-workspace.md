@@ -134,10 +134,18 @@ Repeated-deferral insights do not enter Needs Attention until Calibration has en
 - A one-off “Make This Fit” action that proposes a smaller or clearer version of an oversized task and requires acceptance.
 - Dragging selected text, links, or files into Slate as reviewed user-authored capture input.
 - Recent capture, recent completion, and per-task history inspection backed by the Stage 2 event ledger.
-- Contextual end-of-day and disrupted-day review inside the full window.
 - History-informed Calibration feedback only after the separate Calibration entry criteria are met.
 
 These are extensions of the same workspace, not reasons to add separate dashboards.
+
+### 2.3 — Conditional daily review and recovery
+
+The full window is the intended home for the two review experiences previously considered for Stage 2. They are separate candidates and do not block the 2.0 foundation, 2.1 acceleration, or 2.2 polish work.
+
+- **Unfinished-day review:** give the user enough space to resolve incomplete Today commitments deliberately, with explicit scheduling, Return to Backlog, edit, completion, and leave-unchanged choices. The review must be resumable and must never preselect tomorrow.
+- **Changed-day recovery:** only if real use shows repeated friction after capacity changes, generate a reviewed keep/return proposal with atomic, stale-safe acceptance. Anchor Commitments belong here only if they are still understandable and useful in the full-window workflow.
+
+If neither candidate is earned, remove any provisional Anchor and recovery-only implementation rather than carrying dormant UI, schema state, or event vocabulary.
 
 ## AI role
 
@@ -159,7 +167,7 @@ The initial workspace should reuse the existing task model and native command bo
 
 - Board lanes are derived from task fields such as completion, estimate, and date.
 - Dragging does not require a permanent kanban-status field in the first release.
-- Capacity, Anchor, released-state, expected-state, and atomic change-set validation remain explicit and native-backed.
+- Capacity, expected-state, and atomic change-set validation remain explicit and native-backed. Anchor and released-state semantics are conditional on the 2.3 candidates and must not expand the base workspace model prematurely.
 - SQLite remains the local source of truth.
 - API keys remain in macOS Keychain and never enter board state, snapshots, logs, invalidation events, or accepted event history.
 - Cross-window invalidation continues to keep the popover and full window consistent.
@@ -178,10 +186,10 @@ A new persistent status field should be added only if real use shows that commit
 
 ## Entry criteria
 
-Begin this stage only after the Stage 1 1.0 and Stage 2 daily-resilience exit criteria are met. The following should also be true:
+Begin this stage only after the Stage 1 1.0 and Stage 2 capture/foundation exit criteria are met. The following should also be true:
 
 - Backlog and Today are understandable without the board.
-- Default and per-day capacity, Anchors, release, and recovery behavior are stable and trustworthy.
+- Default and per-day capacity, task return, and task lifecycle behavior are stable and trustworthy. Any Anchor or recovery behavior has a separate 2.3 entry gate.
 - The Stage 2 reviewed change-set boundary can apply board movement atomically and reject stale state.
 - Authoritative task selectors can derive the same lanes, counts, ordering, and capacity for board, list, popover, and full-window summaries.
 - The full window and popover already share authoritative task state.

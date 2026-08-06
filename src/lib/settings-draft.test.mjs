@@ -22,6 +22,18 @@ const snapshot = {
     aiModel: "openai/gpt-5-mini",
     theme: "light",
     onboardingStatus: "not-started",
+    capacityMode: "global",
+    weeklyCapacityMinutes: {
+      monday: 240,
+      tuesday: 240,
+      wednesday: 240,
+      thursday: 240,
+      friday: 240,
+      saturday: 240,
+      sunday: 240,
+    },
+    quickCaptureEnabled: true,
+    quickCaptureShortcut: "CommandOrControl+Shift+Space",
   },
   aiAvailability: "configured",
   aiAvailabilityByProvider: {
@@ -29,6 +41,7 @@ const snapshot = {
     openrouter: "configured",
   },
   today: "2026-07-23",
+  effectiveCapacityMinutes: 240,
 };
 
 describe("Settings draft", () => {
@@ -131,5 +144,19 @@ describe("Settings draft", () => {
     });
     assert.equal(settingsDraftView(saved).isDirty, false);
     assert.equal(settingsDraftView(saved).keyDisplayValue, MASKED_API_KEY);
+  });
+
+  it("tracks quick capture settings in the unified save draft", () => {
+    const changed = changeSettings(createSettingsDraft(snapshot), {
+      quickCaptureEnabled: false,
+      quickCaptureShortcut: "CommandOrControl+Alt+K",
+    });
+
+    assert.equal(settingsDraftView(changed).isDirty, true);
+    assert.deepEqual(buildSaveSettingsInput(changed).settings, {
+      ...snapshot.settings,
+      quickCaptureEnabled: false,
+      quickCaptureShortcut: "CommandOrControl+Alt+K",
+    });
   });
 });

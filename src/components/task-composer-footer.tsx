@@ -13,8 +13,8 @@ import { TaskDetailPanel } from "@/components/task-detail-panel";
 import { useRouteMotion } from "@/components/route-motion";
 import { useTaskMotion, type TaskMotionTransition } from "@/components/task-motion";
 import { useTaskSelection } from "@/components/task-selection";
-import { taskComposerInputId } from "@/lib/task-composer";
 import type { LocalDate } from "@/lib/planner";
+import { taskComposerInputId } from "@/lib/task-composer";
 import type { WindowMode } from "@/lib/window-mode";
 import { useCreateTask, usePlannerState } from "@/lib/planner-query";
 
@@ -60,12 +60,23 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
 
     recordTaskMutation({ kind: "create", transition: createTransitionRef.current });
     createTask.mutate(
-      { title: trimmedTitle, estimateMinutes: null, scheduledDate },
       {
-        onSuccess: () => setTitle(""),
+        title: trimmedTitle,
+        estimateMinutes: null,
+        scheduledDate,
+        source: "manual",
+      },
+      {
+        onSuccess: () => {
+          setTitle("");
+        },
         onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save task."),
       },
     );
+  }
+
+  function handleTitleChange(value: string) {
+    setTitle(value);
   }
 
   function handleOpenSettings(event?: { detail?: number }) {
@@ -126,7 +137,7 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
           className="h-10 text-menu"
           disabled={createTask.isPending}
           id={taskComposerInputId}
-          onChange={(event) => setTitle(event.target.value)}
+          onChange={(event) => handleTitleChange(event.target.value)}
           placeholder="Add a task"
           value={title}
         />

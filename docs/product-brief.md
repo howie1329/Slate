@@ -1,8 +1,8 @@
 # Slate Product Brief
 
-> **Status:** Current product contract and shipped 1.0 baseline
+> **Status:** Current product contract and 1.1 release candidate
 >
-> This brief describes the Slate 1.0.x product contract, including the 1.0.1 onboarding release, and the boundaries future work must preserve. The staged expansion plan lives in [the roadmap](roadmap.md).
+> This brief describes the Slate 1.0.x product contract, the 1.0.1 onboarding release, the 1.1.0 quick-capture release candidate, and the boundaries future work must preserve. The staged expansion plan lives in [the roadmap](roadmap.md).
 
 ## Product definition
 
@@ -16,7 +16,7 @@ An individual knowledge worker who captures more work than they can reliably fin
 
 ## Current product state
 
-Slate 1.0.1 is the shipped local planning baseline. It provides:
+Slate 1.1.0 is the current local planning release candidate. It provides:
 
 - A Tauri macOS shell with a menu-bar popover and full application window.
 - Today, Backlog, and Settings routes using the same workspace shell.
@@ -28,11 +28,20 @@ Slate 1.0.1 is the shipped local planning baseline. It provides:
 - macOS Keychain storage for provider API keys.
 - Reviewable AI Assist and Plan My Day flows through the packaged Node sidecar.
 - A short, skippable first-run onboarding flow that explains capacity, Backlog, Today, and task details.
+- Configurable global quick capture with a dedicated compact capture window, title-only Backlog creation, draft preservation, and revision-safe Undo.
 - Cross-window refresh through native planner-change events and TanStack Query invalidation.
 
 AI Assist and Plan My Day ship as reviewable Keychain-backed sidecar flows. The manual workflow remains the product’s source of truth, and AI never commits a task or plan without explicit acceptance.
 
-Global quick capture, end-of-day review, Spaces, integrations, sync, mobile, and MCP remain outside the shipped 1.0 baseline and follow the evidence-gated roadmap.
+End-of-day review, changed-day recovery, Spaces, integrations, sync, mobile, and MCP remain outside the shipped 1.1 baseline and follow the evidence-gated roadmap. The unfinished-day and changed-day review candidates are now conditional full-window 2.3 work.
+
+### 1.1 global quick capture slice
+
+The configurable `CommandOrControl+Shift+Space` shortcut opens Slate’s dedicated compact capture window and focuses the capture input. A title is saved immediately as an unestimated, unscheduled Backlog task with source `manual-quick-capture`; it never commits work to Today. The in-process draft survives focus loss and capture-window dismissal, and an explicit discard clears it.
+
+The capture window is a two-line command bar: a 40px title field with a separate Add action, followed by a quiet Backlog/status line. It opens at 520 × 100 and supports a 360 × 100 minimum without inheriting the planner popover’s 360 × 520 geometry.
+
+The returned task revision bounds a five-second Undo action. Undo succeeds only while the task remains unchanged, incomplete, unscheduled, and unestimated, and records a `manual-quick-capture-undo` deletion event in the same SQLite transaction. Clipboard, selected-text, application, URL, file, AI enrichment, and destination-picker capture remain deferred.
 
 ## Product surfaces
 
@@ -113,12 +122,13 @@ These are not rejected permanently. They remain outside 1.0 until the determinis
 
 Slate may expand around the same commitment-budget model in the following order:
 
-1. **1.1–1.x — Daily resilience:** global capture, accepted task/day history, per-day capacity overrides, Anchors, unfinished-commitment review, and contextual recovery when the day changes.
-2. **2.0–2.x — Full-window planning workspace:** a visual desktop surface for shaping commitments while preserving the popover as the fast daily planning tool.
-3. **3.0 — Calibration:** respectful, history-informed feedback and conservative suggestions that improve estimates and capacity without scoring productivity.
-4. **4.0, only if earned — Spaces:** distinct planning contexts with their own capacity only when users demonstrate that one planner cannot express their needs.
-5. **5.0 — Outside context:** reviewed, deduplicated candidate actions from systems such as GitHub and Gmail, plus calendar-informed capacity proposals.
-6. **6.0, only if earned — Optional sync and mobile:** explicit identity, conflict, tombstone, and offline-recovery rules followed by a limited mobile companion for a proven multi-device use case.
+1. **1.1–1.x — Capture and foundations:** global capture, accepted task/day history, recurring capacity, stale-safe mutations, and the shared boundaries required by later workspace actions.
+2. **2.0–2.2 — Full-window planning workspace:** a visual desktop surface for shaping commitments while preserving the popover as the fast daily planning tool.
+3. **2.3, conditional — Full-window daily review:** unfinished-commitment review and changed-day recovery only if real use shows that the compact task-level controls are insufficient.
+4. **3.0 — Calibration:** respectful, history-informed feedback and conservative suggestions that improve estimates and capacity without scoring productivity.
+5. **4.0, only if earned — Spaces:** distinct planning contexts with their own capacity only when users demonstrate that one planner cannot express their needs.
+6. **5.0 — Outside context:** reviewed, deduplicated candidate actions from systems such as GitHub and Gmail, plus calendar-informed capacity proposals.
+7. **6.0, only if earned — Optional sync and mobile:** explicit identity, conflict, tombstone, and offline-recovery rules followed by a limited mobile companion for a proven multi-device use case.
 
 **Local agent access** is an independent post-1.x track. A permissioned MCP interface may arrive before later major releases once history, authorization, expected-state validation, and shared domain rules are stable. It does not depend on Spaces, integrations, sync, or mobile.
 

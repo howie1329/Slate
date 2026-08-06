@@ -28,6 +28,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     saveSettings.mutate({
       settings: { ...planner.data.settings, theme: nextTheme },
       apiKeyChange: { kind: "unchanged" },
+      source: "settings",
     });
   }
 
