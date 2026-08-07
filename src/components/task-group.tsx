@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   closestCenter,
   DndContext,
@@ -31,6 +33,11 @@ const taskListScreenReaderInstructions = {
 
 type TaskGroupProps = {
   className?: string;
+  collapsible?: boolean;
+  defaultCollapsed?: boolean;
+  emphasized?: boolean;
+  emptyMessage?: string;
+  getTaskMetadata?: (task: Task) => string | null;
   label: string;
   onReorderTasks?: (taskIds: string[]) => void;
   onSelectTask: (taskId: string, transition?: TaskSelectionTransition) => void;
@@ -46,6 +53,11 @@ type TaskGroupProps = {
 
 export function TaskGroup({
   className,
+  collapsible = false,
+  defaultCollapsed = false,
+  emphasized = false,
+  emptyMessage,
+  getTaskMetadata,
   label,
   onReorderTasks,
   onSelectTask,
@@ -59,6 +71,7 @@ export function TaskGroup({
   tasks,
 }: TaskGroupProps) {
   const { clearTaskMutation } = useTaskMotion();
+  const contentId = useId();
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -70,6 +83,7 @@ export function TaskGroup({
     }),
   );
   const [hasRenderedTasks, setHasRenderedTasks] = useState(tasks.length > 0);
+  const [isManuallyCollapsed, setIsManuallyCollapsed] = useState(defaultCollapsed);
   const previousTaskIdsRef = useRef(new Set(tasks.map((task) => task.id)));
   const handledMotionVersionRef = useRef<number | null>(null);
   const previousTaskIds = previousTaskIdsRef.current;
@@ -83,6 +97,7 @@ export function TaskGroup({
         ? taskMutation?.taskId ?? null
         : null
     : null;
+  const isCollapsed = collapsible && isManuallyCollapsed && !enteringTaskId;
   const taskIds = tasks.map((task) => task.id);
   const taskDetails = useMemo(
     () =>
@@ -152,7 +167,13 @@ export function TaskGroup({
     }
   }, [enteringTaskId, taskMutation, tasks]);
 
-  if (tasks.length === 0 && !hasRenderedTasks) {
+  useEffect(() => {
+    if (collapsible && enteringTaskId) {
+      setIsManuallyCollapsed(false);
+    }
+  }, [collapsible, enteringTaskId]);
+
+  if (tasks.length === 0 && !hasRenderedTasks && !emptyMessage) {
     return null;
   }
 
@@ -191,6 +212,7 @@ export function TaskGroup({
           isOverflow: task.id === overflowTaskId && task.completedAt === null,
           isPending: pending,
           isSelected: selectedTaskId === task.id,
+          metadata: getTaskMetadata?.(task),
           onMotionComplete: clearTaskMutation,
           onSelectTask,
           onToggleTask,
@@ -217,29 +239,58 @@ export function TaskGroup({
 
   return (
     <section aria-label={label} className={cn("mt-5", className)}>
-      <h2 className="m-0 border-b border-border pb-2 text-menu-label font-semibold text-muted-foreground">
-        {label}
-      </h2>
-      <ul className="m-0 list-none divide-y divide-border p-0">
-        {onReorderTasks ? (
-          <DndContext
-            accessibility={{
-              announcements,
-              screenReaderInstructions: taskListScreenReaderInstructions,
-            }}
-            collisionDetection={closestCenter}
-            modifiers={taskListModifiers}
-            onDragEnd={handleDragEnd}
-            sensors={sensors}
+      <h2 className={cn("m-0 border-b border-border pb-2 text-menu-label font-semibold", emphasized ? "text-foreground" : "text-muted-foreground")}>
+        {collapsible ? (
+          <button
+            aria-controls={contentId}
+            aria-expanded={!isCollapsed}
+            className="-my-1 flex w-full items-center justify-between rounded-md py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            onClick={() => setIsManuallyCollapsed((current) => !current)}
+            type="button"
           >
-            <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-              {rows}
-            </SortableContext>
-          </DndContext>
+            <span>{label}</span>
+            <span className="flex items-center gap-1.5 tabular-nums">
+              {tasks.length > 0 ? <span>{tasks.length}</span> : null}
+              <HugeiconsIcon
+                aria-hidden="true"
+                className={cn("size-3.5 transition-transform duration-150 motion-reduce:transition-none", !isCollapsed && "rotate-180")}
+                icon={ArrowDown01Icon}
+                strokeWidth={2}
+              />
+            </span>
+          </button>
         ) : (
-          rows
+          label
         )}
-      </ul>
+      </h2>
+      {isCollapsed ? null : (
+        <div id={contentId}>
+          {tasks.length === 0 && emptyMessage ? (
+            <p className="m-0 border-b border-border py-3 text-menu leading-5 text-muted-foreground">{emptyMessage}</p>
+          ) : (
+            <ul className="m-0 list-none divide-y divide-border p-0">
+              {onReorderTasks ? (
+                <DndContext
+                  accessibility={{
+                    announcements,
+                    screenReaderInstructions: taskListScreenReaderInstructions,
+                  }}
+                  collisionDetection={closestCenter}
+                  modifiers={taskListModifiers}
+                  onDragEnd={handleDragEnd}
+                  sensors={sensors}
+                >
+                  <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+                    {rows}
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                rows
+              )}
+            </ul>
+          )}
+        </div>
+      )}
     </section>
   );
 }

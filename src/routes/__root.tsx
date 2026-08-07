@@ -1,8 +1,8 @@
-import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import NumberFlow from "@number-flow/react";
-import { Link, Outlet, createRootRoute, useRouterState } from "@tanstack/react-router";
+import { Outlet, createRootRoute, useRouterState } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { useAiReview } from "@/components/ai-review";
 import { OnboardingFlow } from "@/components/onboarding-flow";
@@ -16,12 +16,6 @@ import { retryPersistence, type PlannerSnapshot } from "@/lib/planner";
 import { calculateCapacityState, scopeForTask } from "@/lib/task-groups";
 import { hidePopover, openFullApp, useWindowMode, type WindowMode } from "@/lib/window-mode";
 import { usePlannerState } from "@/lib/planner-query";
-
-const navLinkClass =
-  "inline-flex h-8 items-center justify-center rounded-full px-3.5 text-menu font-medium text-muted-foreground no-underline outline-none transition-colors duration-150 hover:bg-background hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none";
-
-const activeNavLinkClass =
-  "inline-flex h-8 items-center justify-center rounded-full bg-foreground px-3.5 text-menu font-semibold text-background no-underline outline-none transition-colors duration-150 hover:bg-foreground/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none";
 
 const routeFadeEase = [0.23, 1, 0.32, 1] as const;
 const headerNumberTransformTiming = { duration: 180, easing: "ease-out" };
@@ -64,12 +58,6 @@ function SlateShell() {
 
   function handleOpenFullApp() {
     void openFullApp();
-  }
-
-  function handleRouteNavigation(event: MouseEvent<HTMLAnchorElement>, destination: string) {
-    setRouteTransition(
-      destination !== pathname && event.detail > 0 ? "animate" : "instant",
-    );
   }
 
   async function handleRetryPersistence() {
@@ -127,30 +115,10 @@ function SlateShell() {
         </RouteFade>
       ) : (
         <>
-          <header className={`shrink-0 bg-background px-4 pt-3 sm:px-6 ${pathname === "/today" ? "pb-3" : ""} ${windowMode === "full" ? "px-8" : ""}`}>
+          <header className={`shrink-0 bg-background px-4 pb-3 pt-3 sm:px-6 ${windowMode === "full" ? "px-8" : ""}`}>
             <div className={`mx-auto grid h-10 w-full max-w-xl grid-cols-[4rem_auto_4rem] items-center ${windowMode === "full" ? "max-w-3xl" : ""}`}>
-              <HeaderSummary pathname={pathname} planner={planner.data} />
-              <nav
-                className="flex justify-self-center items-center rounded-full bg-muted p-1"
-                aria-label="Task views"
-              >
-                <Link
-                  to="/today"
-                  className={navLinkClass}
-                  activeProps={{ className: activeNavLinkClass }}
-                  onClick={(event) => handleRouteNavigation(event, "/today")}
-                >
-                  Today
-                </Link>
-                <Link
-                  to="/backlog"
-                  className={navLinkClass}
-                  activeProps={{ className: activeNavLinkClass }}
-                  onClick={(event) => handleRouteNavigation(event, "/backlog")}
-                >
-                  Backlog
-                </Link>
-              </nav>
+              <HeaderSummary planner={planner.data} />
+              <h1 className="justify-self-center font-heading text-base font-semibold tracking-tight">Today</h1>
               {windowMode === "popover" ? (
                 <Button
                   aria-label="Open full app"
@@ -167,7 +135,7 @@ function SlateShell() {
                 <span aria-hidden="true" className="justify-self-end" />
               )}
             </div>
-            {pathname === "/today" ? <TodayCapacityProgress planner={planner.data} windowMode={windowMode} /> : null}
+            <TodayCapacityProgress planner={planner.data} windowMode={windowMode} />
           </header>
 
           <div className="slate-workspace relative min-h-0 flex-1">
@@ -177,7 +145,7 @@ function SlateShell() {
           </div>
 
           <TaskComposerFooter
-            scheduledDate={pathname === "/today" ? planner.data?.today ?? null : null}
+            scheduledDate={null}
             windowMode={windowMode}
           />
         </>
@@ -214,60 +182,42 @@ function RouteFade({ children, className, transition }: RouteFadeProps) {
 }
 
 type HeaderSummaryProps = {
-  pathname: string;
   planner: PlannerSnapshot | undefined;
 };
 
-function HeaderSummary({ pathname, planner }: HeaderSummaryProps) {
+function HeaderSummary({ planner }: HeaderSummaryProps) {
   if (!planner) {
     return <span aria-hidden="true" />;
   }
 
-  if (pathname === "/today") {
-    const capacity = getTodayCapacity(planner);
-    const capacityRatio = planner.effectiveCapacityMinutes > 0
-      ? capacity.remainingMinutes / planner.effectiveCapacityMinutes
-      : 0;
-    const tone = capacity.isOverCapacity
-      ? "text-destructive"
-      : capacityRatio <= 0.2
-        ? "text-capacity-caution"
-        : capacityRatio <= 0.5
-          ? "text-foreground"
-          : "text-primary";
-    const label = capacity.isOverCapacity
-      ? `${capacity.overageMinutes} minutes over capacity`
-      : `${capacity.remainingMinutes} minutes remaining`;
+  const capacity = getTodayCapacity(planner);
+  const capacityRatio = planner.effectiveCapacityMinutes > 0
+    ? capacity.remainingMinutes / planner.effectiveCapacityMinutes
+    : 0;
+  const tone = capacity.isOverCapacity
+    ? "text-destructive"
+    : capacityRatio <= 0.2
+      ? "text-capacity-caution"
+      : capacityRatio <= 0.5
+        ? "text-foreground"
+        : "text-primary";
+  const label = capacity.isOverCapacity
+    ? `${capacity.overageMinutes} minutes over capacity`
+    : `${capacity.remainingMinutes} minutes remaining`;
 
-    return (
-      <span
-        aria-label={label}
-        className={`justify-self-start text-menu font-semibold tabular-nums transition-colors duration-200 motion-reduce:transition-none ${tone}`}
-        role="status"
-      >
-        <HeaderNumber
-          prefix={capacity.isOverCapacity ? "+" : undefined}
-          suffix="m"
-          value={capacity.isOverCapacity ? capacity.overageMinutes : capacity.remainingMinutes}
-        />
-      </span>
-    );
-  }
-
-  if (pathname === "/backlog") {
-    const todayScope = `today:${planner.today}`;
-    const taskCount = planner.tasks.filter(
-      (task) => task.completedAt === null && scopeForTask(task, planner.today) !== todayScope,
-    ).length;
-
-    return (
-      <span aria-label={`${taskCount} tasks left`} className="justify-self-start text-menu font-semibold tabular-nums text-foreground" role="status">
-        <HeaderNumber value={taskCount} />
-      </span>
-    );
-  }
-
-  return <span aria-hidden="true" />;
+  return (
+    <span
+      aria-label={label}
+      className={`justify-self-start text-menu font-semibold tabular-nums transition-colors duration-200 motion-reduce:transition-none ${tone}`}
+      role="status"
+    >
+      <HeaderNumber
+        prefix={capacity.isOverCapacity ? "+" : undefined}
+        suffix="m"
+        value={capacity.isOverCapacity ? capacity.overageMinutes : capacity.remainingMinutes}
+      />
+    </span>
+  );
 }
 
 function HeaderNumber({ prefix, suffix, value }: { prefix?: string; suffix?: string; value: number }) {

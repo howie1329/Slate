@@ -15,6 +15,7 @@ type TaskRowProps = {
   isOverflow?: boolean;
   isPending: boolean;
   isSelected: boolean;
+  metadata?: string | null;
   onSelectTask: (taskId: string, transition?: TaskSelectionTransition) => void;
   onMotionComplete: (version: number) => void;
   onToggleTask: (taskId: string, transition?: TaskMotionTransition) => void;
@@ -91,6 +92,7 @@ function TaskRowContent({
   isOverflow = false,
   isPending,
   isSelected,
+  metadata,
   onMotionComplete,
   onSelectTask,
   onToggleTask,
@@ -191,15 +193,18 @@ function TaskRowContent({
             onClick={(event) => onSelectTask(task.id, event.detail > 0 ? "animate" : "instant")}
             type="button"
           >
-            <span
-              className={cn(
-                "min-w-0 flex-1 truncate text-menu font-medium",
-                isCompleted
-                  ? cn("font-normal line-through", isSelected ? "text-foreground/70" : "text-muted-foreground")
-                  : cn("text-foreground", isSelected && "font-semibold"),
-              )}
-            >
-              {task.title}
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5 py-2">
+              <span
+                className={cn(
+                  "truncate text-menu font-medium",
+                  isCompleted
+                    ? cn("font-normal line-through", isSelected ? "text-foreground/70" : "text-muted-foreground")
+                    : cn("text-foreground", isSelected && "font-semibold"),
+                )}
+              >
+                {task.title}
+              </span>
+              {metadata ? <span className="text-xs leading-4 text-muted-foreground">{metadata}</span> : null}
             </span>
             <span
               className={cn(
