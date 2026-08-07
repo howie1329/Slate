@@ -8,7 +8,7 @@ Read and follow the repository guidance in `AGENTS.md`.
 
 ### Issue tracker
 
-Issues and specs live in GitHub Issues; use the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues and specs live as local Markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 
