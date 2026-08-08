@@ -7,10 +7,10 @@ Slate is a local-first macOS planner for deciding what work realistically fits i
 The repository contains a working local planning foundation:
 
 - Tauri 2 macOS host with a menu-bar popover and full application window.
-- `/today`, `/backlog`, and `/settings` routes using the shared workspace shell.
+- A canonical Daily workspace at `/` and a separate `/settings` route using the shared workspace shell.
 - SQLite-backed tasks, task ordering, daily capacity, and non-sensitive preferences.
 - Native task creation, editing, completion, deletion, and date scheduling.
-- Pointer and keyboard task ordering within active Today and Backlog groups.
+- Pointer and keyboard task ordering within the active Today list.
 - Today capacity and over-capacity state.
 - Configurable global quick capture with a dedicated compact capture window and revision-safe Undo.
 - macOS Keychain storage for provider API keys.
@@ -27,9 +27,9 @@ The product direction and staged expansion plan live in [the product brief](docs
 Slate is designed around a compact menu-bar popover that can perform the essential daily work:
 
 - **Today:** committed tasks, remaining capacity, over-capacity state, and completed work.
-- **Backlog:** captured work grouped by estimate and date state.
+- **Backlog:** one flat, collapsible list of captured work with quiet estimate and date-state metadata.
 - **Settings:** daily capacity, AI provider/model configuration, provider-specific Keychain credentials, and planning instruction through one explicit Save action.
-- **Persistent footer:** quick capture, Save, context-sensitive AI Assist or Plan My Day, and Settings access.
+- **Persistent footer:** compact Settings access and, in the popover, Open Full App. Capture and AI actions live in the Daily command row.
 
 The full window provides more room for the same workflow. It is not an unlock gate for essential planning behavior.
 

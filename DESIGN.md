@@ -2,55 +2,77 @@
 name: Slate
 description: A calm, compact macOS planner for deciding what fits today.
 colors:
-  background: "oklch(0.985 0.003 85)"
-  foreground: "oklch(0.28 0.016 68)"
-  card: "oklch(0.998 0.002 85)"
-  card-foreground: "oklch(0.28 0.016 68)"
-  popover: "oklch(0.998 0.002 85)"
-  popover-foreground: "oklch(0.28 0.016 68)"
-  primary: "oklch(0.43 0.09 160)"
-  primary-foreground: "oklch(0.985 0.003 85)"
-  secondary: "oklch(0.94 0.008 85)"
-  secondary-foreground: "oklch(0.28 0.016 68)"
-  muted: "oklch(0.95 0.006 85)"
-  muted-foreground: "oklch(0.55 0.014 68)"
-  accent: "oklch(0.94 0.008 85)"
-  accent-foreground: "oklch(0.28 0.016 68)"
-  destructive: "oklch(0.577 0.245 27.325)"
-  border: "oklch(0.87 0.008 85)"
-  input: "oklch(0.87 0.008 85)"
-  ring: "oklch(0.62 0.12 160)"
-  capacity-caution: "oklch(0.56 0.11 80)"
-  dark-background: "oklch(0.22 0.012 68)"
-  dark-foreground: "oklch(0.96 0.006 85)"
-  dark-card: "oklch(0.27 0.014 68)"
-  dark-primary: "oklch(0.72 0.12 160)"
+  background: "oklch(0.9900 0 0)"
+  foreground: "oklch(0 0 0)"
+  card: "oklch(1 0 0)"
+  card-foreground: "oklch(0 0 0)"
+  popover: "oklch(0.9900 0 0)"
+  popover-foreground: "oklch(0 0 0)"
+  primary: "oklch(0 0 0)"
+  primary-foreground: "oklch(1 0 0)"
+  secondary: "oklch(0.9400 0 0)"
+  secondary-foreground: "oklch(0 0 0)"
+  muted: "oklch(0.9700 0 0)"
+  muted-foreground: "oklch(0.4400 0 0)"
+  accent: "oklch(0.9400 0 0)"
+  accent-foreground: "oklch(0 0 0)"
+  destructive: "oklch(0.6300 0.1900 23.0300)"
+  border: "oklch(0.9200 0 0)"
+  input: "oklch(0.9400 0 0)"
+  ring: "oklch(0 0 0)"
+  chart-1: "oklch(0.8100 0.1700 75.3500)"
+  chart-2: "oklch(0.5500 0.2200 264.5300)"
+  chart-3: "oklch(0.7200 0 0)"
+  chart-4: "oklch(0.9200 0 0)"
+  chart-5: "oklch(0.5600 0 0)"
+  capacity-caution: "color-mix(in oklch, var(--chart-1) 70%, var(--foreground))"
+  dark-background: "oklch(0 0 0)"
+  dark-foreground: "oklch(1 0 0)"
+  dark-card: "oklch(0.1400 0 0)"
+  dark-primary: "oklch(1 0 0)"
 typography:
   title:
-    fontFamily: "Iowan Old Style, Palatino Linotype, Palatino, serif"
+    fontFamily: "Inter, ui-sans-serif, sans-serif, system-ui"
     fontSize: "1.5rem"
     fontWeight: 600
     lineHeight: 1.25
   body:
-    fontFamily: "Avenir Next, Helvetica Neue, sans-serif"
+    fontFamily: "Inter, ui-sans-serif, sans-serif, system-ui"
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.5
   menu:
-    fontFamily: "Avenir Next, Helvetica Neue, sans-serif"
-    fontSize: "0.8125rem"
+    fontFamily: "Inter, ui-sans-serif, sans-serif, system-ui"
+    fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.125rem
+  composer:
+    fontFamily: "Inter, ui-sans-serif, sans-serif, system-ui"
+    fontSize: "0.8125rem"
+    fontWeight: 400
+    lineHeight: 1rem
   label:
-    fontFamily: "Avenir Next, Helvetica Neue, sans-serif"
+    fontFamily: "Inter, ui-sans-serif, sans-serif, system-ui"
     fontSize: "0.6875rem"
     fontWeight: 600
     lineHeight: 0.875rem
+  supporting:
+    fontFamily: "Inter, ui-sans-serif, sans-serif, system-ui"
+    fontSize: "0.75rem"
+    fontWeight: 400
+    lineHeight: 1rem
+  metadata:
+    fontFamily: "Inter, ui-sans-serif, sans-serif, system-ui"
+    fontSize: "0.625rem"
+    fontWeight: 400
+    lineHeight: 0.75rem
+  mono:
+    fontFamily: "Intel One Mono, ui-monospace, monospace"
 rounded:
   checkbox: "4px"
-  control: "8px"
-  field: "10px"
-  panel: "14px"
+  control: "6px"
+  field: "8px"
+  panel: "12px"
   shell: "18px"
   pill: "999px"
 spacing:
@@ -102,15 +124,16 @@ components:
 
 Slate is a calm, compact planning surface for one decision: what fits today. The interface uses familiar product-UI vocabulary—short labels, clear hierarchy, standard controls, and quiet boundaries—so the planning workflow stays more visible than the interface itself.
 
-The visual system is restrained rather than decorative. Near-neutral surfaces establish a soft desktop canvas, a single muted teal accent marks commitment and state, and serif type creates a brief reflective pause only where the product asks the user to orient. The system explicitly rejects project-management density, calendar/time-blocking metaphors, and AI surfaces that imply control without confirmation.
+The visual system is restrained rather than decorative. Near-neutral surfaces establish a clean desktop canvas, black-and-white contrast marks commitment and state, and a single Inter family keeps orientation, controls, and task data cohesive. The system explicitly rejects project-management density, calendar/time-blocking metaphors, and AI surfaces that imply control without confirmation.
 
 **Key Characteristics:**
 
 - Compact-first geometry that remains usable in the 360 × 520 minimum window.
 - Tonal surfaces and hairline boundaries instead of decorative card shadows.
 - Serif type for orientation and reflection; sans-serif type for every active workflow.
-- One restrained accent used for commitment, selection, focus, and meaningful status.
+- One restrained contrast signal used for commitment, selection, focus, and meaningful status.
 - State changes communicated through text, shape, and hierarchy as well as color.
+- A slim top command row, dense task rows, and a thin Settings utility strip keep the daily loop visible in the popover.
 
 ## Native identity
 
@@ -123,51 +146,56 @@ Slate’s application mark is a rounded warm-ivory tile over a charcoal underlay
 
 ## Colors
 
-The palette is a warm-neutral desktop canvas with a muted teal commitment signal and a red destructive state. The same semantic roles drive light and dark themes; components should use CSS variables rather than literal values.
+The palette is a neutral monochrome desktop canvas with black-and-white primary contrast and a red destructive state. The same semantic roles drive light and dark themes; components should use CSS variables rather than literal values.
 
 ### Primary
 
-- **Muted teal commitment signal** (`oklch(0.43 0.09 160)`): Use for committed capacity progress, selected or checked state, confirmed configuration, and the primary in-flow action. Keep it scarce so it retains meaning.
-- **Teal focus ring** (`oklch(0.62 0.12 160)`): Use for keyboard focus and active control emphasis. It must remain distinct from the primary fill.
+- **Primary contrast** (`oklch(0 0 0)` in light mode, `oklch(1 0 0)` in dark mode): Use for committed capacity progress, selected or checked state, confirmed configuration, and the primary in-flow action.
+- **Primary focus ring** (`oklch(0 0 0)` in light mode, `oklch(0.7200 0 0)` in dark mode): Use for keyboard focus and active control emphasis.
 
 ### Neutral
 
-- **Canvas** (`oklch(0.985 0.003 85)`): The main light-theme background.
-- **Surface** (`oklch(0.998 0.002 85)`): Cards, popovers, and contained summaries.
-- **Ink** (`oklch(0.28 0.016 68)`): Primary readable text and active navigation.
-- **Muted surface** (`oklch(0.95 0.006 85)`): Navigation tray, hover state, capacity rail, and secondary regions.
-- **Muted text** (`oklch(0.55 0.014 68)`): Supporting labels and metadata. It remains body-text contrast, not decoration.
-- **Boundary** (`oklch(0.87 0.008 85)`): Hairline structure between tasks, fields, and sections.
-- **Destructive red** (`oklch(0.577 0.245 27.325)`): Invalid, delete, and over-capacity states only.
-- **Capacity caution** (`oklch(0.56 0.11 80)`): Use for the remaining-capacity value as the day approaches its limit. It is distinct from the destructive over-capacity state.
-- **Dark canvas** (`oklch(0.22 0.012 68)`): The dark-theme background.
-- **Dark surface** (`oklch(0.27 0.014 68)`): Dark cards and popovers.
+- **Canvas** (`oklch(0.9900 0 0)`): The main light-theme background.
+- **Surface** (`oklch(1 0 0)`): Cards and contained summaries.
+- **Ink** (`oklch(0 0 0)`): Primary readable text and active navigation.
+- **Muted surface** (`oklch(0.9700 0 0)`): Navigation tray, hover state, capacity rail, and secondary regions.
+- **Muted text** (`oklch(0.4400 0 0)`): Supporting labels and metadata. It remains body-text contrast, not decoration.
+- **Boundary** (`oklch(0.9200 0 0)`): Hairline structure between tasks, fields, and sections.
+- **Destructive red** (`oklch(0.6300 0.1900 23.0300)`): Invalid, delete, and over-capacity states only.
+- **Capacity caution** (a readable blend of `chart-1` and the foreground): Use for the remaining-capacity value as the day approaches its limit and for recoverable warnings.
+- **Dark canvas** (`oklch(0 0 0)`): The dark-theme background.
+- **Dark surface** (`oklch(0.1400 0 0)`): Dark cards; popovers use `oklch(0.1800 0 0)`.
 
 ### Named Rules
 
-**The One Signal Rule.** Use the primary teal only when it communicates action, progress, selection, focus, or meaningful state. Do not use it as page decoration.
+**The One Contrast Rule.** Use the primary black/white contrast only when it communicates action, progress, selection, focus, or meaningful state. Do not use it as page decoration.
 
 **The Token Rule.** Use the semantic CSS variables from `src/styles.css`. Do not introduce near-matching neutral or accent values in component classes.
 
 ## Typography
 
-**Display / Orientation Font:** Iowan Old Style with Palatino Linotype, Palatino fallbacks.
+**Display / Orientation Font:** Inter with the system sans-serif fallback.
 
-**Body / UI Font:** Avenir Next with Helvetica Neue fallbacks.
+**Body / UI Font:** Inter with the system sans-serif fallback.
 
-**Character:** The serif face creates a measured pause around orientation and the daily decision. The sans-serif face carries labels, controls, task data, and settings so active work stays familiar and compact.
+**Monospace Font:** Intel One Mono with the system monospace fallback.
+
+**Character:** The Inter family keeps orientation, labels, controls, task data, and settings familiar and compact. Intel One Mono is reserved for shortcuts and other technical values that benefit from aligned characters.
 
 ### Hierarchy
 
 - **Title** (600, `1.5rem`, `1.25`): Concise page or recovery headings where the user needs orientation.
 - **Body** (400, `1rem`, `1.5`): Explanatory copy and comfortable supporting text.
-- **Menu** (400–600, `0.8125rem`, `1.125rem`): Task titles, controls, navigation, and compact data.
+- **Menu** (400–600, `0.875rem`, `1.125rem`): Task titles, controls, navigation, and compact data.
+- **Composer** (400, `0.8125rem`, `1rem`): The compact search and capture field in the Daily workspace.
 - **Label** (600, `0.6875rem`, `0.875rem`): Section labels, capacity metadata, and small status text. Use uppercase only when it improves recognition, never as repeated scaffolding.
+- **Supporting** (400, `0.75rem`, `1rem`): Secondary descriptions and recoverable messages.
+- **Metadata** (400, `0.625rem`, `0.75rem`): Compact task state, counts, and utility labels that support scanning without competing with the task title.
 - **Numeric data** (tabular numerals): Durations, capacity, overages, and counts should align clearly.
 
 ### Named Rules
 
-**The Reflection Rule.** Serif type belongs to high-level orientation and a short reflective moment. Controls, task metadata, and operational labels stay in the sans-serif family.
+**The Cohesive Type Rule.** Inter carries high-level orientation, controls, task metadata, and operational labels. Intel One Mono is reserved for technical values and keyboard shortcuts.
 
 ## Elevation
 
@@ -177,7 +205,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 
 - **Transient menu layer** (`shadow-md` plus a subtle foreground ring): Select and popover content that must separate from the workspace.
 - **Dialog layer** (foreground ring with a restrained backdrop): Modal confirmation or calendar interaction when an inline treatment cannot contain the task.
-- **Static content** (none): Today rows, Backlog groups, settings groups, and capacity summaries remain flat.
+- **Static content** (none): Today rows, the flat Backlog list, settings groups, and capacity summaries remain flat.
 
 ### Named Rules
 
@@ -198,7 +226,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 
 ### Cards / Containers
 
-- **Corner Style:** `10px` for ordinary groups and controls; `14px` for transient panels; `18px` for the popover shell.
+- **Corner Style:** `8px` for ordinary groups and controls; `12px` for transient panels; `18px` for the popover shell.
 - **Background:** Use `card` against `background` for contained summaries; use `muted` for navigation and secondary regions.
 - **Border:** One quiet `border` establishes structure. Do not add decorative shadows to static panels.
 - **Internal Padding:** Use `8px` compact spacing, `10px` control spacing, and `20px` panel spacing.
@@ -207,39 +235,41 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 
 ### Inputs / Fields
 
-- **Style:** Transparent fields with `input` border, `10px` radius, `10px` horizontal padding, and `32px` height for compact controls.
+- **Style:** Transparent fields with `input` border, `8px` radius, `10px` horizontal padding, and `32px` height for ordinary compact controls. The Daily command row uses a slimmer `28px` treatment.
 - **Focus:** Shift the border to `ring` and add the standard visible focus ring.
 - **Error:** Use `destructive` border and ring treatment; keep the message adjacent and actionable.
 - **Disabled:** Reduce opacity and interaction without making the field appear like a separate inactive product state.
 
-### Navigation
+### Daily Workspace
 
-- **Style:** The top-level Today/Backlog switcher is a compact `pill` container with `muted` fill and `4px` internal padding.
-- **Default:** Sans-serif menu text in `muted-foreground`.
-- **Active:** `foreground` fill with `background` text and semibold weight, making the current planning context immediately legible.
-- **Density:** Keep navigation short. New categories belong in the task workflow only when they make the daily decision easier.
+- **Command row:** A slim search-and-capture entry sits above the scrollable task surface. It is the primary way to add work and the visual entry point for search and reviewable AI actions.
+- **Today:** The dominant section shows the remaining-minute value, a thin progress rail, active tasks, and completed Today tasks at the bottom.
+- **Backlog:** A single flat list appears beneath Today by default. Needs estimate, Overdue, Upcoming, and Unscheduled remain row metadata rather than category headings. The section can collapse locally when the user wants to protect the Today view.
+- **Settings:** A thin, subdued utility strip remains at the bottom of the workspace; it does not compete with capture or task content.
+- **Density:** Preserve the normal daily loop at `360 × 520`. Prefer compact hierarchy and metadata over extra panels or route-level navigation.
 
 ### Task Rows
 
-- **Structure:** A quiet divided list with a circular completion affordance, a flexible truncated title, and tabular duration metadata.
-- **State:** Selected rows use `muted`; completed rows use `muted-foreground` and a line-through; over-capacity rows use a restrained `destructive` boundary.
+- **Structure:** A quiet divided list with a circular completion affordance, a flexible task title, a smaller muted metadata line beneath it when needed, and tabular duration aligned to the right.
+- **Density:** Active rows target roughly `34–36px` of vertical height. Metadata is smaller and lighter than the title so it supports scanning without competing with the work.
+- **State:** Selected rows use `muted`; completed rows remain at the bottom of their owning list with `muted-foreground` and a line-through; over-capacity rows use a restrained `destructive` boundary.
 - **Interaction:** The entire row remains keyboard-operable with a visible focus ring. Completion and edit affordances must not rely on color alone.
 
 ### Capacity Summary
 
-- **Structure:** The persistent header shows the Today remaining-minute value and thin `4px` progress rail, or the Backlog active-task count. The rail stays with the capacity value while task content scrolls.
+- **Structure:** The Today header shows the remaining-minute value and thin `4px` progress rail. The rail stays with the capacity value while task content scrolls.
 - **Progress:** `primary` represents committed minutes; `destructive` represents over-capacity. The remaining-minute text shifts from `primary`, to `foreground`, to `capacity-caution` as capacity is used, then to `destructive` when over capacity.
 - **Behavior:** The rail is a signal, not a chart or performance score.
 
-### Persistent Composer
+### Daily Command Row and Utility Strip
 
-- **Structure:** A quiet, bounded footer holds the capture field, manual save, unavailable AI placeholder, and settings utility without adding a floating card treatment.
-- **Hierarchy:** Manual save becomes `primary` only when the capture has a valid title; utilities stay `outline`, and unavailable controls use the standard disabled treatment.
-- **Behavior:** The footer remains available as task content scrolls and connects directly to the task-detail panel when one is open.
+- **Structure:** A slim top command row holds the search-and-capture field and reviewable AI action. Enter submits a captured title; there is no separate save button. The row remains visible while the task list scrolls.
+- **Hierarchy:** The command row is visually quiet; the task list and Today capacity carry the main emphasis. Enter-to-save stays implicit and keyboard-first.
+- **Utility strip:** A thin bottom strip exposes Settings and, in the popover, Open full app with small muted controls. It stays available without consuming a large footer band.
 
 ### Task Detail Panel
 
-- **Placement:** A footer-adjacent transient panel using `14px` top corners and a bounded compact height.
+- **Placement:** A utility-strip-adjacent transient panel using `12px` top corners and a bounded compact height.
 - **Surface:** A tinted task-detail surface with quiet boundary and no decorative shadow.
 - **Interaction:** Editing stays close to the task list, dismisses with Escape or outside click, and respects reduced motion.
 
@@ -248,7 +278,10 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 ### Do:
 
 - **Do** use `background`, `foreground`, `card`, `border`, `muted`, `primary`, and `ring` as semantic roles from `src/styles.css`.
-- **Do** reserve the teal accent for an explicit task decision, progress, selection, focus, or meaningful state.
+- **Do** keep the top command row compact and the Settings utility strip subordinate to the task surface.
+- **Do** keep Backlog flat and communicate task state through row metadata rather than category subsections.
+- **Do** keep completed Today tasks at the bottom of Today without creating a separate Done section.
+- **Do** reserve the primary black/white contrast for an explicit task decision, progress, selection, focus, or meaningful state.
 - **Do** keep the core workflow understandable at 360 × 520 before optimizing the full window.
 - **Do** use standard keyboard-operable controls with visible focus and 150–250ms state transitions.
 - **Do** provide empty, completed, over-capacity, persistence-error, loading, and disabled states with concise explanatory copy.

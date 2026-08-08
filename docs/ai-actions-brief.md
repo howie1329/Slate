@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Slate has one AI action button in the persistent footer. The button changes behavior based on whether the task composer contains text:
+Slate has one AI action button in the Daily command row. The button changes behavior based on whether the command input contains text:
 
 - With non-empty input: **AI Assist**.
 - With empty or whitespace-only input: **Plan My Day**.
@@ -13,16 +13,16 @@ AI Assist and Plan My Day ship in Slate 1.0.0. Both use the native Keychain-back
 
 The implementation details and acceptance checklist are in [Plan My Day sidecar vertical slice](plans/012-plan-my-day-sidecar-vertical-slice.md).
 
-The regular Save button remains available for manual task capture. AI is an optional acceleration layer; manual capture and task management must continue to work without a configured key or network access.
+Manual capture is submitted with Enter from the command row. AI is an optional acceleration layer; manual capture and task management must continue to work without a configured key or network access.
 
-## Shared footer behavior
+## Shared command-row behavior
 
-The footer contains:
+The Daily workspace contains:
 
-- A task input.
-- A regular Save button for immediate manual capture.
+- A search-and-capture input; Enter creates an unestimated, unscheduled Backlog task.
 - One AI button whose action is selected from the input state.
-- Settings access.
+
+The compact footer contains Settings and Open full app access. The AI review tray and task detail panel appear above that utility strip.
 
 The AI button should treat whitespace-only input as empty. Its label, tooltip, and accessible name should reflect the active action:
 
@@ -31,7 +31,7 @@ The AI button should treat whitespace-only input as empty. Its label, tooltip, a
 
 Planner snapshots determine whether each provider has a saved key through a non-interactive, metadata-only Keychain lookup. Startup, focus, task changes, and other ordinary planner refreshes never retrieve API-key data or request Keychain authentication. `configured` means the provider's Keychain item exists; the native layer reads the selected provider's key once, just in time, only after the user invokes an AI action.
 
-When the active provider has no saved key, the AI button is disabled and its tooltip directs the user to Settings. A Keychain metadata failure remains a separate unavailable state with retry guidance. If a just-in-time read is locked or denied, the AI action returns `credentials-unavailable`; if the item was removed after the last snapshot, it returns `unavailable-key`. Neither state prevents regular Save from working.
+When the active provider has no saved key, activating the AI button directs the user to Settings. A Keychain metadata failure remains a separate unavailable state with retry guidance. If a just-in-time read is locked or denied, the AI action returns `credentials-unavailable`; if the item was removed after the last snapshot, it returns `unavailable-key`. Neither state prevents Enter-based capture from working.
 
 Settings uses one footer Save action for provider, global model, planning preferences, and the selected provider's Keychain credential. A saved credential appears only as a fixed non-secret mask. OpenRouter and AI Gateway keys are stored independently; secrets never enter planner snapshots, SQLite, query-cache data, logs, or change events.
 
@@ -61,11 +61,11 @@ AI may suggest:
 - An estimated duration in whole positive minutes.
 - An optional scheduled date.
 
-The AI must not overwrite an explicit date. When capture begins from Today, the task already has Today’s date, so AI Assist focuses on title cleanup and duration estimation. When capture begins from Log/backlog without a date, AI may infer a date from the capture only when it is clearly justified; otherwise it should leave the task unscheduled.
+The AI must not overwrite an explicit date. When capture begins with Today’s date already set, AI Assist focuses on title cleanup and duration estimation. When capture begins from the Daily workspace without a date, AI may infer a date from the capture only when it is clearly justified; otherwise it should leave the task unscheduled.
 
 ### Interaction
 
-1. The user enters text into the footer.
+1. The user enters text into the command row.
 2. The user presses the AI button.
 3. The composer text is cleared from the visible input.
 4. A review panel opens above the footer using the same interaction pattern as the existing task detail panel.
@@ -133,7 +133,7 @@ If there are no eligible tasks or no remaining capacity, the review panel should
 
 ## Shared review tray
 
-The review tray is the shared transient surface above the persistent footer for both AI actions. It follows the existing task detail panel’s positioning, focus, dismissal, and compact-window behavior.
+The review tray is the shared transient surface above the compact utility strip for both AI actions. It follows the existing task detail panel’s positioning, focus, dismissal, and compact-window behavior.
 
 ### AI Assist variant
 

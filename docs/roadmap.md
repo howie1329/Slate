@@ -62,13 +62,13 @@ The version labels are directional rather than promises of release dates. Calibr
 Slate 1.0.0 is the shipped baseline for the first usable daily planning loop:
 
 - Tauri macOS host with a compact menu-bar popover and full application window.
-- Today, Backlog, and Settings routes using the same workspace shell.
+- A unified Daily workspace and a separate Settings route using the same workspace shell.
 - Local SQLite persistence for tasks, ordering, and non-sensitive preferences.
-- Native task creation, editing, completion, deletion, scheduling, and persisted pointer/keyboard reordering.
+- Native task creation, editing, completion, deletion, scheduling, and persisted pointer/keyboard reordering within the active Today list.
 - Daily capacity state with visible remaining and over-capacity behavior.
 - macOS Keychain storage for provider API keys.
 - Renderer caching and cross-window invalidation through TanStack Query and native change events.
-- Compact task-detail interaction above the persistent footer.
+- Compact task-detail interaction above the Settings utility strip.
 - Light and dark themes with a restrained visual system.
 - Pointer-only Motion transitions for task presence/layout, task-detail entry and exit, route changes, empty states, and pending-save feedback.
 - Reviewable AI Assist and atomic Plan My Day flows through the Keychain-backed packaged Node sidecar.
@@ -90,7 +90,7 @@ Make the capture-to-commit-to-completion loop reliable and demonstrable without 
 
 - Finish task editing, scheduling, deletion, and capacity behavior.
 - Make Today and Backlog understandable when empty, active, completed, overdue, and over capacity.
-- Keep unsized tasks out of Today and AI-generated plans while allowing them to remain in Backlog.
+- Keep unsized tasks out of AI-generated plans by default while allowing an explicit manual unsized commitment in Today with a visible Needs estimate state and no guessed minute cost.
 - Preserve explicit Today commitments when planning again.
 - Treat existing Today commitments as fixed planning context; only accepted eligible Backlog tasks receive today’s date and enter Today.
 - Make Plan My Day additive and capacity-aware; it may fill available capacity but never removes or reorders existing commitments.

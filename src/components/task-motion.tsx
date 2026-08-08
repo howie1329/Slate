@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 
 export type TaskMotionTransition = "animate" | "instant";
-export type TaskMutationKind = "complete" | "create" | "delete" | "move" | "restore";
+export type TaskMotionKind = "complete" | "create" | "delete" | "move" | "restore" | "update";
 
 export type TaskMutationMotion = {
-  kind: TaskMutationKind;
+  kind: TaskMotionKind;
   taskId?: string;
   transition: TaskMotionTransition;
   version: number;
@@ -12,7 +12,7 @@ export type TaskMutationMotion = {
 
 type TaskMotionContextValue = {
   clearTaskMutation: (version: number) => void;
-  recordTaskMutation: (mutation: Omit<TaskMutationMotion, "version">) => void;
+  recordTaskMutation: (mutation: Omit<TaskMutationMotion, "version">) => number;
   taskMutation: TaskMutationMotion | null;
 };
 
@@ -26,7 +26,9 @@ export function TaskMotionProvider({ children }: { children: ReactNode }) {
   }, []);
   const recordTaskMutation = useCallback((mutation: Omit<TaskMutationMotion, "version">) => {
     motionVersionRef.current += 1;
-    setTaskMutation({ ...mutation, version: motionVersionRef.current });
+    const version = motionVersionRef.current;
+    setTaskMutation({ ...mutation, version });
+    return version;
   }, []);
   const value = useMemo(
     () => ({ clearTaskMutation, recordTaskMutation, taskMutation }),

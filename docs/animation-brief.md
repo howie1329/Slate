@@ -1,6 +1,6 @@
 # Slate animation brief
 
-> **Status:** Core task-list, task-detail, navigation, empty-state, and pending-save motion is shipped on `codex/animations`. The AI review-tray motion remains planned work.
+> **Status:** Core task-list, task-detail, navigation, empty-state, pending-save, and AI review-tray motion is shipped.
 
 ## Purpose
 
@@ -41,16 +41,16 @@ Use a single calm ease-out curve. Make exits faster through duration rather than
 
 ### Task lists
 
-Today and Backlog are the highest-value use of Motion.
+Today and the flat Backlog list are the highest-value use of Motion.
 
 - Render task rows as `motion.li` with `layout="position"` so neighbouring rows settle into place after a pointer-initiated change.
 - Wrap each list in `AnimatePresence` to animate a newly created task in and a deleted task out when that action came from a pointer. Keyboard-initiated mutations remain immediate.
-- A pointer-initiated completion change moves the task between active and Completed groups. Animate the item and the resulting layout, including capacity changes, rather than animating the checkbox in isolation.
+- A pointer-initiated completion change moves the task between active rows and the completed-at-bottom portion of its owning list. Animate the item and the resulting layout, including capacity changes, rather than animating the checkbox in isolation.
 - When a task changes sections, place it at the start of the destination section. Do not make the user track a moved task to the section tail; restored tasks and newly completed Today tasks likewise return at the start of their destination.
 - Record pointer intent before a local mutation so the renderer can prepare the transition, but animate the changed list only after the mutation succeeds and the planner snapshot updates. Failed writes do not produce a list transition. SQLite remains the source of truth.
 - Empty states may fade in after a mutation leaves a list empty; they should not animate on initial page render.
 
-This applies to `src/routes/today.tsx` and `src/routes/backlog.tsx`. A later drag-and-drop implementation should reuse the same layout animation and add keyboard-operable reorder controls; drag motion must not be the only way to reorder.
+This applies to `src/components/daily-workspace.tsx`, `src/components/task-group.tsx`, and `src/components/task-row.tsx`. A later flat-Backlog drag-and-drop implementation should reuse the same layout animation and add keyboard-operable reorder controls; drag motion must not be the only way to reorder.
 
 ### Capacity summary
 
@@ -60,17 +60,17 @@ When a completed or scheduled task changes the total, let the rail transition on
 
 ### Task detail panel
 
-The task detail panel above the persistent footer uses a paired Motion enter/exit transition for pointer-initiated opening and dismissal; keyboard interactions remain immediate.
+The task detail panel above the compact utility strip uses a paired Motion enter/exit transition for pointer-initiated opening and dismissal; keyboard interactions remain immediate.
 
 The panel should be the only elevated task-editing surface. Pointer-initiated opening and dismissal use the paired transition; keyboard opening and dismissal, including Escape, are immediate. Field edits, title toggles, date selection, and focus changes remain immediate; do not animate form controls while someone is typing.
 
 ### Manual task capture
 
-After a successful Save from the persistent footer, clear the composer immediately and let the destination task row enter from its list. The Save icon shows a pending spinner while the mutation is in flight, but does not show a celebratory animation. Task-detail, Settings, and API-key saves use the same pending-feedback pattern.
+After a successful Enter submission from the Daily command row, clear the input immediately and let the destination Backlog row enter from its list. The input is disabled while the mutation is in flight; there is no separate Save icon or celebratory animation. Task-detail, Settings, and API-key saves use the same pending-feedback pattern.
 
 ### AI Assist and Plan My Day
 
-The AI review tray is the second major Motion surface. It appears directly above the persistent footer and has these transitions:
+The AI review tray is the second major Motion surface. It appears directly above the compact utility strip and has these transitions:
 
 1. The user triggers AI Assist or Plan My Day.
 2. A compact loading tray enters above the footer; manual Save remains usable.
@@ -82,7 +82,7 @@ Do not use character-by-character AI typing. The current AI scope is non-streami
 
 ### Navigation and settings
 
-Pointer navigation between Today, Backlog, and Settings uses a 180-200ms opacity fade with no more than 4px of vertical movement. Today and Backlog retain the persistent shell while only workspace content transitions; Settings transitions as its own surface. Keyboard navigation remains immediate. Do not slide full pages horizontally: that makes the compact macOS popover feel like a mobile application.
+Navigation from the Daily workspace to Settings uses a 180-200ms opacity fade with no more than 4px of vertical movement. The Daily workspace retains the persistent shell while only workspace content transitions; Settings transitions as its own surface. Keyboard navigation remains immediate. Do not slide full pages horizontally: that makes the compact macOS popover feel like a mobile application.
 
 Settings save and API-key save use the existing toast for durable confirmation. During a pending save, the action icon swaps for a small spinner; on completion, it restores. The AI-status dot may transition color/opacity when configuration changes, but should not pulse continuously.
 
