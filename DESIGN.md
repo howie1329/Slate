@@ -32,25 +32,37 @@ colors:
   dark-primary: "oklch(1 0 0)"
 typography:
   title:
-    fontFamily: "Georgia, serif"
+    fontFamily: "Inter, ui-sans-serif, sans-serif, system-ui"
     fontSize: "1.5rem"
     fontWeight: 600
     lineHeight: 1.25
   body:
-    fontFamily: "Geist, sans-serif"
+    fontFamily: "Inter, ui-sans-serif, sans-serif, system-ui"
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.5
   menu:
-    fontFamily: "Geist, sans-serif"
+    fontFamily: "Inter, ui-sans-serif, sans-serif, system-ui"
     fontSize: "0.8125rem"
     fontWeight: 400
     lineHeight: 1.125rem
   label:
-    fontFamily: "Geist, sans-serif"
+    fontFamily: "Inter, ui-sans-serif, sans-serif, system-ui"
     fontSize: "0.6875rem"
     fontWeight: 600
     lineHeight: 0.875rem
+  supporting:
+    fontFamily: "Inter, ui-sans-serif, sans-serif, system-ui"
+    fontSize: "0.75rem"
+    fontWeight: 400
+    lineHeight: 1rem
+  metadata:
+    fontFamily: "Inter, ui-sans-serif, sans-serif, system-ui"
+    fontSize: "0.625rem"
+    fontWeight: 400
+    lineHeight: 0.75rem
+  mono:
+    fontFamily: "Intel One Mono, ui-monospace, monospace"
 rounded:
   checkbox: "4px"
   control: "6px"
@@ -107,7 +119,7 @@ components:
 
 Slate is a calm, compact planning surface for one decision: what fits today. The interface uses familiar product-UI vocabulary—short labels, clear hierarchy, standard controls, and quiet boundaries—so the planning workflow stays more visible than the interface itself.
 
-The visual system is restrained rather than decorative. Near-neutral surfaces establish a clean desktop canvas, black-and-white contrast marks commitment and state, and Georgia type creates a brief reflective pause only where the product asks the user to orient. The system explicitly rejects project-management density, calendar/time-blocking metaphors, and AI surfaces that imply control without confirmation.
+The visual system is restrained rather than decorative. Near-neutral surfaces establish a clean desktop canvas, black-and-white contrast marks commitment and state, and a single Inter family keeps orientation, controls, and task data cohesive. The system explicitly rejects project-management density, calendar/time-blocking metaphors, and AI surfaces that imply control without confirmation.
 
 **Key Characteristics:**
 
@@ -157,11 +169,13 @@ The palette is a neutral monochrome desktop canvas with black-and-white primary 
 
 ## Typography
 
-**Display / Orientation Font:** Georgia with the system serif fallback.
+**Display / Orientation Font:** Inter with the system sans-serif fallback.
 
-**Body / UI Font:** Geist with the system sans-serif fallback.
+**Body / UI Font:** Inter with the system sans-serif fallback.
 
-**Character:** The serif face creates a measured pause around orientation and the daily decision. The sans-serif face carries labels, controls, task data, and settings so active work stays familiar and compact.
+**Monospace Font:** Intel One Mono with the system monospace fallback.
+
+**Character:** The Inter family keeps orientation, labels, controls, task data, and settings familiar and compact. Intel One Mono is reserved for shortcuts and other technical values that benefit from aligned characters.
 
 ### Hierarchy
 
@@ -169,11 +183,13 @@ The palette is a neutral monochrome desktop canvas with black-and-white primary 
 - **Body** (400, `1rem`, `1.5`): Explanatory copy and comfortable supporting text.
 - **Menu** (400–600, `0.8125rem`, `1.125rem`): Task titles, controls, navigation, and compact data.
 - **Label** (600, `0.6875rem`, `0.875rem`): Section labels, capacity metadata, and small status text. Use uppercase only when it improves recognition, never as repeated scaffolding.
+- **Supporting** (400, `0.75rem`, `1rem`): Secondary descriptions and recoverable messages.
+- **Metadata** (400, `0.625rem`, `0.75rem`): Compact task state, counts, and utility labels that support scanning without competing with the task title.
 - **Numeric data** (tabular numerals): Durations, capacity, overages, and counts should align clearly.
 
 ### Named Rules
 
-**The Reflection Rule.** Serif type belongs to high-level orientation and a short reflective moment. Controls, task metadata, and operational labels stay in the sans-serif family.
+**The Cohesive Type Rule.** Inter carries high-level orientation, controls, task metadata, and operational labels. Intel One Mono is reserved for technical values and keyboard shortcuts.
 
 ## Elevation
 

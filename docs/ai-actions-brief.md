@@ -61,7 +61,7 @@ AI may suggest:
 - An estimated duration in whole positive minutes.
 - An optional scheduled date.
 
-The AI must not overwrite an explicit date. When capture begins from Today, the task already has Today’s date, so AI Assist focuses on title cleanup and duration estimation. When capture begins from Log/backlog without a date, AI may infer a date from the capture only when it is clearly justified; otherwise it should leave the task unscheduled.
+The AI must not overwrite an explicit date. When capture begins with Today’s date already set, AI Assist focuses on title cleanup and duration estimation. When capture begins from the Daily workspace without a date, AI may infer a date from the capture only when it is clearly justified; otherwise it should leave the task unscheduled.
 
 ### Interaction
 

@@ -1,6 +1,6 @@
 # Slate animation brief
 
-> **Status:** Core task-list, task-detail, navigation, empty-state, and pending-save motion is shipped on `codex/animations`. The AI review-tray motion remains planned work.
+> **Status:** Core task-list, task-detail, navigation, empty-state, pending-save, and AI review-tray motion is shipped.
 
 ## Purpose
 

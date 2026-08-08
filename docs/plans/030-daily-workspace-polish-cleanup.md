@@ -6,15 +6,15 @@
 
 **Blocked by:** 029 — Add explicit Daily workspace movement actions
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] Task creation, movement, completion, and section changes provide local feedback without unrelated global toast choreography.
-- [ ] Today remains understandable and dominant when Backlog is large or expanded.
-- [ ] Backlog and Done collapse behavior, empty states, completed history, over-capacity state, and unsized-commitment messaging are clear.
-- [ ] Keyboard focus, screen-reader labels, reduced-motion behavior, light theme, dark theme, and minimum popover geometry are verified.
-- [ ] Persistence failure and stale-state recovery remain understandable and recoverable.
-- [ ] The full application window shares the same Daily workspace behavior without becoming a separate board or status system.
-- [ ] Obsolete route logic, unused imports, dead feature helpers, obsolete tests, and contradicted documentation are removed.
-- [ ] Shared Shadescene components remain available and dependency versions are unchanged.
-- [ ] Product, roadmap, domain, ADR, and plan documentation agree with the shipped behavior.
-- [ ] Native tests, renderer build, manual compact-popover verification, and diff hygiene checks pass.
+- [x] Task creation, movement, completion, and section changes provide local feedback without unrelated global toast choreography.
+- [x] Today remains understandable and dominant when Backlog is large or expanded.
+- [x] Backlog collapse behavior, inline completed history, empty states, over-capacity state, and unsized-commitment messaging are clear; there is no separate Done section.
+- [x] Keyboard focus, screen-reader labels, reduced-motion behavior, light theme, dark theme, and minimum popover geometry are verified.
+- [x] Persistence failure and stale-state recovery remain understandable and recoverable.
+- [x] The full application window shares the same Daily workspace behavior without becoming a separate board or status system.
+- [x] Obsolete route logic, unused imports, dead feature helpers, obsolete tests, and contradicted documentation are removed.
+- [x] Shared Shadescene components remain available and dependency versions are unchanged.
+- [x] Product, roadmap, domain, ADR, and plan documentation agree with the shipped behavior.
+- [x] Native tests, renderer build, compact-popover geometry checks, and diff hygiene checks pass.

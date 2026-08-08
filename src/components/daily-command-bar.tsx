@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { taskComposerInputId } from "@/lib/task-composer";
 import type { WindowMode } from "@/lib/window-mode";
 import { useCreateTask, usePlannerState } from "@/lib/planner-query";
+import { plannerMutationErrorMessage } from "@/lib/planner-errors";
 
 type DailyCommandBarProps = {
   onValueChange: (value: string) => void;
@@ -26,7 +27,7 @@ export function DailyCommandBar({ onValueChange, value, windowMode }: DailyComma
   const aiReview = useAiReview();
   const { setRouteTransition } = useRouteMotion();
   const { clearSelection } = useTaskSelection();
-  const { recordTaskMutation } = useTaskMotion();
+  const { clearTaskMutation, recordTaskMutation } = useTaskMotion();
   const createTransitionRef = useRef<TaskMotionTransition>("instant");
   const hasValue = value.trim().length > 0;
   const aiUnavailable = planner.data?.aiAvailability !== "configured";
@@ -43,7 +44,7 @@ export function DailyCommandBar({ onValueChange, value, windowMode }: DailyComma
       return;
     }
 
-    recordTaskMutation({ kind: "create", transition: createTransitionRef.current });
+    const mutationVersion = recordTaskMutation({ kind: "create", transition: createTransitionRef.current });
     createTask.mutate(
       {
         title,
@@ -53,7 +54,10 @@ export function DailyCommandBar({ onValueChange, value, windowMode }: DailyComma
       },
       {
         onSuccess: () => onValueChange(""),
-        onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save task."),
+        onError: (error) => {
+          clearTaskMutation(mutationVersion);
+          toast.error(plannerMutationErrorMessage(error, "Could not save task."));
+        },
       },
     );
   }

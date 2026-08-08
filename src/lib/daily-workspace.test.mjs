@@ -94,4 +94,52 @@ describe("Daily workspace selector", () => {
     assert.equal(noMatch.hasMatches, false);
     assert.equal(noMatch.today.capacity.committedMinutes, 30);
   });
+
+  it("reflects commit and return movement after the refreshed snapshot", () => {
+    const captured = task("captured", {
+      title: "Review the launch notes",
+      estimateMinutes: 45,
+    });
+    const unsized = task("unsized", {
+      estimateMinutes: null,
+    });
+
+    const committed = selectDailyWorkspace(
+      planner(
+        [
+          { ...captured, scheduledDate: today },
+          { ...unsized, scheduledDate: today },
+        ],
+        { [`today:${today}`]: ["unsized", "captured"] },
+      ),
+    );
+
+    assert.deepEqual(committed.today.active.tasks.map(({ id }) => id), ["unsized", "captured"]);
+    assert.equal(committed.today.capacity.committedMinutes, 45);
+    assert.equal(committed.today.unsizedTaskCount, 1);
+    assert.equal(committed.today.active.tasks.find(({ id }) => id === "captured").title, captured.title);
+    assert.equal(committed.today.active.tasks.find(({ id }) => id === "captured").estimateMinutes, 45);
+
+    const returned = selectDailyWorkspace(
+      planner(
+        [captured, unsized],
+        {
+          "log:needs-estimate": ["unsized"],
+          "log:unscheduled": ["captured"],
+        },
+      ),
+    );
+
+    assert.deepEqual(returned.today.active.tasks, []);
+    assert.deepEqual(returned.backlog.active.tasks.map(({ id }) => id), ["unsized", "captured"]);
+    assert.equal(returned.backlog.active.tasks.find(({ id }) => id === "captured").title, captured.title);
+    assert.equal(returned.backlog.active.tasks.find(({ id }) => id === "captured").estimateMinutes, 45);
+    assert.deepEqual(
+      returned.backlog.active.metadataByTaskId.unsized,
+      [
+        { label: "Needs estimate", tone: "caution" },
+        { label: "Unscheduled" },
+      ],
+    );
+  });
 });

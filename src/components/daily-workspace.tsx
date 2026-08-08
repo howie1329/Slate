@@ -1,14 +1,15 @@
 import { useState } from "react";
 import NumberFlow from "@number-flow/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { InboxIcon, Sun01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowUp01Icon, InboxIcon, Sun01Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 import { DailyCommandBar } from "@/components/daily-command-bar";
 import { PlannerEmptyState } from "@/components/planner-empty-state";
 import { TaskGroup } from "@/components/task-group";
-import { useTaskMotion, type TaskMotionTransition } from "@/components/task-motion";
+import { useTaskMotion, type TaskMotionKind, type TaskMotionTransition } from "@/components/task-motion";
 import { useTaskSelection } from "@/components/task-selection";
 import { selectDailyWorkspace } from "@/lib/daily-workspace";
+import { plannerMutationErrorMessage } from "@/lib/planner-errors";
 import type { PlannerSnapshot, Task } from "@/lib/planner";
 import { usePlannerState, useReorderTasks, useSetTaskCompleted } from "@/lib/planner-query";
 import { useWindowMode } from "@/lib/window-mode";
@@ -22,7 +23,12 @@ export function DailyWorkspace() {
   const [query, setQuery] = useState("");
 
   if (!planner.data) {
-    return null;
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <DailyCommandBar onValueChange={setQuery} value={query} windowMode={windowMode} />
+        <DailyWorkspaceLoading />
+      </div>
+    );
   }
 
   return (
@@ -46,7 +52,7 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
   const model = selectDailyWorkspace(planner, query);
   const setTaskCompleted = useSetTaskCompleted();
   const reorderTasks = useReorderTasks();
-  const { recordTaskMutation, taskMutation } = useTaskMotion();
+  const { clearTaskMutation, recordTaskMutation, taskMutation } = useTaskMotion();
   const { selectedTaskId, selectTask } = useTaskSelection();
   const [backlogExpanded, setBacklogExpanded] = useState(true);
   const mutationPending = setTaskCompleted.isPending || reorderTasks.isPending;
@@ -58,14 +64,19 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
       return;
     }
 
-    recordTaskMutation({
+    const mutationVersion = recordTaskMutation({
       kind: task.completedAt === null ? "complete" : "restore",
       taskId,
       transition,
     });
     setTaskCompleted.mutate(
       { id: taskId, completed: task.completedAt === null, expectedRevision: task.revision },
-      { onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update task.") },
+      {
+        onError: (error) => {
+          clearTaskMutation(mutationVersion);
+          toast.error(plannerMutationErrorMessage(error, "Could not update task."));
+        },
+      },
     );
   }
 
@@ -107,7 +118,7 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
             </PlannerEmptyState>
           ) : (
             <>
-              <section aria-labelledby="daily-today-heading" className="pt-3">
+              <section aria-labelledby="daily-today-heading" className="sticky top-0 z-[1] -mx-4 bg-background px-4 pb-2 pt-3 sm:-mx-6 sm:px-6">
                 <div className="flex items-end justify-between gap-3">
                   <div className="min-w-0">
                     <h1 className="m-0 font-heading text-xl font-semibold leading-6 tracking-tight" id="daily-today-heading">
@@ -131,7 +142,7 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
                     </p>
                   </div>
                   {model.today.unsizedTaskCount > 0 ? (
-                    <span aria-label={`${model.today.unsizedTaskCount} unsized tasks`} className="shrink-0 text-[10px] tabular-nums text-muted-foreground" role="status">
+                    <span aria-label={`${model.today.unsizedTaskCount} unsized ${model.today.unsizedTaskCount === 1 ? "task" : "tasks"}`} className="shrink-0 text-metadata tabular-nums text-muted-foreground" role="status">
                       <NumberFlow
                         aria-hidden="true"
                         opacityTiming={numberOpacityTiming}
@@ -193,13 +204,14 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
                 <button
                   aria-controls="daily-backlog-list"
                   aria-expanded={backlogExpanded}
+                  aria-label={`${backlogExpanded ? "Collapse" : "Expand"} Backlog, ${model.backlog.totalTaskCount} tasks`}
                   className="flex w-full items-center justify-between rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={() => setBacklogExpanded((expanded) => !expanded)}
                   type="button"
                 >
                   <span className="flex min-w-0 items-baseline gap-2">
                     <span className="font-heading text-base font-semibold leading-5" id="daily-backlog-heading">Backlog</span>
-                    <span aria-label={`${model.backlog.totalTaskCount} tasks in backlog`} className="text-[10px] tabular-nums text-muted-foreground" role="status">
+                    <span aria-label={`${model.backlog.totalTaskCount} ${model.backlog.totalTaskCount === 1 ? "task" : "tasks"} in backlog`} className="text-metadata tabular-nums text-muted-foreground" role="status">
                       <NumberFlow
                         aria-hidden="true"
                         opacityTiming={numberOpacityTiming}
@@ -209,10 +221,22 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
                       />
                     </span>
                   </span>
-                  <span aria-hidden="true" className="text-xs text-muted-foreground">{backlogExpanded ? "⌃" : "⌄"}</span>
+                  <HugeiconsIcon
+                    aria-hidden="true"
+                    className="text-muted-foreground"
+                    icon={backlogExpanded ? ArrowUp01Icon : ArrowDown01Icon}
+                    size={14}
+                    strokeWidth={1.8}
+                  />
                 </button>
-                {backlogExpanded ? (
-                  <div id="daily-backlog-list">
+                <div
+                  aria-hidden={!backlogExpanded}
+                  aria-labelledby="daily-backlog-heading"
+                  className={`grid transition-[grid-template-rows,opacity] duration-200 motion-reduce:transition-none ${backlogExpanded ? "grid-rows-[1fr] opacity-100" : "pointer-events-none invisible grid-rows-[0fr] opacity-0"}`}
+                  id="daily-backlog-list"
+                  role="region"
+                >
+                  <div className="min-h-0 overflow-hidden">
                     {model.backlog.active.tasks.length > 0 || model.backlog.completed.tasks.length > 0 ? (
                       <TaskGroup
                         className="mt-1"
@@ -232,13 +256,41 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
                       <p className="m-0 py-4 text-center text-xs text-muted-foreground">Backlog is clear.</p>
                     )}
                   </div>
-                ) : null}
+                </div>
               </section>
             </>
           )}
         </div>
       </section>
+      <span aria-live="polite" className="sr-only" role="status">
+        {taskMutation ? taskMutationStatus(taskMutation.kind) : ""}
+      </span>
     </div>
+  );
+}
+
+function DailyWorkspaceLoading() {
+  return (
+    <section
+      aria-busy="true"
+      aria-label="Loading Daily workspace"
+      className="min-h-0 flex-1 overflow-hidden px-4 pb-10 sm:px-6"
+      role="status"
+    >
+      <div className="mx-auto w-full max-w-xl animate-pulse space-y-3 pt-4 motion-reduce:animate-none">
+        <div className="h-5 w-16 rounded bg-muted" />
+        <div className="h-3 w-28 rounded bg-muted" />
+        <div className="h-1 w-full rounded-full bg-muted" />
+        <div className="space-y-1 border-t border-border pt-3">
+          {["w-4/5", "w-3/5", "w-2/3", "w-1/2"].map((width) => (
+            <div className="flex h-9 items-center gap-3 border-b border-border" key={width}>
+              <div className="size-5 rounded-full bg-muted" />
+              <div className={`h-3 rounded bg-muted ${width}`} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -248,4 +300,21 @@ function capacityPercentage(committedMinutes: number, capacityMinutes: number) {
 
 function capacityStatus(capacity: ReturnType<typeof selectDailyWorkspace>["today"]["capacity"]) {
   return capacity.isOverCapacity ? `${capacity.overageMinutes} min over capacity` : `${capacity.remainingMinutes} min remaining`;
+}
+
+function taskMutationStatus(kind: TaskMotionKind) {
+  switch (kind) {
+    case "complete":
+      return "Updating task completion.";
+    case "create":
+      return "Adding task to Backlog.";
+    case "delete":
+      return "Deleting task.";
+    case "move":
+      return "Moving task between Today and Backlog.";
+    case "restore":
+      return "Restoring task.";
+    case "update":
+      return "Saving task changes.";
+  }
 }

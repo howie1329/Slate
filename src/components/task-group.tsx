@@ -39,7 +39,6 @@ type TaskGroupProps = {
   metadataForTask?: (task: Task) => DailyTaskMetadata[];
   onReorderTasks?: (taskIds: string[]) => void;
   onSelectTask: (taskId: string, transition?: TaskSelectionTransition) => void;
-  onTasksExitComplete?: () => void;
   onToggleTask: (taskId: string, transition?: TaskMotionTransition) => void;
   overflowTaskId?: string | null;
   pending: boolean;
@@ -58,7 +57,6 @@ export function TaskGroup({
   metadataForTask,
   onReorderTasks,
   onSelectTask,
-  onTasksExitComplete,
   onToggleTask,
   overflowTaskId = null,
   pending,
@@ -192,7 +190,6 @@ export function TaskGroup({
         }
         if (allTasks.length === 0) {
           setHasRenderedTasks(false);
-          onTasksExitComplete?.();
         }
       }}
     >

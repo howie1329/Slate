@@ -4,7 +4,7 @@ status: accepted
 
 # Keep the Daily workspace derived from the existing task model
 
-The first redesign slice targets the compact popover's Daily workspace, not the future full-window Planning workspace, and derives Today and flat Backlog rows from the existing task facts rather than adding a persistent status field. Completion remains a row state: completed Today tasks stay at the bottom of Today, with no separate Done section. The workspace is the canonical `/` route; the old `/today` and `/backlog` route modules are removed, while `/settings` remains a separate route. This preserves Slate's commitment semantics and keeps the popover's daily loop understandable; explicit movement can be added without creating a second state system, while richer full-window planning remains a later surface.
+The first redesign slice targets the compact popover's Daily workspace, not the future full-window Planning workspace, and derives Today and flat Backlog rows from the existing task facts rather than adding a persistent status field. Completion remains a row state: completed Today tasks stay at the bottom of Today, with no separate Done section. The workspace is the canonical `/` route; the old `/today` and `/backlog` route modules are removed, while `/settings` remains a separate route. This preserves Slate's commitment semantics and keeps the popover's daily loop understandable; explicit movement uses the existing revision-safe scheduled-date mutation, while richer full-window planning remains a later surface.
 
 ## Considered Options
 

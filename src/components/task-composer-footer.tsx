@@ -78,7 +78,7 @@ export function TaskComposerFooter({ windowMode }: TaskComposerFooterProps) {
         ) : null}
         <Button
           aria-label="Open settings"
-          className="h-6 gap-1 rounded-md px-1.5 text-[10px] font-medium text-muted-foreground"
+          className="h-6 gap-1 rounded-md px-1.5 text-metadata font-medium text-muted-foreground"
           onClick={handleOpenSettings}
           title="Open settings"
           type="button"

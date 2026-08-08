@@ -2,7 +2,7 @@
 
 ## Status
 
-**Status:** ready-for-agent
+**Status:** complete
 
 **Priority:** P1 product workflow / renderer architecture
 
@@ -177,4 +177,4 @@ Tests should verify externally observable planning behavior and persistence outc
 - The accepted domain decisions are recorded in the project glossary and ADRs: the Daily workspace is derived from the existing task model, and unsized commitments may be explicitly placed in Today.
 - The exact visual treatment of section headers, metadata, collapse affordances, and task-detail presentation remains subject to compact-popover design validation, but it must preserve the semantic hierarchy and interaction contracts in this spec.
 - Future drag-and-drop and full-window Planning workspace work must reuse the Daily workspace selector and native mutation semantics rather than introducing a parallel status model.
-- This is a multi-session feature. The next step after this spec is to split it into dependency-aware vertical tickets; implementation should proceed one ticket at a time with cleanup included in each slice.
+- This feature was delivered through Plans 027–030. Future work should preserve the Daily selector and native mutation boundaries rather than reopening the removed route model.

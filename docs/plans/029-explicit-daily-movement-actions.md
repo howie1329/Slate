@@ -9,15 +9,15 @@
 - 027 — Build the canonical Daily workspace UI
 - 028 — Make unsized Today commitments first-class
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] A selected Backlog task exposes an explicit Commit to Today action.
-- [ ] Commit to Today sets the current local date while preserving the task's estimate, including a null estimate.
-- [ ] A selected Today task exposes an explicit Return to Backlog action.
-- [ ] Return to Backlog clears the scheduled date while preserving the task's estimate and title.
-- [ ] Both actions work from the compact popover and full application window.
-- [ ] Both actions are keyboard-operable with visible focus and clear accessible names.
-- [ ] Accepted movement updates the Daily workspace, capacity, metadata, ordering, and selection without requiring route navigation.
-- [ ] Stale movement failures make no partial writes, refresh the planner state, and provide actionable local feedback.
-- [ ] The first slice does not add cross-section pointer dragging, drag overlays, or generic movement Undo history.
-- [ ] Renderer and native tests cover sized and unsized movement, preservation of task data, stale rejection, and refresh behavior.
+- [x] A selected Backlog task exposes an explicit Commit to Today action.
+- [x] Commit to Today sets the current local date while preserving the task's estimate, including a null estimate.
+- [x] A selected Today task exposes an explicit Return to Backlog action.
+- [x] Return to Backlog clears the scheduled date while preserving the task's estimate and title.
+- [x] Both actions work from the compact popover and full application window.
+- [x] Both actions are keyboard-operable with visible focus and clear accessible names.
+- [x] Accepted movement updates the Daily workspace, capacity, metadata, ordering, and selection without requiring route navigation.
+- [x] Stale movement failures make no partial writes, refresh the planner state, and provide actionable local feedback.
+- [x] The first slice does not add cross-section pointer dragging, drag overlays, or generic movement Undo history.
+- [x] Renderer and native tests cover sized and unsized movement, preservation of task data, stale rejection, and refresh behavior.

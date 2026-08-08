@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { motion } from "motion/react";
 import {
+  ArrowDown01Icon,
+  ArrowUp01Icon,
   Calendar01Icon,
   Cancel01Icon,
   Clock01Icon,
@@ -16,9 +18,15 @@ import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useTaskMotion } from "@/components/task-motion";
-import { useDeleteTask, usePlannerState, useUpdateTask } from "@/lib/planner-query";
+import {
+  useDeleteTask,
+  usePlannerState,
+  useSetTaskScheduledDate,
+  useUpdateTask,
+} from "@/lib/planner-query";
 import type { LocalDate, Task } from "@/lib/planner";
 import { dateFromLocalDate, formatDueDate, localDateFromDate } from "@/lib/local-date";
+import { plannerMutationErrorMessage } from "@/lib/planner-errors";
 import { useTaskSelection, type TaskSelectionTransition } from "@/components/task-selection";
 import type { WindowMode } from "@/lib/window-mode";
 
@@ -80,8 +88,9 @@ type TaskDetailPanelProps = {
 export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPanelProps) {
   const planner = usePlannerState();
   const updateTask = useUpdateTask();
+  const setTaskScheduledDate = useSetTaskScheduledDate();
   const deleteTask = useDeleteTask();
-  const { recordTaskMutation } = useTaskMotion();
+  const { clearTaskMutation, recordTaskMutation } = useTaskMotion();
   const { clearSelection } = useTaskSelection();
   const task = planner.data?.tasks.find((candidate) => candidate.id === taskId);
   const lastTaskRef = useRef<Task | null>(null);
@@ -135,13 +144,18 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       normalizedEstimate !== (selectedTask.estimateMinutes?.toString() ?? "") ||
       scheduledDate !== selectedTask.scheduledDate ||
       anchorDate !== selectedTask.anchorDate);
-  const isSaving = updateTask.isPending || deleteTask.isPending;
+  const isSaving = updateTask.isPending || setTaskScheduledDate.isPending || deleteTask.isPending;
   const controlsDisabled = isSaving || deleteArmed || isStale;
 
   if (!selectedTask) {
     return null;
   }
   const activeTask = selectedTask;
+  const movementAction = planner.data
+    ? activeTask.scheduledDate === planner.data.today
+      ? "backlog"
+      : "today"
+    : null;
 
   function parseEstimate() {
     if (!normalizedEstimate) {
@@ -172,8 +186,8 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       return;
     }
 
-    recordTaskMutation({
-      kind: "move",
+    const mutationVersion = recordTaskMutation({
+      kind: "update",
       taskId: activeTask.id,
       transition: interactionTransitionRef.current,
     });
@@ -188,10 +202,14 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       },
       {
         onSuccess: () => {
+          clearTaskMutation(mutationVersion);
           clearSelection(interactionTransitionRef.current);
           toast.success("Task updated.");
         },
-        onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update task."),
+        onError: (error) => {
+          clearTaskMutation(mutationVersion);
+          toast.error(plannerMutationErrorMessage(error, "Could not update task."));
+        },
       },
     );
   }
@@ -218,7 +236,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       return;
     }
 
-    recordTaskMutation({
+    const mutationVersion = recordTaskMutation({
       kind: "delete",
       taskId: activeTask.id,
       transition: interactionTransitionRef.current,
@@ -229,8 +247,43 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
         clearSelection(interactionTransitionRef.current);
         toast.success("Task deleted.");
       },
-      onError: (error) => toast.error(error instanceof Error ? error.message : "Could not delete task."),
+      onError: (error) => {
+        clearTaskMutation(mutationVersion);
+        toast.error(plannerMutationErrorMessage(error, "Could not delete task."));
+      },
     });
+  }
+
+  function handleMovement() {
+    const today = planner.data?.today;
+    const expectedRevision = draftRevisionRef.current;
+    if (!today || expectedRevision === null || movementAction === null || controlsDisabled || isDirty) {
+      return;
+    }
+
+    const returningToBacklog = movementAction === "backlog";
+    const mutationVersion = recordTaskMutation({
+      kind: "move",
+      taskId: activeTask.id,
+      transition: interactionTransitionRef.current,
+    });
+    setTaskScheduledDate.mutate(
+      {
+        id: activeTask.id,
+        scheduledDate: returningToBacklog ? null : today,
+        expectedRevision,
+      },
+      {
+        onSuccess: () => {
+          clearSelection(interactionTransitionRef.current);
+          toast.success(returningToBacklog ? "Task returned to Backlog." : "Task committed to Today.");
+        },
+        onError: (error) => {
+          clearTaskMutation(mutationVersion);
+          toast.error(plannerMutationErrorMessage(error, "Could not move task."));
+        },
+      },
+    );
   }
 
   return (
@@ -239,6 +292,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       animate="visible"
       className="task-detail-panel absolute inset-x-4 bottom-full rounded-t-xl border-x border-t border-[var(--task-detail-border)] bg-[var(--task-detail)] text-[var(--task-detail-foreground)]"
       exit="exit"
+      id="task-detail-panel"
       initial={transition === "animate" ? "hidden" : false}
       data-task-detail
       onKeyDownCapture={() => {
@@ -442,6 +496,41 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
           )}
         </div>
       </motion.div>
+      {movementAction ? (
+        <div className="border-t border-[var(--task-detail-border)] px-4 py-1.5 sm:px-6">
+          <Button
+            aria-busy={setTaskScheduledDate.isPending}
+            aria-label={movementAction === "today" ? "Commit task to Today" : "Return task to Backlog"}
+            className="w-full justify-between"
+            disabled={controlsDisabled || isDirty}
+            onClick={handleMovement}
+            size="sm"
+            title={isDirty ? "Save changes before moving this task" : undefined}
+            type="button"
+            variant={movementAction === "today" ? "default" : "outline"}
+          >
+            <span>
+              {setTaskScheduledDate.isPending
+                ? "Moving task…"
+                : movementAction === "today"
+                  ? "Commit to Today"
+                  : "Return to Backlog"}
+            </span>
+            <HugeiconsIcon
+              aria-hidden="true"
+              className={setTaskScheduledDate.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
+              icon={
+                setTaskScheduledDate.isPending
+                  ? Loading03Icon
+                  : movementAction === "today"
+                    ? ArrowDown01Icon
+                    : ArrowUp01Icon
+              }
+              strokeWidth={1.7}
+            />
+          </Button>
+        </div>
+      ) : null}
       <span aria-live="polite" className="sr-only">
         {deleteArmed ? "Delete confirmation. Choose Keep task or Confirm delete task." : ""}
       </span>

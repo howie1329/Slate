@@ -2978,6 +2978,157 @@ mod tests {
     }
 
     #[test]
+    fn explicit_daily_movement_preserves_sized_and_unsized_task_data() {
+        let mut database = TestDatabase::new();
+        let today = local_today();
+        let sized = create_task(&mut database.repository, "Sized movement");
+        let unsized_created = database
+            .repository
+            .create_task(TaskInput {
+                title: "Unsized movement".into(),
+                estimate_minutes: None,
+                scheduled_date: None,
+                source: "manual".into(),
+            })
+            .expect("create unsized movement task");
+        let unsized_task = database
+            .repository
+            .tasks()
+            .expect("load unsized movement task")
+            .into_iter()
+            .find(|task| task.id == unsized_created.id)
+            .expect("unsized movement task");
+
+        database
+            .repository
+            .set_task_scheduled_date(ScheduledDateInput {
+                id: sized.id.clone(),
+                scheduled_date: Some(today.clone()),
+                expected_revision: sized.revision,
+            })
+            .expect("commit sized task");
+        database
+            .repository
+            .set_task_scheduled_date(ScheduledDateInput {
+                id: unsized_task.id.clone(),
+                scheduled_date: Some(today.clone()),
+                expected_revision: unsized_task.revision,
+            })
+            .expect("commit unsized task");
+
+        let committed = test_snapshot(&database.repository);
+        let committed_sized = committed
+            .tasks
+            .iter()
+            .find(|task| task.id == sized.id)
+            .expect("committed sized task");
+        let committed_unsized = committed
+            .tasks
+            .iter()
+            .find(|task| task.id == unsized_task.id)
+            .expect("committed unsized task");
+        assert_eq!(committed_sized.title, "Sized movement");
+        assert_eq!(committed_sized.estimate_minutes, Some(30));
+        assert_eq!(
+            committed_sized.scheduled_date.as_deref(),
+            Some(today.as_str())
+        );
+        assert_eq!(committed_unsized.title, "Unsized movement");
+        assert_eq!(committed_unsized.estimate_minutes, None);
+        assert_eq!(
+            committed_unsized.scheduled_date.as_deref(),
+            Some(today.as_str())
+        );
+        assert_eq!(
+            committed.order_by_scope.get(&format!("today:{today}")),
+            Some(&vec![unsized_task.id.clone(), sized.id.clone()]),
+        );
+
+        database
+            .repository
+            .set_task_scheduled_date(ScheduledDateInput {
+                id: sized.id.clone(),
+                scheduled_date: None,
+                expected_revision: committed_sized.revision,
+            })
+            .expect("return sized task to backlog");
+        database
+            .repository
+            .set_task_scheduled_date(ScheduledDateInput {
+                id: unsized_task.id.clone(),
+                scheduled_date: None,
+                expected_revision: committed_unsized.revision,
+            })
+            .expect("return unsized task to backlog");
+
+        let returned = test_snapshot(&database.repository);
+        let returned_sized = returned
+            .tasks
+            .iter()
+            .find(|task| task.id == sized.id)
+            .expect("returned sized task");
+        let returned_unsized = returned
+            .tasks
+            .iter()
+            .find(|task| task.id == unsized_task.id)
+            .expect("returned unsized task");
+        assert_eq!(returned_sized.title, "Sized movement");
+        assert_eq!(returned_sized.estimate_minutes, Some(30));
+        assert_eq!(returned_sized.scheduled_date, None);
+        assert_eq!(returned_unsized.title, "Unsized movement");
+        assert_eq!(returned_unsized.estimate_minutes, None);
+        assert_eq!(returned_unsized.scheduled_date, None);
+        assert_eq!(
+            returned.order_by_scope.get("log:unscheduled"),
+            Some(&vec![sized.id.clone()]),
+        );
+        assert_eq!(
+            returned.order_by_scope.get("log:needs-estimate"),
+            Some(&vec![unsized_task.id.clone()]),
+        );
+
+        let event_count: i64 = database
+            .repository
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM planner_events WHERE task_id = ?1",
+                [&sized.id],
+                |row| row.get(0),
+            )
+            .expect("count movement events");
+        assert_eq!(
+            database
+                .repository
+                .set_task_scheduled_date(ScheduledDateInput {
+                    id: sized.id.clone(),
+                    scheduled_date: Some(today),
+                    expected_revision: committed_sized.revision,
+                }),
+            Err("stale-task".into())
+        );
+        assert_eq!(
+            database
+                .repository
+                .connection
+                .query_row(
+                    "SELECT COUNT(*) FROM planner_events WHERE task_id = ?1",
+                    [&sized.id],
+                    |row| row.get::<_, i64>(0),
+                )
+                .expect("count movement events after stale write"),
+            event_count
+        );
+        let stale_snapshot = test_snapshot(&database.repository);
+        let stale_sized = stale_snapshot
+            .tasks
+            .iter()
+            .find(|task| task.id == sized.id)
+            .expect("sized task after stale write");
+        assert_eq!(stale_sized.scheduled_date, None);
+        assert_eq!(stale_sized.revision, returned_sized.revision);
+    }
+
+    #[test]
     fn restored_tasks_return_to_the_start_of_their_scope() {
         let mut database = TestDatabase::new();
         let first = create_task(&mut database.repository, "First");

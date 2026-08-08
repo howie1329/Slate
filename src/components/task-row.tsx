@@ -191,6 +191,7 @@ function TaskRowContent({
             }}
           />
           <button
+            aria-controls={isSelected ? "task-detail-panel" : undefined}
             aria-expanded={isSelected}
             aria-label={`Edit ${task.title}${isOverflow ? ", pushes today over capacity" : ""}`}
             className={cn(
@@ -212,7 +213,7 @@ function TaskRowContent({
                 {task.title}
               </span>
               {metadata.length > 0 ? (
-                <span className="mt-0.5 flex min-w-0 gap-1.5 truncate text-[10px] leading-3 text-muted-foreground">
+                <span className="mt-0.5 flex min-w-0 gap-1.5 truncate text-metadata text-muted-foreground">
                   {metadata.map((item) => (
                     <span
                       className={cn(item.tone === "destructive" && "text-destructive", item.tone === "caution" && "text-capacity-caution")}
