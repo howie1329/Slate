@@ -162,7 +162,7 @@ function TaskRowContent({
           animate="visible"
           className={cn(
             "group/task-row flex items-center transition-colors duration-150 hover:bg-muted/50 motion-reduce:transition-none",
-            compact ? "min-h-9" : "min-h-12",
+            compact ? "min-h-8" : "min-h-12",
             isSelected && "bg-muted",
             isOverflow && "ring-1 ring-inset ring-destructive",
             sortable?.isDragging && "bg-muted ring-1 ring-inset ring-ring",
@@ -196,7 +196,7 @@ function TaskRowContent({
             aria-label={`Edit ${task.title}${isOverflow ? ", pushes today over capacity" : ""}`}
             className={cn(
               "flex min-w-0 flex-1 self-stretch items-center gap-3 rounded-md pl-3 pr-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-              compact ? "py-1" : "py-1.5",
+              compact ? "py-0.5" : "py-1.5",
             )}
             onClick={(event) => onSelectTask(task.id, event.detail > 0 ? "animate" : "instant")}
             type="button"
@@ -204,10 +204,10 @@ function TaskRowContent({
             <span className="min-w-0 flex-1">
               <span
                 className={cn(
-                  "block truncate text-menu font-medium leading-4",
+                  "block truncate text-task font-normal",
                   isCompleted
                     ? cn("font-normal line-through", isSelected ? "text-foreground/70" : "text-muted-foreground")
-                    : cn("text-foreground", isSelected && "font-semibold"),
+                    : "text-foreground",
                 )}
               >
                 {task.title}

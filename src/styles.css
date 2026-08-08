@@ -5,18 +5,24 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+  --text-section: 0.8125rem;
+  --text-section--line-height: 0.875rem;
+  --text-task: 0.75rem;
+  --text-task--line-height: 0.875rem;
   --text-menu: 0.875rem;
   --text-menu--line-height: 1.125rem;
   --text-menu-label: 0.6875rem;
   --text-menu-label--line-height: 0.875rem;
-  --text-composer: 0.8125rem;
-  --text-composer--line-height: 1rem;
+  --text-composer: 0.75rem;
+  --text-composer--line-height: 0.875rem;
+  --text-capacity: 0.6875rem;
+  --text-capacity--line-height: 0.875rem;
   --text-estimate: 0.625rem;
   --text-estimate--line-height: 0.75rem;
   --text-footer: 0.5rem;
   --text-footer--line-height: 0.625rem;
-  --text-metadata: 0.625rem;
-  --text-metadata--line-height: 0.75rem;
+  --text-metadata: 0.5rem;
+  --text-metadata--line-height: 0.625rem;
 }
 
 @theme inline {

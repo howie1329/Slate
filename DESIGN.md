@@ -191,7 +191,10 @@ The palette is a neutral monochrome desktop canvas with black-and-white primary 
 - **Label** (600, `0.6875rem`, `0.875rem`): Section labels, capacity metadata, and small status text. Use uppercase only when it improves recognition, never as repeated scaffolding.
 - **Supporting** (400, `0.75rem`, `1rem`): Secondary descriptions and recoverable messages.
 - **Estimate** (400, `0.625rem`, `0.75rem`): Quiet right-aligned duration text in task rows.
-- **Metadata** (400, `0.625rem`, `0.75rem`): Compact task state, counts, and utility labels that support scanning without competing with the task title.
+- **Metadata** (400, `0.5rem`, `0.625rem`): Compact task state, counts, and utility labels that support scanning without competing with the task title.
+- **Daily section** (500, `0.8125rem`, `0.875rem`): Quiet Today and Backlog labels that establish structure without competing with task content.
+- **Task** (400, `0.75rem`, `0.875rem`): Regular-weight task titles sized for the compact popover.
+- **Capacity** (400, `0.6875rem`, `0.875rem`): Remaining-minute and capacity status text.
 - **Numeric data** (tabular numerals): Durations, capacity, overages, and counts should align clearly.
 
 ### Named Rules
@@ -253,13 +256,13 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 ### Task Rows
 
 - **Structure:** A quiet divided list with a circular completion affordance, a flexible task title, a smaller muted metadata line beneath it when needed, and a quiet right-aligned duration.
-- **Density:** Active rows target roughly `34–36px` of vertical height. Metadata is smaller and lighter than the title so it supports scanning without competing with the work.
+- **Density:** Active rows target roughly `32–36px` of vertical height. Task titles use regular weight; metadata is `8px` and lighter than the title so it supports scanning without competing with the work.
 - **State:** Selected rows use `muted`; completed rows remain at the bottom of their owning list with `muted-foreground` and a line-through; over-capacity rows use a restrained `destructive` boundary.
 - **Interaction:** The entire row remains keyboard-operable with a visible focus ring. Completion and edit affordances must not rely on color alone.
 
 ### Capacity Summary
 
-- **Structure:** The Today header shows the remaining-minute value and thin `4px` progress rail. The rail stays with the capacity value while task content scrolls.
+- **Structure:** The Today header shows the remaining-minute value and thin `2px` progress rail. The rail stays with the capacity value while task content scrolls.
 - **Progress:** `primary` represents committed minutes; `destructive` represents over-capacity. The remaining-minute text shifts from `primary`, to `foreground`, to `capacity-caution` as capacity is used, then to `destructive` when over capacity.
 - **Behavior:** The rail is a signal, not a chart or performance score.
 

@@ -121,17 +121,17 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
               <section aria-labelledby="daily-today-heading" className="sticky top-0 z-[1] -mx-4 bg-background px-4 pb-2 pt-3 sm:-mx-6 sm:px-6">
                 <div className="flex items-end justify-between gap-3">
                   <div className="min-w-0">
-                    <h1 className="m-0 font-heading text-menu font-semibold leading-5 tracking-tight" id="daily-today-heading">
+                    <h1 className="m-0 font-heading text-section font-medium tracking-tight" id="daily-today-heading">
                       Today
                     </h1>
                     <p
                       aria-label={capacityStatus(model.today.capacity)}
-                      className={`m-0 mt-0.5 text-menu-label tabular-nums ${model.today.capacity.isOverCapacity ? "text-destructive" : "text-muted-foreground"}`}
+                      className={`m-0 mt-0.5 text-capacity tabular-nums ${model.today.capacity.isOverCapacity ? "text-destructive" : "text-muted-foreground"}`}
                       role="status"
                     >
                       <NumberFlow
                         aria-hidden="true"
-                        className="font-semibold text-foreground"
+                        className="font-medium text-foreground"
                         opacityTiming={numberOpacityTiming}
                         respectMotionPreference
                         suffix="m"
@@ -159,7 +159,7 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
                   aria-valuemin={0}
                   aria-valuenow={capacityPercentage(model.today.capacity.committedMinutes, planner.effectiveCapacityMinutes)}
                   aria-valuetext={capacityStatus(model.today.capacity)}
-                  className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted"
+                  className="mt-1.5 h-0.5 w-full overflow-hidden rounded-full bg-muted"
                   role="progressbar"
                 >
                   <span
@@ -200,7 +200,7 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
                 </PlannerEmptyState>
               )}
 
-              <section aria-labelledby="daily-backlog-heading" className="mt-5 border-t border-border pt-3">
+              <section aria-labelledby="daily-backlog-heading" className="mt-4 border-t border-border pt-2">
                 <button
                   aria-controls="daily-backlog-list"
                   aria-expanded={backlogExpanded}
@@ -210,7 +210,7 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
                   type="button"
                 >
                   <span className="flex min-w-0 items-baseline gap-2">
-                    <span className="font-heading text-xs font-semibold leading-4" id="daily-backlog-heading">Backlog</span>
+                    <span className="font-heading text-section font-medium" id="daily-backlog-heading">Backlog</span>
                     <span aria-label={`${model.backlog.totalTaskCount} ${model.backlog.totalTaskCount === 1 ? "task" : "tasks"} in backlog`} className="text-metadata tabular-nums text-muted-foreground" role="status">
                       <NumberFlow
                         aria-hidden="true"
@@ -225,7 +225,7 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
                     aria-hidden="true"
                     className="text-muted-foreground"
                     icon={backlogExpanded ? ArrowUp01Icon : ArrowDown01Icon}
-                    size={14}
+                    size={12}
                     strokeWidth={1.8}
                   />
                 </button>
@@ -280,7 +280,7 @@ function DailyWorkspaceLoading() {
       <div className="mx-auto w-full max-w-xl animate-pulse space-y-3 pt-4 motion-reduce:animate-none">
         <div className="h-5 w-16 rounded bg-muted" />
         <div className="h-3 w-28 rounded bg-muted" />
-        <div className="h-1 w-full rounded-full bg-muted" />
+        <div className="h-0.5 w-full rounded-full bg-muted" />
         <div className="space-y-1 border-t border-border pt-3">
           {["w-4/5", "w-3/5", "w-2/3", "w-1/2"].map((width) => (
             <div className="flex h-9 items-center gap-3 border-b border-border" key={width}>
