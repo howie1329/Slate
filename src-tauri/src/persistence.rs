@@ -1710,12 +1710,9 @@ fn active_scope(
     scheduled_date: Option<&str>,
     today: &str,
 ) -> String {
-    if estimate_minutes.is_none() {
-        return "log:needs-estimate".into();
-    }
-
     match scheduled_date {
         Some(date) if date == today => format!("today:{today}"),
+        _ if estimate_minutes.is_none() => "log:needs-estimate".into(),
         None => "log:unscheduled".into(),
         Some(date) if date < today => "log:overdue".into(),
         Some(_) => "log:upcoming".into(),
@@ -2808,6 +2805,176 @@ mod tests {
         assert!(!snapshot
             .order_by_scope
             .contains_key(&format!("today:{today}")));
+    }
+
+    #[test]
+    fn unsized_today_commitments_use_today_scope_without_capacity_or_ai_eligibility() {
+        let mut database = TestDatabase::new();
+        let today = local_today();
+        let created = database
+            .repository
+            .create_task(TaskInput {
+                title: "Needs sizing".into(),
+                estimate_minutes: None,
+                scheduled_date: None,
+                source: "manual".into(),
+            })
+            .expect("create unsized task");
+
+        database
+            .repository
+            .set_task_scheduled_date(ScheduledDateInput {
+                id: created.id.clone(),
+                scheduled_date: Some(today.clone()),
+                expected_revision: created.revision,
+            })
+            .expect("schedule unsized task");
+
+        let snapshot = test_snapshot(&database.repository);
+        let scheduled = snapshot
+            .tasks
+            .iter()
+            .find(|task| task.id == created.id)
+            .expect("scheduled unsized task");
+        assert_eq!(scheduled.estimate_minutes, None);
+        assert_eq!(scheduled.scheduled_date.as_deref(), Some(today.as_str()));
+        assert_eq!(
+            snapshot.order_by_scope.get(&format!("today:{today}")),
+            Some(&vec![created.id.clone()]),
+        );
+
+        let context = database
+            .repository
+            .ai_plan_context()
+            .expect("AI plan context");
+        assert!(context.today_task_ids.contains(&created.id));
+        assert!(context
+            .today_tasks
+            .iter()
+            .any(|task| task.id == created.id && task.estimate_minutes.is_none()));
+        assert_eq!(context.remaining_minutes, context.daily_capacity_minutes);
+        assert!(context.candidates.iter().all(|task| task.id != created.id));
+
+        database
+            .repository
+            .set_task_completed(CompletionInput {
+                id: created.id.clone(),
+                completed: true,
+                expected_revision: scheduled.revision,
+            })
+            .expect("complete unsized task");
+        let completed = test_snapshot(&database.repository)
+            .tasks
+            .into_iter()
+            .find(|task| task.id == created.id)
+            .expect("completed unsized task");
+        assert!(completed.completed_at.is_some());
+        assert_eq!(completed.scheduled_date.as_deref(), Some(today.as_str()));
+
+        database
+            .repository
+            .set_task_completed(CompletionInput {
+                id: created.id.clone(),
+                completed: false,
+                expected_revision: completed.revision,
+            })
+            .expect("restore unsized task");
+        let restored = test_snapshot(&database.repository)
+            .tasks
+            .into_iter()
+            .find(|task| task.id == created.id)
+            .expect("restored unsized task");
+        assert_eq!(restored.estimate_minutes, None);
+        assert_eq!(restored.scheduled_date.as_deref(), Some(today.as_str()));
+        assert_eq!(restored.completed_at, None);
+        assert_eq!(
+            test_snapshot(&database.repository)
+                .order_by_scope
+                .get(&format!("today:{today}")),
+            Some(&vec![created.id.clone()]),
+        );
+
+        let event_count: i64 = database
+            .repository
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM planner_events WHERE task_id = ?1",
+                [&created.id],
+                |row| row.get(0),
+            )
+            .expect("count events before stale schedule");
+        assert_eq!(
+            database
+                .repository
+                .set_task_scheduled_date(ScheduledDateInput {
+                    id: created.id.clone(),
+                    scheduled_date: None,
+                    expected_revision: created.revision,
+                }),
+            Err("stale-task".into())
+        );
+        assert_eq!(
+            database
+                .repository
+                .connection
+                .query_row(
+                    "SELECT COUNT(*) FROM planner_events WHERE task_id = ?1",
+                    [&created.id],
+                    |row| row.get::<_, i64>(0),
+                )
+                .expect("count events after stale schedule"),
+            event_count
+        );
+
+        database
+            .repository
+            .set_task_scheduled_date(ScheduledDateInput {
+                id: created.id.clone(),
+                scheduled_date: None,
+                expected_revision: restored.revision,
+            })
+            .expect("return unsized task to backlog");
+
+        let returned = test_snapshot(&database.repository);
+        assert_eq!(
+            returned.order_by_scope.get("log:needs-estimate"),
+            Some(&vec![created.id.clone()]),
+        );
+        assert!(!returned
+            .order_by_scope
+            .contains_key(&format!("today:{today}")));
+        let event_kinds: Vec<String> = database
+            .repository
+            .connection
+            .prepare(
+                "SELECT kind FROM planner_events
+                 WHERE task_id = ?1 ORDER BY occurred_at ASC, id ASC",
+            )
+            .expect("prepare event kinds")
+            .query_map([&created.id], |row| row.get(0))
+            .expect("query event kinds")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("collect event kinds");
+        assert!(event_kinds.contains(&"task-created".into()));
+        assert!(event_kinds.contains(&"task-committed".into()));
+        assert!(event_kinds.contains(&"task-completed".into()));
+        assert!(event_kinds.contains(&"task-reopened".into()));
+        assert!(event_kinds.contains(&"task-returned-to-backlog".into()));
+
+        let reopened =
+            Repository::open(database.directory.join(DATABASE_FILE_NAME)).expect("reopen database");
+        let reopened_snapshot = test_snapshot(&reopened);
+        let reopened_task = reopened_snapshot
+            .tasks
+            .iter()
+            .find(|task| task.id == created.id)
+            .expect("reopened unsized task");
+        assert_eq!(reopened_task.estimate_minutes, None);
+        assert_eq!(reopened_task.scheduled_date, None);
+        assert_eq!(
+            reopened_snapshot.order_by_scope.get("log:needs-estimate"),
+            Some(&vec![created.id]),
+        );
     }
 
     #[test]
