@@ -133,7 +133,7 @@ The visual system is restrained rather than decorative. Near-neutral surfaces es
 - Serif type for orientation and reflection; sans-serif type for every active workflow.
 - One restrained contrast signal used for commitment, selection, focus, and meaningful status.
 - State changes communicated through text, shape, and hierarchy as well as color.
-- A slim top command row, dense task rows, and a thin Settings utility strip keep the daily loop visible in the popover.
+- A slim top command row and dense task rows keep the daily loop visible in the popover; transient detail and review panels appear only when needed.
 
 ## Native identity
 
@@ -246,7 +246,8 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 - **Command row:** A slim search-and-capture entry sits above the scrollable task surface. It is the primary way to add work and the visual entry point for search and reviewable AI actions.
 - **Today:** The dominant section shows the remaining-minute value, a thin progress rail, active tasks, and completed Today tasks at the bottom.
 - **Backlog:** A single flat list appears beneath Today by default. Needs estimate, Overdue, Upcoming, and Unscheduled remain row metadata rather than category headings. The section can collapse locally when the user wants to protect the Today view.
-- **Settings:** A thin, subdued utility strip remains at the bottom of the workspace; it does not compete with capture or task content.
+- **Persistent footer:** A slim muted tray anchors labeled utilities to the bottom edge. The popover shows Open full app on the left and Settings on the right; the full app shows Settings on the right.
+- **Transient panels:** Task details and AI review panels attach above the persistent footer only while active.
 - **Density:** Preserve the normal daily loop at `360 × 520`. Prefer compact hierarchy and metadata over extra panels or route-level navigation.
 
 ### Task Rows
@@ -262,11 +263,12 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 - **Progress:** `primary` represents committed minutes; `destructive` represents over-capacity. The remaining-minute text shifts from `primary`, to `foreground`, to `capacity-caution` as capacity is used, then to `destructive` when over capacity.
 - **Behavior:** The rail is a signal, not a chart or performance score.
 
-### Daily Command Row and Utility Strip
+### Daily Command Row and Persistent Footer
 
 - **Structure:** A slim top command row holds the search-and-capture field and reviewable AI action. Enter submits a captured title; there is no separate save button. The row remains visible while the task list scrolls.
 - **Hierarchy:** The command row is visually quiet; the task list and Today capacity carry the main emphasis. Enter-to-save stays implicit and keyboard-first.
-- **Utility strip:** A thin bottom strip exposes Settings and, in the popover, Open full app with small muted controls. It stays available without consuming a large footer band.
+- **Persistent footer:** The 28px tray uses a slight muted tint and hairline divider. Labels and icons stay quiet at `10px`, with the popover split between Open full app and Settings and the full app keeping Settings on the right.
+- **Transient panels:** Task details and AI review panels attach above the footer when active and disappear with the selection or review state.
 
 ### Task Detail Panel
 
@@ -279,7 +281,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 ### Do:
 
 - **Do** use `background`, `foreground`, `card`, `border`, `muted`, `primary`, and `ring` as semantic roles from `src/styles.css`.
-- **Do** keep the top command row compact and the Settings utility strip subordinate to the task surface.
+- **Do** keep the top command row compact, the footer subordinate, and transient panels above both.
 - **Do** keep Backlog flat and communicate task state through row metadata rather than category subsections.
 - **Do** keep completed Today tasks at the bottom of Today without creating a separate Done section.
 - **Do** reserve the primary black/white contrast for an explicit task decision, progress, selection, focus, or meaningful state.

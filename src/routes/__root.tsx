@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { useAiReview } from "@/components/ai-review";
 import { OnboardingFlow } from "@/components/onboarding-flow";
 import { QuickCaptureWindow } from "@/components/quick-capture-window";
-import { TaskComposerFooter } from "@/components/task-composer-footer";
+import { WorkspaceFooter } from "@/components/workspace-footer";
 import { RouteMotionProvider, useRouteMotion, type RouteMotionTransition } from "@/components/route-motion";
 import { TaskMotionProvider } from "@/components/task-motion";
 import { TaskSelectionProvider, useTaskSelection } from "@/components/task-selection";
@@ -111,7 +111,7 @@ function SlateShell() {
             </RouteFade>
           </div>
 
-          <TaskComposerFooter
+          <WorkspaceFooter
             windowMode={windowMode}
           />
         </>

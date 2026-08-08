@@ -1,5 +1,5 @@
-import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUpRight01Icon, Settings01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence } from "motion/react";
 import { AiReviewTray } from "@/components/ai-review-tray";
@@ -11,11 +11,11 @@ import { useTaskSelection } from "@/components/task-selection";
 import { Button } from "@/components/ui/button";
 import { openFullApp, type WindowMode } from "@/lib/window-mode";
 
-type TaskComposerFooterProps = {
+type WorkspaceFooterProps = {
   windowMode: WindowMode;
 };
 
-export function TaskComposerFooter({ windowMode }: TaskComposerFooterProps) {
+export function WorkspaceFooter({ windowMode }: WorkspaceFooterProps) {
   const navigate = useNavigate();
   const { setRouteTransition } = useRouteMotion();
   const { clearTaskMutation, taskMutation } = useTaskMotion();
@@ -30,8 +30,38 @@ export function TaskComposerFooter({ windowMode }: TaskComposerFooterProps) {
   return (
     <footer
       aria-label="Workspace utilities"
-      className={`absolute inset-x-0 bottom-0 z-10 h-8 border-t border-border bg-background px-4 sm:px-6 ${windowMode === "full" ? "px-8" : ""}`}
+      className={`absolute inset-x-0 bottom-0 z-10 h-7 border-t border-border bg-muted/40 px-4 sm:px-6 ${
+        windowMode === "full" ? "px-8" : ""
+      }`}
     >
+      <div className={`mx-auto flex h-full w-full items-center gap-2 ${windowMode === "popover" ? "justify-between" : "justify-end"}`}>
+        {windowMode === "popover" ? (
+          <Button
+            aria-label="Open full app"
+            className="h-6 gap-1 rounded-md px-1.5 text-metadata font-normal text-muted-foreground"
+            onClick={() => void openFullApp()}
+            title="Open full app"
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon aria-hidden="true" icon={ArrowUpRight01Icon} size={10} strokeWidth={1.8} />
+            <span>Open full app</span>
+          </Button>
+        ) : null}
+
+        <Button
+          aria-label="Open settings"
+          className="h-6 gap-1 rounded-md px-1.5 text-metadata font-normal text-muted-foreground"
+          onClick={handleOpenSettings}
+          title="Open settings"
+          type="button"
+          variant="ghost"
+        >
+          <HugeiconsIcon aria-hidden="true" icon={Settings01Icon} size={10} strokeWidth={1.8} />
+          <span>Settings</span>
+        </Button>
+      </div>
+
       <AnimatePresence
         custom={selectedTaskTransition}
         initial={false}
@@ -62,32 +92,6 @@ export function TaskComposerFooter({ windowMode }: TaskComposerFooterProps) {
           />
         ) : null}
       </AnimatePresence>
-      <div className={`mx-auto flex h-full w-full max-w-xl items-center justify-end ${windowMode === "full" ? "max-w-3xl" : ""}`}>
-        {windowMode === "popover" ? (
-          <Button
-            aria-label="Open full app"
-            className="size-6 rounded-md text-muted-foreground"
-            onClick={() => void openFullApp()}
-            size="icon"
-            title="Open full app"
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden="true" icon={ArrowUpRight01Icon} size={13} strokeWidth={1.8} />
-          </Button>
-        ) : null}
-        <Button
-          aria-label="Open settings"
-          className="h-6 gap-1 rounded-md px-1.5 text-metadata font-medium text-muted-foreground"
-          onClick={handleOpenSettings}
-          title="Open settings"
-          type="button"
-          variant="ghost"
-        >
-          <HugeiconsIcon aria-hidden="true" icon={Settings01Icon} size={13} strokeWidth={1.8} />
-          <span>Settings</span>
-        </Button>
-      </div>
     </footer>
   );
 }
