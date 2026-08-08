@@ -7,14 +7,17 @@ import { motion } from "motion/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { TaskMutationMotion, TaskMotionTransition } from "@/components/task-motion";
 import type { TaskSelectionTransition } from "@/components/task-selection";
+import type { DailyTaskMetadata } from "@/lib/daily-workspace";
 import type { Task } from "@/lib/planner";
 import { formatMinutes } from "@/lib/task-groups";
 import { cn } from "@/lib/utils";
 
-type TaskRowProps = {
+export type TaskRowProps = {
+  compact?: boolean;
   isOverflow?: boolean;
   isPending: boolean;
   isSelected: boolean;
+  metadata?: DailyTaskMetadata[];
   onSelectTask: (taskId: string, transition?: TaskSelectionTransition) => void;
   onMotionComplete: (version: number) => void;
   onToggleTask: (taskId: string, transition?: TaskMotionTransition) => void;
@@ -88,9 +91,11 @@ export function SortableTaskRow({
 }
 
 function TaskRowContent({
+  compact = false,
   isOverflow = false,
   isPending,
   isSelected,
+  metadata = [],
   onMotionComplete,
   onSelectTask,
   onToggleTask,
@@ -156,7 +161,8 @@ function TaskRowContent({
         <motion.div
           animate="visible"
           className={cn(
-            "group/task-row flex min-h-12 items-center transition-colors duration-150 hover:bg-muted/50 motion-reduce:transition-none",
+            "group/task-row flex items-center transition-colors duration-150 hover:bg-muted/50 motion-reduce:transition-none",
+            compact ? "min-h-9" : "min-h-12",
             isSelected && "bg-muted",
             isOverflow && "ring-1 ring-inset ring-destructive",
             sortable?.isDragging && "bg-muted ring-1 ring-inset ring-ring",
@@ -187,19 +193,36 @@ function TaskRowContent({
           <button
             aria-expanded={isSelected}
             aria-label={`Edit ${task.title}${isOverflow ? ", pushes today over capacity" : ""}`}
-            className="flex min-w-0 flex-1 self-stretch items-center gap-3 rounded-md pl-3 pr-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            className={cn(
+              "flex min-w-0 flex-1 self-stretch items-center gap-3 rounded-md pl-3 pr-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+              compact ? "py-1" : "py-1.5",
+            )}
             onClick={(event) => onSelectTask(task.id, event.detail > 0 ? "animate" : "instant")}
             type="button"
           >
-            <span
-              className={cn(
-                "min-w-0 flex-1 truncate text-menu font-medium",
-                isCompleted
-                  ? cn("font-normal line-through", isSelected ? "text-foreground/70" : "text-muted-foreground")
-                  : cn("text-foreground", isSelected && "font-semibold"),
-              )}
-            >
-              {task.title}
+            <span className="min-w-0 flex-1">
+              <span
+                className={cn(
+                  "block truncate text-menu font-medium leading-4",
+                  isCompleted
+                    ? cn("font-normal line-through", isSelected ? "text-foreground/70" : "text-muted-foreground")
+                    : cn("text-foreground", isSelected && "font-semibold"),
+                )}
+              >
+                {task.title}
+              </span>
+              {metadata.length > 0 ? (
+                <span className="mt-0.5 flex min-w-0 gap-1.5 truncate text-[10px] leading-3 text-muted-foreground">
+                  {metadata.map((item) => (
+                    <span
+                      className={cn(item.tone === "destructive" && "text-destructive", item.tone === "caution" && "text-capacity-caution")}
+                      key={item.label}
+                    >
+                      {item.label}
+                    </span>
+                  ))}
+                </span>
+              ) : null}
             </span>
             <span
               className={cn(

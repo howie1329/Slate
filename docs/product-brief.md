@@ -22,9 +22,9 @@ Slate 1.1.0 is the current local planning release candidate. It provides:
 - A unified Daily workspace and a separate Settings route using the same workspace shell.
 - Local SQLite persistence for tasks, ordering data, daily capacity, and non-sensitive preferences.
 - Task creation, editing, completion, deletion, and calendar-date scheduling.
-- Pointer and keyboard ordering within active Today and Backlog groups, persisted through SQLite.
+- Pointer and keyboard ordering within the active Today list, persisted through SQLite.
 - Visible Today capacity, remaining minutes, and over-capacity state.
-- A task-detail panel above the persistent footer.
+- A task-detail panel above the compact Settings utility strip.
 - macOS Keychain storage for provider API keys.
 - Reviewable AI Assist and Plan My Day flows through the packaged Node sidecar.
 - A short, skippable first-run onboarding flow that explains capacity, Backlog, Today, and task details.
@@ -45,10 +45,10 @@ The returned task revision bounds a five-second Undo action. Undo succeeds only 
 
 ## Product surfaces
 
-- **Daily workspace** is the default workspace. It shows Today as the dominant section, Backlog as adjacent uncommitted work, and Done as quiet history. Today includes dated work for today, active committed minutes, remaining capacity, unsized commitments that need estimates, over-capacity state, and completed work at the bottom.
+- **Daily workspace** is the default workspace. It shows Today as the dominant section and a flat, collapsible Backlog beneath it. Today includes dated work for today, active committed minutes, remaining capacity, unsized commitments that need estimates, over-capacity state, and completed work at the bottom. There is no separate Done section.
 - **Backlog** is the current task record for work that is not committed to Today. Its metadata can identify Needs estimate, Unscheduled, Overdue / needs reschedule, and Upcoming work without making each state a top-level route or section.
 - **Settings** contains daily capacity, AI provider/model/key configuration, and the persistent planning instruction.
-- **Persistent footer** is always available in the workspace. It supports quick manual capture, Save, the context-sensitive AI action, and Settings access. Text invokes AI Assist; empty input invokes the Plan My Day review flow.
+- **Daily command row** is always available at the top of the workspace. It supports search, quick manual capture, Save, and the context-sensitive AI action. Text invokes AI Assist; empty input invokes the Plan My Day review flow. A thin Settings utility strip remains available at the bottom.
 - **Menu-bar popover** is the primary surface. It dismisses when focus leaves it and must support the essential daily loop within the compact window.
 - **Full window** provides more room for the same workflow. It may later support configuration, comparison, history, and review surfaces, but it must not be required for ordinary daily planning.
 
@@ -60,7 +60,7 @@ Make the local capture-to-commit-to-completion loop reliable enough that Slate i
 
 The 1.0 loop is:
 
-1. Capture a task from the persistent footer with a title.
+1. Capture a task from the Daily command row with a title.
 2. Add or suggest a positive whole-minute estimate.
 3. Keep newly captured but uncommitted work in Backlog.
 4. Deliberately place work on Today; an unsized task may be committed manually but remains visibly in need of an estimate.
@@ -86,7 +86,7 @@ The 1.0 loop is:
 
 ## AI actions for 1.0
 
-The persistent footer has one context-sensitive AI action:
+The Daily command row has one context-sensitive AI action:
 
 - With composer text, it becomes **AI Assist** and proposes a cleaner title, a positive whole-minute estimate, and an optional date only when the user has not already supplied one.
 - With an empty composer, it becomes **Plan My Day** and proposes eligible Backlog tasks that fit the remaining capacity.

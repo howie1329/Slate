@@ -20,6 +20,7 @@ import { AnimatePresence } from "motion/react";
 import { useTaskMotion, type TaskMutationMotion, type TaskMotionTransition } from "@/components/task-motion";
 import { SortableTaskRow, TaskRow } from "@/components/task-row";
 import type { TaskSelectionTransition } from "@/components/task-selection";
+import type { DailyTaskMetadata } from "@/lib/daily-workspace";
 import type { Task } from "@/lib/planner";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +32,11 @@ const taskListScreenReaderInstructions = {
 
 type TaskGroupProps = {
   className?: string;
+  compact?: boolean;
+  completedTasks?: Task[];
+  hideLabel?: boolean;
   label: string;
+  metadataForTask?: (task: Task) => DailyTaskMetadata[];
   onReorderTasks?: (taskIds: string[]) => void;
   onSelectTask: (taskId: string, transition?: TaskSelectionTransition) => void;
   onTasksExitComplete?: () => void;
@@ -46,7 +51,11 @@ type TaskGroupProps = {
 
 export function TaskGroup({
   className,
+  compact = false,
+  completedTasks = [],
+  hideLabel = false,
   label,
+  metadataForTask,
   onReorderTasks,
   onSelectTask,
   onTasksExitComplete,
@@ -69,13 +78,14 @@ export function TaskGroup({
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
-  const [hasRenderedTasks, setHasRenderedTasks] = useState(tasks.length > 0);
-  const previousTaskIdsRef = useRef(new Set(tasks.map((task) => task.id)));
+  const allTasks = useMemo(() => [...tasks, ...completedTasks], [completedTasks, tasks]);
+  const [hasRenderedTasks, setHasRenderedTasks] = useState(allTasks.length > 0);
+  const previousTaskIdsRef = useRef(new Set(allTasks.map((task) => task.id)));
   const handledMotionVersionRef = useRef<number | null>(null);
   const previousTaskIds = previousTaskIdsRef.current;
   const canAnimateEntry =
     taskMutation?.transition === "animate" && handledMotionVersionRef.current !== taskMutation.version;
-  const addedTasks = tasks.filter((task) => !previousTaskIds.has(task.id));
+  const addedTasks = allTasks.filter((task) => !previousTaskIds.has(task.id));
   const enteringTaskId = canAnimateEntry
     ? taskMutation?.kind === "create"
       ? addedTasks[0]?.id ?? null
@@ -143,16 +153,16 @@ export function TaskGroup({
   );
 
   useEffect(() => {
-    previousTaskIdsRef.current = new Set(tasks.map((task) => task.id));
+    previousTaskIdsRef.current = new Set(allTasks.map((task) => task.id));
     if (enteringTaskId && taskMutation) {
       handledMotionVersionRef.current = taskMutation.version;
     }
-    if (tasks.length > 0) {
+    if (allTasks.length > 0) {
       setHasRenderedTasks(true);
     }
-  }, [enteringTaskId, taskMutation, tasks]);
+  }, [allTasks, enteringTaskId, taskMutation]);
 
-  if (tasks.length === 0 && !hasRenderedTasks) {
+  if (allTasks.length === 0 && !hasRenderedTasks) {
     return null;
   }
 
@@ -180,7 +190,7 @@ export function TaskGroup({
           const completedVersion = taskMutation.version;
           window.setTimeout(() => clearTaskMutation(completedVersion), 50);
         }
-        if (tasks.length === 0) {
+        if (allTasks.length === 0) {
           setHasRenderedTasks(false);
           onTasksExitComplete?.();
         }
@@ -191,12 +201,14 @@ export function TaskGroup({
           isOverflow: task.id === overflowTaskId && task.completedAt === null,
           isPending: pending,
           isSelected: selectedTaskId === task.id,
+          metadata: metadataForTask?.(task),
           onMotionComplete: clearTaskMutation,
           onSelectTask,
           onToggleTask,
           shouldAnimateEnter: task.id === enteringTaskId,
           task,
           taskMutation,
+          compact,
         };
 
         return onReorderTasks ? (
@@ -212,14 +224,32 @@ export function TaskGroup({
           <TaskRow {...rowProps} key={task.id} />
         );
       })}
+      {completedTasks.length > 0 ? <li aria-hidden="true" className="h-px bg-border" /> : null}
+      {completedTasks.map((task) => (
+        <TaskRow
+          compact={compact}
+          isPending={pending}
+          isSelected={selectedTaskId === task.id}
+          key={task.id}
+          metadata={metadataForTask?.(task)}
+          onMotionComplete={clearTaskMutation}
+          onSelectTask={onSelectTask}
+          onToggleTask={onToggleTask}
+          shouldAnimateEnter={task.id === enteringTaskId}
+          task={task}
+          taskMutation={taskMutation}
+        />
+      ))}
     </AnimatePresence>
   );
 
   return (
     <section aria-label={label} className={cn("mt-5", className)}>
-      <h2 className="m-0 border-b border-border pb-2 text-menu-label font-semibold text-muted-foreground">
-        {label}
-      </h2>
+      {!hideLabel ? (
+        <h2 className="m-0 border-b border-border pb-2 text-menu-label font-semibold text-muted-foreground">
+          {label}
+        </h2>
+      ) : null}
       <ul className="m-0 list-none divide-y divide-border p-0">
         {onReorderTasks ? (
           <DndContext

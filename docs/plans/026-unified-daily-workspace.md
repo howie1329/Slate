@@ -18,11 +18,10 @@ The separate routes also duplicate task classification, ordering, capacity, empt
 
 ## Solution
 
-Replace the separate Today and Backlog planner routes with one canonical Daily workspace at `/`. The workspace shows three semantic sections in one continuous surface:
+Replace the separate Today and Backlog planner routes with one canonical Daily workspace at `/`. The workspace shows two semantic sections in one continuous surface:
 
 - **Today** — visible and visually dominant; contains incomplete work scheduled for the current local day, including unsized commitments.
-- **Backlog** — captured work not currently committed to Today; it may be collapsed and carries quiet metadata such as Needs estimate, Overdue, Upcoming, or Unscheduled.
-- **Done** — completed work shown as quiet, collapsed history.
+- **Backlog** — captured work not currently committed to Today; it appears as one flat, collapsible list and carries quiet row metadata such as Needs estimate, Overdue, Upcoming, or Unscheduled. Completed non-Today work remains quiet at the bottom of this list.
 
 New captures from the Daily workspace save to the persisted Backlog by default. A user explicitly moves a task into Today through task-detail actions; movement preserves the task's estimate and changes only its scheduled date. An unsized task may be deliberately moved into Today, where it remains visibly marked Needs estimate and contributes no guessed minutes to capacity.
 
@@ -35,7 +34,7 @@ The workspace is rendered from one derived Daily workspace model built from the 
 3. As a person planning the day, I want Today and Backlog visible in one continuous workspace, so that I do not need to translate between separate routes.
 4. As a person planning the day, I want Today to remain visible and dominant in the compact popover, so that I can understand my active commitments at a glance.
 5. As a person with many captured tasks, I want Backlog to collapse without affecting Today, so that the daily decision remains focused.
-6. As a person reviewing history, I want Done to start collapsed and remain visually secondary, so that completed work does not compete with active planning.
+6. As a person reviewing history, I want completed Today work to remain at the bottom of Today without a separate Done section, so that completed work does not compete with active planning.
 7. As a person choosing work, I want to explicitly commit an estimated Backlog task to Today, so that the task's time cost becomes part of my plan.
 8. As a person choosing work whose duration is unknown, I want to explicitly commit an unsized Backlog task to Today, so that uncertainty does not prevent me from making a deliberate commitment.
 9. As a person with an unsized Today task, I want the task to say Needs estimate, so that I know the commitment has no known duration yet.
@@ -68,18 +67,18 @@ The workspace is rendered from one derived Daily workspace model built from the 
 
 ### Domain model
 
-- Today, Backlog, and Done remain semantic sections, not persistent task statuses.
+- Today and Backlog remain semantic sections, not persistent task statuses. Completion is a row state, not a top-level section.
 - Commitment state is derived from task facts: completion, scheduled date, and estimate.
 - An incomplete task scheduled for the current local day belongs to Today even when its estimate is null.
 - A noncompleted task with a date in the past or future remains in Backlog and exposes its date state as metadata. An unsized task may expose Needs estimate at the same time.
 - A task without a scheduled date remains in Backlog. A newly captured task is unscheduled and unestimated by default.
 - Unfinished tasks retain their original date after the day passes. Slate never silently reschedules them.
-- Done is quiet completed-work history and is not a destination for incomplete work.
+- Completed Today tasks remain at the bottom of Today. Completed non-Today tasks remain at the bottom of the flat Backlog list.
 - No persistent `backlog`, `today`, `done`, or generic kanban status field is added.
 
 ### Renderer read model
 
-- Add one pure Daily workspace selector at the highest useful renderer seam. It accepts the authoritative planner snapshot and returns Today, Backlog, Done, row metadata, ordering, and capacity presentation data.
+- Add one pure Daily workspace selector at the highest useful renderer seam. It accepts the authoritative planner snapshot and returns Today, flat Backlog, row metadata, ordering, and capacity presentation data.
 - React route and section components render that derived model rather than independently filtering tasks through repeated scope rules.
 - The selector exposes composable metadata, including Needs estimate, Overdue, Upcoming, Unscheduled, and duration where applicable.
 - Capacity presentation includes known committed minutes, known remaining minutes, over-capacity state for sized work, and an explicit unsized-commitment count.
@@ -146,7 +145,7 @@ Tests should verify externally observable planning behavior and persistence outc
 
 - Verify the Daily workspace at the compact popover minimum size and in the full application window.
 - Verify Today remains visible and dominant when Backlog contains many tasks.
-- Verify Backlog collapse and Done's collapsed default do not obscure capacity or the capture control.
+- Verify Backlog collapse does not obscure capacity or the capture control, and completed Today tasks remain visible at the bottom of Today.
 - Verify capture feedback, explicit movement feedback, selection, task detail editing, completion, focus states, reduced motion, light theme, dark theme, empty states, over-capacity state, and persistence failure recovery.
 - Verify that no navigation control or stale route-specific UI remains for Today or Backlog.
 - Verify that the Settings route remains reachable and behaves as before.

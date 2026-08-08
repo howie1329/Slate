@@ -1,93 +1,36 @@
-import { useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon, SentIcon, Settings01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
+import { Settings01Icon } from "@hugeicons/core-free-icons";
 import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence } from "motion/react";
-import { toast } from "sonner";
 import { AiReviewTray } from "@/components/ai-review-tray";
 import { useAiReview } from "@/components/ai-review";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { TaskDetailPanel } from "@/components/task-detail-panel";
 import { useRouteMotion } from "@/components/route-motion";
-import { useTaskMotion, type TaskMotionTransition } from "@/components/task-motion";
+import { TaskDetailPanel } from "@/components/task-detail-panel";
+import { useTaskMotion } from "@/components/task-motion";
 import { useTaskSelection } from "@/components/task-selection";
-import type { LocalDate } from "@/lib/planner";
-import { taskComposerInputId } from "@/lib/task-composer";
+import { Button } from "@/components/ui/button";
 import type { WindowMode } from "@/lib/window-mode";
-import { useCreateTask, usePlannerState } from "@/lib/planner-query";
 
 type TaskComposerFooterProps = {
-  scheduledDate: LocalDate | null;
   windowMode: WindowMode;
 };
 
-export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFooterProps) {
+export function TaskComposerFooter({ windowMode }: TaskComposerFooterProps) {
   const navigate = useNavigate();
-  const createTask = useCreateTask();
-  const planner = usePlannerState();
-  const { clearTaskMutation, recordTaskMutation, taskMutation } = useTaskMotion();
   const { setRouteTransition } = useRouteMotion();
-  const { clearSelection, selectedTaskId, selectedTaskTransition } = useTaskSelection();
+  const { clearTaskMutation, taskMutation } = useTaskMotion();
+  const { selectedTaskId, selectedTaskTransition } = useTaskSelection();
   const aiReview = useAiReview();
-  const [title, setTitle] = useState("");
-  const createTransitionRef = useRef<TaskMotionTransition>("instant");
-  const hasTitle = title.trim().length > 0;
-  const aiUnavailable = planner.data?.aiAvailability !== "configured";
-  const aiKeyMissing = planner.data?.aiAvailability === "unconfigured";
-  const aiButtonDisabled = aiUnavailable || aiReview.state.kind === "assist-loading" || aiReview.state.kind === "plan-loading" || aiReview.state.kind === "plan-accepting";
 
-  function handleAiAction() {
-    clearSelection("instant");
-
-    if (hasTitle) {
-      const capture = title.trim();
-      setTitle("");
-      aiReview.startAssist(capture, scheduledDate);
-    } else {
-      aiReview.startPlan();
-    }
-  }
-
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const trimmedTitle = title.trim();
-
-    if (!trimmedTitle || createTask.isPending) {
-      return;
-    }
-
-    recordTaskMutation({ kind: "create", transition: createTransitionRef.current });
-    createTask.mutate(
-      {
-        title: trimmedTitle,
-        estimateMinutes: null,
-        scheduledDate,
-        source: "manual",
-      },
-      {
-        onSuccess: () => {
-          setTitle("");
-        },
-        onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save task."),
-      },
-    );
-  }
-
-  function handleTitleChange(value: string) {
-    setTitle(value);
-  }
-
-  function handleOpenSettings(event?: { detail?: number }) {
-    setRouteTransition(event?.detail ? "animate" : "instant");
+  function handleOpenSettings() {
+    setRouteTransition("animate");
     void navigate({ to: "/settings" });
   }
 
   return (
     <footer
-      aria-label="Task composer"
-      className={`absolute inset-x-0 bottom-0 z-10 h-16 bg-background px-4 py-3 sm:px-6 ${selectedTaskId ? "" : "border-t border-border"} ${windowMode === "full" ? "px-8" : ""}`}
+      aria-label="Workspace utilities"
+      className={`absolute inset-x-0 bottom-0 z-10 h-8 border-t border-border bg-background px-4 sm:px-6 ${windowMode === "full" ? "px-8" : ""}`}
     >
       <AnimatePresence
         custom={selectedTaskTransition}
@@ -111,10 +54,7 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
           <AiReviewTray
             key="ai-review"
             onDismiss={aiReview.dismiss}
-            onOpenSettings={() => {
-              setRouteTransition("animate");
-              void navigate({ to: "/settings" });
-            }}
+            onOpenSettings={handleOpenSettings}
             onAcceptPlan={aiReview.acceptPlan}
             onRedo={isPlanReviewState(aiReview.state) ? aiReview.redoPlan : aiReview.redoAssist}
             state={aiReview.state}
@@ -122,105 +62,19 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
           />
         ) : null}
       </AnimatePresence>
-      <form
-        className={`mx-auto flex h-10 w-full max-w-xl items-center gap-1.5 ${windowMode === "full" ? "max-w-3xl" : ""}`}
-        onKeyDownCapture={() => {
-          createTransitionRef.current = "instant";
-        }}
-        onPointerDownCapture={() => {
-          createTransitionRef.current = "animate";
-        }}
-        onSubmit={handleSubmit}
-      >
-        <Input
-          aria-label="New task"
-          className="h-10 text-menu"
-          disabled={createTask.isPending}
-          id={taskComposerInputId}
-          onChange={(event) => handleTitleChange(event.target.value)}
-          placeholder="Add a task"
-          value={title}
-        />
-        <Button
-          aria-label={createTask.isPending ? "Saving task" : "Create task"}
-          className="size-8 rounded-md"
-          disabled={!hasTitle || createTask.isPending}
-          size="icon"
-          title={createTask.isPending ? "Saving task" : "Save task"}
-          type="submit"
-          variant={hasTitle ? "default" : "outline"}
-        >
-          <HugeiconsIcon
-            className={createTask.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
-            icon={createTask.isPending ? Loading03Icon : SentIcon}
-            strokeWidth={1.8}
-          />
-        </Button>
-        {aiUnavailable ? (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <span
-                  aria-label={aiKeyMissing ? "AI features unavailable; add a provider key in Settings" : "AI features unavailable; retry Keychain access"}
-                  className="inline-flex"
-                  onClick={handleOpenSettings}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      handleOpenSettings();
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                />
-              }
-            >
-              <Button
-                aria-label={aiKeyMissing ? "AI features unavailable; add a provider key in Settings" : "AI features unavailable; retry Keychain access"}
-                className="size-8 rounded-md"
-                disabled
-                size="icon"
-                title={aiKeyMissing ? "Add a provider key in Settings to use AI" : "Retry Keychain access to use AI"}
-                type="button"
-                variant="outline"
-              >
-                <HugeiconsIcon icon={SparklesIcon} strokeWidth={1.8} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              {aiKeyMissing ? "Add a provider key in Settings to use AI" : "Retry Keychain access to use AI"}
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <Button
-            aria-label={aiReview.state.kind === "assist-loading" ? "Generating AI Assist proposal" : aiReview.state.kind === "plan-loading" ? "Generating Plan My Day proposal" : hasTitle ? "Use AI Assist" : "Plan my day with AI"}
-            className="size-8 rounded-md"
-            disabled={aiButtonDisabled}
-            onClick={handleAiAction}
-            size="icon"
-            title={aiReview.state.kind === "assist-loading" ? "Generating AI Assist proposal" : aiReview.state.kind === "plan-loading" ? "Generating Plan My Day proposal" : hasTitle ? "Use AI Assist" : "Plan My Day"}
-            type="button"
-            variant="outline"
-          >
-            <HugeiconsIcon
-              className={aiReview.state.kind === "assist-loading" || aiReview.state.kind === "plan-loading" || aiReview.state.kind === "plan-accepting" ? "animate-pulse motion-reduce:animate-none" : undefined}
-              icon={SparklesIcon}
-              strokeWidth={1.8}
-            />
-          </Button>
-        )}
+      <div className={`mx-auto flex h-full w-full max-w-xl items-center justify-end ${windowMode === "full" ? "max-w-3xl" : ""}`}>
         <Button
           aria-label="Open settings"
-          className="size-8 rounded-md"
+          className="h-6 gap-1 rounded-md px-1.5 text-[10px] font-medium text-muted-foreground"
           onClick={handleOpenSettings}
-          size="icon"
           title="Open settings"
           type="button"
-          variant="outline"
+          variant="ghost"
         >
-          <HugeiconsIcon icon={Settings01Icon} strokeWidth={1.8} />
+          <HugeiconsIcon aria-hidden="true" icon={Settings01Icon} size={13} strokeWidth={1.8} />
+          <span>Settings</span>
         </Button>
-      </form>
+      </div>
     </footer>
   );
 }

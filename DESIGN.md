@@ -114,8 +114,9 @@ The visual system is restrained rather than decorative. Near-neutral surfaces es
 - Compact-first geometry that remains usable in the 360 × 520 minimum window.
 - Tonal surfaces and hairline boundaries instead of decorative card shadows.
 - Serif type for orientation and reflection; sans-serif type for every active workflow.
-- One restrained accent used for commitment, selection, focus, and meaningful status.
+- One restrained contrast signal used for commitment, selection, focus, and meaningful status.
 - State changes communicated through text, shape, and hierarchy as well as color.
+- A slim top command row, dense task rows, and a thin Settings utility strip keep the daily loop visible in the popover.
 
 ## Native identity
 
@@ -182,7 +183,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 
 - **Transient menu layer** (`shadow-md` plus a subtle foreground ring): Select and popover content that must separate from the workspace.
 - **Dialog layer** (foreground ring with a restrained backdrop): Modal confirmation or calendar interaction when an inline treatment cannot contain the task.
-- **Static content** (none): Today rows, Backlog groups, settings groups, and capacity summaries remain flat.
+- **Static content** (none): Today rows, the flat Backlog list, settings groups, and capacity summaries remain flat.
 
 ### Named Rules
 
@@ -203,7 +204,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 
 ### Cards / Containers
 
-- **Corner Style:** `10px` for ordinary groups and controls; `14px` for transient panels; `18px` for the popover shell.
+- **Corner Style:** `8px` for ordinary groups and controls; `12px` for transient panels; `18px` for the popover shell.
 - **Background:** Use `card` against `background` for contained summaries; use `muted` for navigation and secondary regions.
 - **Border:** One quiet `border` establishes structure. Do not add decorative shadows to static panels.
 - **Internal Padding:** Use `8px` compact spacing, `10px` control spacing, and `20px` panel spacing.
@@ -212,39 +213,41 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 
 ### Inputs / Fields
 
-- **Style:** Transparent fields with `input` border, `10px` radius, `10px` horizontal padding, and `32px` height for compact controls.
+- **Style:** Transparent fields with `input` border, `8px` radius, `10px` horizontal padding, and `32px` height for ordinary compact controls. The Daily command row uses a slimmer `28px` treatment.
 - **Focus:** Shift the border to `ring` and add the standard visible focus ring.
 - **Error:** Use `destructive` border and ring treatment; keep the message adjacent and actionable.
 - **Disabled:** Reduce opacity and interaction without making the field appear like a separate inactive product state.
 
-### Navigation
+### Daily Workspace
 
-- **Style:** The top-level Today/Backlog switcher is a compact `pill` container with `muted` fill and `4px` internal padding.
-- **Default:** Sans-serif menu text in `muted-foreground`.
-- **Active:** `foreground` fill with `background` text and semibold weight, making the current planning context immediately legible.
-- **Density:** Keep navigation short. New categories belong in the task workflow only when they make the daily decision easier.
+- **Command row:** A slim search-and-capture entry sits above the scrollable task surface. It is the primary way to add work and the visual entry point for search and reviewable AI actions.
+- **Today:** The dominant section shows the remaining-minute value, a thin progress rail, active tasks, and completed Today tasks at the bottom.
+- **Backlog:** A single flat list appears beneath Today by default. Needs estimate, Overdue, Upcoming, and Unscheduled remain row metadata rather than category headings. The section can collapse locally when the user wants to protect the Today view.
+- **Settings:** A thin, subdued utility strip remains at the bottom of the workspace; it does not compete with capture or task content.
+- **Density:** Preserve the normal daily loop at `360 × 520`. Prefer compact hierarchy and metadata over extra panels or route-level navigation.
 
 ### Task Rows
 
-- **Structure:** A quiet divided list with a circular completion affordance, a flexible truncated title, and tabular duration metadata.
-- **State:** Selected rows use `muted`; completed rows use `muted-foreground` and a line-through; over-capacity rows use a restrained `destructive` boundary.
+- **Structure:** A quiet divided list with a circular completion affordance, a flexible task title, a smaller muted metadata line beneath it when needed, and tabular duration aligned to the right.
+- **Density:** Active rows target roughly `34–36px` of vertical height. Metadata is smaller and lighter than the title so it supports scanning without competing with the work.
+- **State:** Selected rows use `muted`; completed rows remain at the bottom of their owning list with `muted-foreground` and a line-through; over-capacity rows use a restrained `destructive` boundary.
 - **Interaction:** The entire row remains keyboard-operable with a visible focus ring. Completion and edit affordances must not rely on color alone.
 
 ### Capacity Summary
 
-- **Structure:** The persistent header shows the Today remaining-minute value and thin `4px` progress rail, or the Backlog active-task count. The rail stays with the capacity value while task content scrolls.
+- **Structure:** The Today header shows the remaining-minute value and thin `4px` progress rail. The rail stays with the capacity value while task content scrolls.
 - **Progress:** `primary` represents committed minutes; `destructive` represents over-capacity. The remaining-minute text shifts from `primary`, to `foreground`, to `capacity-caution` as capacity is used, then to `destructive` when over capacity.
 - **Behavior:** The rail is a signal, not a chart or performance score.
 
-### Persistent Composer
+### Daily Command Row and Utility Strip
 
-- **Structure:** A quiet, bounded footer holds the capture field, manual save, unavailable AI placeholder, and settings utility without adding a floating card treatment.
-- **Hierarchy:** Manual save becomes `primary` only when the capture has a valid title; utilities stay `outline`, and unavailable controls use the standard disabled treatment.
-- **Behavior:** The footer remains available as task content scrolls and connects directly to the task-detail panel when one is open.
+- **Structure:** A slim top command row holds the search-and-capture field, manual save affordance, and reviewable AI action. It remains visible while the task list scrolls.
+- **Hierarchy:** The command row is visually quiet; the task list and Today capacity carry the main emphasis. Manual save becomes `primary` only when the capture has a valid title.
+- **Utility strip:** A thin bottom strip exposes Settings with a small icon and muted label. It stays available without consuming a large footer band.
 
 ### Task Detail Panel
 
-- **Placement:** A footer-adjacent transient panel using `14px` top corners and a bounded compact height.
+- **Placement:** A utility-strip-adjacent transient panel using `12px` top corners and a bounded compact height.
 - **Surface:** A tinted task-detail surface with quiet boundary and no decorative shadow.
 - **Interaction:** Editing stays close to the task list, dismisses with Escape or outside click, and respects reduced motion.
 
@@ -253,6 +256,9 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 ### Do:
 
 - **Do** use `background`, `foreground`, `card`, `border`, `muted`, `primary`, and `ring` as semantic roles from `src/styles.css`.
+- **Do** keep the top command row compact and the Settings utility strip subordinate to the task surface.
+- **Do** keep Backlog flat and communicate task state through row metadata rather than category subsections.
+- **Do** keep completed Today tasks at the bottom of Today without creating a separate Done section.
 - **Do** reserve the primary black/white contrast for an explicit task decision, progress, selection, focus, or meaningful state.
 - **Do** keep the core workflow understandable at 360 × 520 before optimizing the full window.
 - **Do** use standard keyboard-operable controls with visible focus and 150–250ms state transitions.

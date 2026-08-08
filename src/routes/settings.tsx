@@ -137,7 +137,7 @@ function SettingsPage() {
     });
   }
 
-  function handleBackToToday(event: MouseEvent<HTMLAnchorElement>) {
+  function handleBackToWorkspace(event: MouseEvent<HTMLAnchorElement>) {
     setRouteTransition(event.detail > 0 ? "animate" : "instant");
   }
 
@@ -146,10 +146,10 @@ function SettingsPage() {
       <header className="shrink-0 px-4 pt-3 sm:px-6">
         <div className="mx-auto flex h-10 w-full max-w-xl items-center">
           <Link
-            aria-label="Back to Today"
+            aria-label="Back to Daily workspace"
             className="inline-flex h-8 items-center gap-1.5 rounded-md px-1 text-sm font-semibold text-foreground no-underline outline-none transition-colors duration-150 hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none"
-            onClick={handleBackToToday}
-            to="/today"
+            onClick={handleBackToWorkspace}
+            to="/"
           >
             <HugeiconsIcon aria-hidden="true" icon={ArrowLeft01Icon} size={16} strokeWidth={2} />
             <span id="settings-heading">Settings</span>
