@@ -679,6 +679,73 @@ impl Repository {
         transaction.commit().map_err(database_error)
     }
 
+    fn move_task(&mut self, input: MoveTaskInput) -> Result<MovedTask, String> {
+        let transaction = self.connection.transaction().map_err(database_error)?;
+        let before = task_state(&transaction, &input.id)?;
+        ensure_expected_revision(&before, input.expected_revision)?;
+
+        if before.completed_at.is_some() {
+            return Err("Completed tasks cannot be moved.".into());
+        }
+
+        let today = local_today();
+        let destination_date = match input.destination {
+            MoveTaskDestination::Today => {
+                if before.estimate_minutes.unwrap_or_default() <= 0 {
+                    return Err("estimate-required".into());
+                }
+                if before.scheduled_date.as_deref() == Some(today.as_str()) {
+                    return Err("Task is already in Today.".into());
+                }
+                Some(today.clone())
+            }
+            MoveTaskDestination::Backlog => {
+                if before.scheduled_date.as_deref() != Some(today.as_str()) {
+                    return Err("Task is not committed to Today.".into());
+                }
+                None
+            }
+        };
+        let previous_scope = active_scope(
+            before.estimate_minutes,
+            before.scheduled_date.as_deref(),
+            &today,
+        );
+        let destination_scope =
+            active_scope(before.estimate_minutes, destination_date.as_deref(), &today);
+
+        transaction
+            .execute(
+                "UPDATE tasks SET scheduled_date = ?1, anchor_date = NULL, revision = revision + 1
+                 WHERE id = ?2 AND revision = ?3",
+                params![destination_date, input.id, input.expected_revision],
+            )
+            .map_err(database_error)?;
+        if previous_scope != destination_scope {
+            move_task_to_scope_start(&transaction, &input.id, &destination_scope)?;
+        }
+
+        let after = task_state(&transaction, &input.id)?;
+        let revision = after.revision;
+        let before_json = serde_json::to_value(before).map_err(json_error)?;
+        let after_json = serde_json::to_value(after).map_err(json_error)?;
+        insert_event(
+            &transaction,
+            Some(&input.id),
+            if destination_date.is_some() {
+                "task-committed"
+            } else {
+                "task-returned-to-backlog"
+            },
+            "manual",
+            &Uuid::new_v4().to_string(),
+            Some(&before_json),
+            Some(&after_json),
+        )?;
+        transaction.commit().map_err(database_error)?;
+        Ok(MovedTask { revision })
+    }
+
     fn delete_task(&mut self, input: DeleteTaskInput) -> Result<(), String> {
         let transaction = self.connection.transaction().map_err(database_error)?;
         let before = task_state(&transaction, &input.id)?;
@@ -1140,6 +1207,27 @@ pub struct ScheduledDateInput {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum MoveTaskDestination {
+    Today,
+    Backlog,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MoveTaskInput {
+    id: String,
+    destination: MoveTaskDestination,
+    expected_revision: i64,
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MovedTask {
+    revision: i64,
+}
+
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteTaskInput {
     id: String,
@@ -1302,6 +1390,17 @@ pub fn set_task_scheduled_date(
         repository.set_task_scheduled_date(input)
     })?;
     emit_change(&app, &state)
+}
+
+#[tauri::command]
+pub fn move_task(
+    app: AppHandle,
+    state: State<PersistenceState>,
+    input: MoveTaskInput,
+) -> Result<MovedTask, String> {
+    let moved = with_repository(&state, |repository| repository.move_task(input))?;
+    emit_change(&app, &state)?;
+    Ok(moved)
 }
 
 #[tauri::command]
@@ -2808,6 +2907,219 @@ mod tests {
         assert!(!snapshot
             .order_by_scope
             .contains_key(&format!("today:{today}")));
+    }
+
+    #[test]
+    fn moves_estimated_tasks_between_today_and_backlog() {
+        let mut database = TestDatabase::new();
+        let first = create_task(&mut database.repository, "First commitment");
+        let second = create_task(&mut database.repository, "Move me");
+        let today = local_today();
+
+        database
+            .repository
+            .move_task(MoveTaskInput {
+                id: first.id.clone(),
+                destination: MoveTaskDestination::Today,
+                expected_revision: first.revision,
+            })
+            .expect("move first task to today");
+        database
+            .repository
+            .move_task(MoveTaskInput {
+                id: second.id.clone(),
+                destination: MoveTaskDestination::Today,
+                expected_revision: second.revision,
+            })
+            .expect("move second task to today");
+
+        let today_snapshot = test_snapshot(&database.repository);
+        let moved = today_snapshot
+            .tasks
+            .iter()
+            .find(|task| task.id == second.id)
+            .expect("moved task");
+        assert_eq!(moved.scheduled_date.as_deref(), Some(today.as_str()));
+        assert_eq!(
+            today_snapshot.order_by_scope.get(&format!("today:{today}")),
+            Some(&vec![second.id.clone(), first.id.clone()]),
+        );
+
+        database
+            .repository
+            .move_task(MoveTaskInput {
+                id: second.id.clone(),
+                destination: MoveTaskDestination::Backlog,
+                expected_revision: moved.revision,
+            })
+            .expect("return task to backlog");
+
+        let final_snapshot = test_snapshot(&database.repository);
+        let returned = final_snapshot
+            .tasks
+            .iter()
+            .find(|task| task.id == second.id)
+            .expect("returned task");
+        assert_eq!(returned.scheduled_date, None);
+        assert_eq!(
+            final_snapshot.order_by_scope.get("log:unscheduled"),
+            Some(&vec![second.id]),
+        );
+    }
+
+    #[test]
+    fn moving_an_unestimated_task_to_today_is_rejected_without_writes() {
+        let mut database = TestDatabase::new();
+        let created = database
+            .repository
+            .create_task(TaskInput {
+                title: "Needs estimate".into(),
+                estimate_minutes: None,
+                scheduled_date: None,
+                source: "manual".into(),
+            })
+            .expect("create unestimated task");
+        let event_count: i64 = database
+            .repository
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM planner_events WHERE task_id = ?1",
+                [&created.id],
+                |row| row.get(0),
+            )
+            .expect("event count");
+
+        assert_eq!(
+            database.repository.move_task(MoveTaskInput {
+                id: created.id.clone(),
+                destination: MoveTaskDestination::Today,
+                expected_revision: created.revision,
+            }),
+            Err("estimate-required".into())
+        );
+
+        let task = database
+            .repository
+            .tasks()
+            .expect("load tasks")
+            .into_iter()
+            .find(|task| task.id == created.id)
+            .expect("unestimated task");
+        assert_eq!(task.scheduled_date, None);
+        assert_eq!(task.revision, created.revision);
+        assert_eq!(
+            database
+                .repository
+                .connection
+                .query_row(
+                    "SELECT COUNT(*) FROM planner_events WHERE task_id = ?1",
+                    [&created.id],
+                    |row| row.get::<_, i64>(0),
+                )
+                .expect("event count after rejected move"),
+            event_count
+        );
+    }
+
+    #[test]
+    fn stale_task_moves_leave_state_unchanged() {
+        let mut database = TestDatabase::new();
+        let task = create_task(&mut database.repository, "Revision check");
+        database
+            .repository
+            .update_task(UpdateTaskInput {
+                id: task.id.clone(),
+                title: "Latest title".into(),
+                estimate_minutes: task.estimate_minutes,
+                scheduled_date: None,
+                anchor_date: None,
+                expected_revision: task.revision,
+            })
+            .expect("update task");
+
+        assert_eq!(
+            database.repository.move_task(MoveTaskInput {
+                id: task.id.clone(),
+                destination: MoveTaskDestination::Today,
+                expected_revision: task.revision,
+            }),
+            Err("stale-task".into())
+        );
+        let stored = database
+            .repository
+            .tasks()
+            .expect("load tasks")
+            .into_iter()
+            .find(|candidate| candidate.id == task.id)
+            .expect("updated task");
+        assert_eq!(stored.title, "Latest title");
+        assert_eq!(stored.scheduled_date, None);
+        assert_eq!(stored.revision, task.revision + 1);
+    }
+
+    #[test]
+    fn task_moves_return_a_revision_for_stale_safe_undo() {
+        let mut database = TestDatabase::new();
+        let task = create_task(&mut database.repository, "Undo me");
+        let today = local_today();
+
+        let committed = database
+            .repository
+            .move_task(MoveTaskInput {
+                id: task.id.clone(),
+                destination: MoveTaskDestination::Today,
+                expected_revision: task.revision,
+            })
+            .expect("commit task");
+        assert_eq!(committed.revision, task.revision + 1);
+
+        let returned = database
+            .repository
+            .move_task(MoveTaskInput {
+                id: task.id.clone(),
+                destination: MoveTaskDestination::Backlog,
+                expected_revision: committed.revision,
+            })
+            .expect("undo commitment");
+        assert_eq!(returned.revision, committed.revision + 1);
+
+        let recommitted = database
+            .repository
+            .move_task(MoveTaskInput {
+                id: task.id.clone(),
+                destination: MoveTaskDestination::Today,
+                expected_revision: returned.revision,
+            })
+            .expect("commit task again");
+        database
+            .repository
+            .update_task(UpdateTaskInput {
+                id: task.id.clone(),
+                title: "Changed after move".into(),
+                estimate_minutes: task.estimate_minutes,
+                scheduled_date: Some(today.clone()),
+                anchor_date: None,
+                expected_revision: recommitted.revision,
+            })
+            .expect("change moved task");
+
+        assert_eq!(
+            database.repository.move_task(MoveTaskInput {
+                id: task.id.clone(),
+                destination: MoveTaskDestination::Backlog,
+                expected_revision: recommitted.revision,
+            }),
+            Err("stale-task".into())
+        );
+        let stored = database
+            .repository
+            .tasks()
+            .expect("load tasks")
+            .into_iter()
+            .find(|candidate| candidate.id == task.id)
+            .expect("changed task");
+        assert_eq!(stored.title, "Changed after move");
+        assert_eq!(stored.scheduled_date.as_deref(), Some(today.as_str()));
     }
 
     #[test]

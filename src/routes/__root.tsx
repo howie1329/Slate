@@ -10,6 +10,7 @@ import { QuickCaptureWindow } from "@/components/quick-capture-window";
 import { TaskComposerFooter } from "@/components/task-composer-footer";
 import { RouteMotionProvider, useRouteMotion, type RouteMotionTransition } from "@/components/route-motion";
 import { TaskMotionProvider } from "@/components/task-motion";
+import { TaskMoveUndoProvider } from "@/components/task-move-undo";
 import { TaskSelectionProvider, useTaskSelection } from "@/components/task-selection";
 import { Button } from "@/components/ui/button";
 import { retryPersistence, type PlannerSnapshot } from "@/lib/planner";
@@ -26,7 +27,9 @@ export const Route = createRootRoute({
     <RouteMotionProvider>
       <TaskMotionProvider>
         <TaskSelectionProvider>
-          <SlateShell />
+          <TaskMoveUndoProvider>
+            <SlateShell />
+          </TaskMoveUndoProvider>
         </TaskSelectionProvider>
       </TaskMotionProvider>
     </RouteMotionProvider>

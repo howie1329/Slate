@@ -6,7 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { motion } from "motion/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { TaskMutationMotion, TaskMotionTransition } from "@/components/task-motion";
-import type { TaskSelectionTransition } from "@/components/task-selection";
+import type { TaskSelectionFocus, TaskSelectionTransition } from "@/components/task-selection";
 import type { Task } from "@/lib/planner";
 import { formatMinutes } from "@/lib/task-groups";
 import { cn } from "@/lib/utils";
@@ -16,7 +16,7 @@ type TaskRowProps = {
   isPending: boolean;
   isSelected: boolean;
   metadata?: string | null;
-  onSelectTask: (taskId: string, transition?: TaskSelectionTransition) => void;
+  onSelectTask: (taskId: string, transition?: TaskSelectionTransition, focus?: TaskSelectionFocus) => void;
   onMotionComplete: (version: number) => void;
   onToggleTask: (taskId: string, transition?: TaskMotionTransition) => void;
   shouldAnimateEnter: boolean;
@@ -28,6 +28,7 @@ type SortableTaskRowProps = TaskRowProps & {
   disabled: boolean;
   itemCount: number;
   position: number;
+  sectionLabel: string;
   showDragHandle: boolean;
 };
 
@@ -44,6 +45,7 @@ type SortableState = Pick<
   disabled: boolean;
   itemCount: number;
   position: number;
+  sectionLabel: string;
   showDragHandle: boolean;
 };
 
@@ -58,6 +60,7 @@ export function SortableTaskRow({
   disabled,
   itemCount,
   position,
+  sectionLabel,
   showDragHandle,
   task,
   ...props
@@ -77,6 +80,7 @@ export function SortableTaskRow({
         itemCount,
         listeners: sortable.listeners,
         position,
+        sectionLabel,
         setActivatorNodeRef: sortable.setActivatorNodeRef,
         setNodeRef: sortable.setNodeRef,
         showDragHandle,
@@ -224,7 +228,7 @@ function TaskRowContent({
             <button
               {...sortable.attributes}
               {...sortable.listeners}
-              aria-label={`Reorder ${task.title}, position ${sortable.position} of ${sortable.itemCount}`}
+              aria-label={`Move ${task.title} within ${sortable.sectionLabel}, position ${sortable.position} of ${sortable.itemCount}`}
               className={cn(
                 "mr-1 flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground opacity-25 outline-none transition-[color,background-color,opacity] duration-150 group-hover/task-row:opacity-70 hover:bg-background hover:text-foreground hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring active:cursor-grabbing motion-reduce:transition-none",
                 sortable.disabled && "cursor-default opacity-20 group-hover/task-row:opacity-35",

@@ -1,46 +1,29 @@
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
-import {
-  closestCenter,
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type Announcements,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import {
-  arrayMove,
-  sortableKeyboardCoordinates,
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { AnimatePresence } from "motion/react";
 import { useTaskMotion, type TaskMutationMotion, type TaskMotionTransition } from "@/components/task-motion";
 import { SortableTaskRow, TaskRow } from "@/components/task-row";
-import type { TaskSelectionTransition } from "@/components/task-selection";
+import type { TaskSelectionFocus, TaskSelectionTransition } from "@/components/task-selection";
 import type { Task } from "@/lib/planner";
 import { cn } from "@/lib/utils";
-
-const taskListModifiers = [restrictToVerticalAxis];
-const taskListScreenReaderInstructions = {
-  draggable:
-    "To reorder this task, press Space or Enter. While sorting, use the arrow keys to move it, press Space or Enter to drop it, or press Escape to cancel.",
-};
 
 type TaskGroupProps = {
   className?: string;
   collapsible?: boolean;
   defaultCollapsed?: boolean;
+  dragTargetId?: string;
+  draggable?: boolean;
   emphasized?: boolean;
   emptyMessage?: string;
+  forceExpanded?: boolean;
   getTaskMetadata?: (task: Task) => string | null;
+  getTaskOrderDetails?: (task: Task) => TaskOrderDetails | undefined;
+  isDragTarget?: boolean;
   label: string;
-  onReorderTasks?: (taskIds: string[]) => void;
-  onSelectTask: (taskId: string, transition?: TaskSelectionTransition) => void;
+  onSelectTask: (taskId: string, transition?: TaskSelectionTransition, focus?: TaskSelectionFocus) => void;
   onTasksExitComplete?: () => void;
   onToggleTask: (taskId: string, transition?: TaskMotionTransition) => void;
   overflowTaskId?: string | null;
@@ -51,15 +34,25 @@ type TaskGroupProps = {
   tasks: Task[];
 };
 
+export type TaskOrderDetails = {
+  itemCount: number;
+  position: number;
+  sectionLabel: string;
+};
+
 export function TaskGroup({
   className,
   collapsible = false,
   defaultCollapsed = false,
+  dragTargetId,
+  draggable = false,
   emphasized = false,
   emptyMessage,
+  forceExpanded = false,
   getTaskMetadata,
+  getTaskOrderDetails,
+  isDragTarget = false,
   label,
-  onReorderTasks,
   onSelectTask,
   onTasksExitComplete,
   onToggleTask,
@@ -72,16 +65,6 @@ export function TaskGroup({
 }: TaskGroupProps) {
   const { clearTaskMutation } = useTaskMotion();
   const contentId = useId();
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 6,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
   const [hasRenderedTasks, setHasRenderedTasks] = useState(tasks.length > 0);
   const [isManuallyCollapsed, setIsManuallyCollapsed] = useState(defaultCollapsed);
   const previousTaskIdsRef = useRef(new Set(tasks.map((task) => task.id)));
@@ -97,65 +80,8 @@ export function TaskGroup({
         ? taskMutation?.taskId ?? null
         : null
     : null;
-  const isCollapsed = collapsible && isManuallyCollapsed && !enteringTaskId;
+  const isCollapsed = collapsible && isManuallyCollapsed && !enteringTaskId && !forceExpanded;
   const taskIds = tasks.map((task) => task.id);
-  const taskDetails = useMemo(
-    () =>
-      new Map(
-        tasks.map((task, index) => [
-          task.id,
-          {
-            position: index + 1,
-            title: task.title,
-          },
-        ]),
-      ),
-    [tasks],
-  );
-  const announcements = useMemo<Announcements>(
-    () => ({
-      onDragStart({ active }) {
-        const task = taskDetails.get(String(active.id));
-        return task
-          ? `Picked up ${task.title}, position ${task.position} of ${tasks.length} in ${label}.`
-          : undefined;
-      },
-      onDragOver({ active, over }) {
-        const activeTask = taskDetails.get(String(active.id));
-        const overTask = over ? taskDetails.get(String(over.id)) : undefined;
-
-        if (!activeTask) {
-          return undefined;
-        }
-        if (active.id === over?.id) {
-          return undefined;
-        }
-        if (!overTask) {
-          return `${activeTask.title} is outside ${label}.`;
-        }
-
-        return `${activeTask.title} moved to position ${overTask.position} of ${tasks.length} in ${label}.`;
-      },
-      onDragEnd({ active, over }) {
-        const activeTask = taskDetails.get(String(active.id));
-        const overTask = over ? taskDetails.get(String(over.id)) : undefined;
-
-        if (!activeTask) {
-          return undefined;
-        }
-        if (!overTask || active.id === over?.id) {
-          return `${activeTask.title} was not moved.`;
-        }
-
-        return `${activeTask.title} was dropped at position ${overTask.position} of ${tasks.length} in ${label}.`;
-      },
-      onDragCancel({ active }) {
-        const task = taskDetails.get(String(active.id));
-        return task ? `Reordering ${task.title} was cancelled.` : undefined;
-      },
-    }),
-    [label, taskDetails, tasks.length],
-  );
 
   useEffect(() => {
     previousTaskIdsRef.current = new Set(tasks.map((task) => task.id));
@@ -173,23 +99,8 @@ export function TaskGroup({
     }
   }, [collapsible, enteringTaskId]);
 
-  if (tasks.length === 0 && !hasRenderedTasks && !emptyMessage) {
+  if (tasks.length === 0 && !hasRenderedTasks && !emptyMessage && !dragTargetId) {
     return null;
-  }
-
-  function handleDragEnd({ active, over }: DragEndEvent) {
-    if (!onReorderTasks || reorderDisabled || !over || active.id === over.id) {
-      return;
-    }
-
-    const activeIndex = taskIds.indexOf(String(active.id));
-    const overIndex = taskIds.indexOf(String(over.id));
-
-    if (activeIndex === -1 || overIndex === -1) {
-      return;
-    }
-
-    onReorderTasks(arrayMove(taskIds, activeIndex, overIndex));
   }
 
   const rows = (
@@ -208,6 +119,7 @@ export function TaskGroup({
       }}
     >
       {tasks.map((task, index) => {
+        const orderDetails = getTaskOrderDetails?.(task);
         const rowProps = {
           isOverflow: task.id === overflowTaskId && task.completedAt === null,
           isPending: pending,
@@ -221,14 +133,15 @@ export function TaskGroup({
           taskMutation,
         };
 
-        return onReorderTasks ? (
+        return draggable ? (
           <SortableTaskRow
             {...rowProps}
-            disabled={reorderDisabled || tasks.length < 2}
-            itemCount={tasks.length}
+            disabled={reorderDisabled}
+            itemCount={orderDetails?.itemCount ?? tasks.length}
             key={task.id}
-            position={index + 1}
-            showDragHandle={tasks.length > 1}
+            position={orderDetails?.position ?? index + 1}
+            sectionLabel={orderDetails?.sectionLabel ?? label}
+            showDragHandle
           />
         ) : (
           <TaskRow {...rowProps} key={task.id} />
@@ -268,29 +181,39 @@ export function TaskGroup({
           {tasks.length === 0 && emptyMessage ? (
             <p className="m-0 border-b border-border py-3 text-menu leading-5 text-muted-foreground">{emptyMessage}</p>
           ) : (
-            <ul className="m-0 list-none divide-y divide-border p-0">
-              {onReorderTasks ? (
-                <DndContext
-                  accessibility={{
-                    announcements,
-                    screenReaderInstructions: taskListScreenReaderInstructions,
-                  }}
-                  collisionDetection={closestCenter}
-                  modifiers={taskListModifiers}
-                  onDragEnd={handleDragEnd}
-                  sensors={sensors}
-                >
-                  <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-                    {rows}
-                  </SortableContext>
-                </DndContext>
-              ) : (
-                rows
-              )}
-            </ul>
+            <TaskList dragTargetId={dragTargetId} isDragTarget={isDragTarget}>
+              {draggable ? <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>{rows}</SortableContext> : rows}
+            </TaskList>
           )}
         </div>
       )}
     </section>
+  );
+}
+
+function TaskList({
+  children,
+  dragTargetId,
+  isDragTarget,
+}: {
+  children: ReactNode;
+  dragTargetId?: string;
+  isDragTarget: boolean;
+}) {
+  const { isOver, setNodeRef } = useDroppable({
+    disabled: !dragTargetId,
+    id: dragTargetId ?? "task-group-drop-target",
+  });
+
+  return (
+    <ul
+      className={cn(
+        "m-0 list-none divide-y divide-border p-0 transition-colors duration-150 motion-reduce:transition-none",
+        (isOver || isDragTarget) && "bg-muted/60 ring-1 ring-inset ring-ring/50",
+      )}
+      ref={dragTargetId ? setNodeRef : undefined}
+    >
+      {children}
+    </ul>
   );
 }

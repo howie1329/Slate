@@ -135,6 +135,13 @@ export type SetTaskScheduledDateInput = {
   scheduledDate: LocalDate | null;
   expectedRevision: number;
 };
+export type TaskMoveDestination = "today" | "backlog";
+export type MoveTaskInput = {
+  id: string;
+  destination: TaskMoveDestination;
+  expectedRevision: number;
+};
+export type MovedTask = { revision: number };
 export type DeleteTaskInput = { id: string; expectedRevision: number };
 export type ReorderTasksInput = {
   scope: string;
@@ -196,6 +203,10 @@ export function setTaskCompleted(input: SetTaskCompletedInput) {
 
 export function setTaskScheduledDate(input: SetTaskScheduledDateInput) {
   return plannerInvoke<void>("set_task_scheduled_date", { input });
+}
+
+export function moveTask(input: MoveTaskInput) {
+  return plannerInvoke<MovedTask>("move_task", { input });
 }
 
 export function deleteTask(input: DeleteTaskInput) {
