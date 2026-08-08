@@ -2,55 +2,60 @@
 name: Slate
 description: A calm, compact macOS planner for deciding what fits today.
 colors:
-  background: "oklch(0.985 0.003 85)"
-  foreground: "oklch(0.28 0.016 68)"
-  card: "oklch(0.998 0.002 85)"
-  card-foreground: "oklch(0.28 0.016 68)"
-  popover: "oklch(0.998 0.002 85)"
-  popover-foreground: "oklch(0.28 0.016 68)"
-  primary: "oklch(0.43 0.09 160)"
-  primary-foreground: "oklch(0.985 0.003 85)"
-  secondary: "oklch(0.94 0.008 85)"
-  secondary-foreground: "oklch(0.28 0.016 68)"
-  muted: "oklch(0.95 0.006 85)"
-  muted-foreground: "oklch(0.55 0.014 68)"
-  accent: "oklch(0.94 0.008 85)"
-  accent-foreground: "oklch(0.28 0.016 68)"
-  destructive: "oklch(0.577 0.245 27.325)"
-  border: "oklch(0.87 0.008 85)"
-  input: "oklch(0.87 0.008 85)"
-  ring: "oklch(0.62 0.12 160)"
-  capacity-caution: "oklch(0.56 0.11 80)"
-  dark-background: "oklch(0.22 0.012 68)"
-  dark-foreground: "oklch(0.96 0.006 85)"
-  dark-card: "oklch(0.27 0.014 68)"
-  dark-primary: "oklch(0.72 0.12 160)"
+  background: "oklch(0.9900 0 0)"
+  foreground: "oklch(0 0 0)"
+  card: "oklch(1 0 0)"
+  card-foreground: "oklch(0 0 0)"
+  popover: "oklch(0.9900 0 0)"
+  popover-foreground: "oklch(0 0 0)"
+  primary: "oklch(0 0 0)"
+  primary-foreground: "oklch(1 0 0)"
+  secondary: "oklch(0.9400 0 0)"
+  secondary-foreground: "oklch(0 0 0)"
+  muted: "oklch(0.9700 0 0)"
+  muted-foreground: "oklch(0.4400 0 0)"
+  accent: "oklch(0.9400 0 0)"
+  accent-foreground: "oklch(0 0 0)"
+  destructive: "oklch(0.6300 0.1900 23.0300)"
+  border: "oklch(0.9200 0 0)"
+  input: "oklch(0.9400 0 0)"
+  ring: "oklch(0 0 0)"
+  chart-1: "oklch(0.8100 0.1700 75.3500)"
+  chart-2: "oklch(0.5500 0.2200 264.5300)"
+  chart-3: "oklch(0.7200 0 0)"
+  chart-4: "oklch(0.9200 0 0)"
+  chart-5: "oklch(0.5600 0 0)"
+  capacity-caution: "color-mix(in oklch, var(--chart-1) 70%, var(--foreground))"
+  dark-background: "oklch(0 0 0)"
+  dark-foreground: "oklch(1 0 0)"
+  dark-card: "oklch(0.1400 0 0)"
+  dark-primary: "oklch(1 0 0)"
 typography:
   title:
-    fontFamily: "Iowan Old Style, Palatino Linotype, Palatino, serif"
+    fontFamily: "Georgia, serif"
     fontSize: "1.5rem"
     fontWeight: 600
     lineHeight: 1.25
   body:
-    fontFamily: "Avenir Next, Helvetica Neue, sans-serif"
+    fontFamily: "Geist, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.5
   menu:
-    fontFamily: "Avenir Next, Helvetica Neue, sans-serif"
+    fontFamily: "Geist, sans-serif"
     fontSize: "0.8125rem"
     fontWeight: 400
     lineHeight: 1.125rem
   label:
-    fontFamily: "Avenir Next, Helvetica Neue, sans-serif"
+    fontFamily: "Geist, sans-serif"
     fontSize: "0.6875rem"
     fontWeight: 600
     lineHeight: 0.875rem
 rounded:
   checkbox: "4px"
-  control: "8px"
-  field: "10px"
-  panel: "14px"
+  control: "6px"
+  field: "8px"
+  panel: "12px"
   shell: "18px"
   pill: "999px"
 spacing:
@@ -102,7 +107,7 @@ components:
 
 Slate is a calm, compact planning surface for one decision: what fits today. The interface uses familiar product-UI vocabulary—short labels, clear hierarchy, standard controls, and quiet boundaries—so the planning workflow stays more visible than the interface itself.
 
-The visual system is restrained rather than decorative. Near-neutral surfaces establish a soft desktop canvas, a single muted teal accent marks commitment and state, and serif type creates a brief reflective pause only where the product asks the user to orient. The system explicitly rejects project-management density, calendar/time-blocking metaphors, and AI surfaces that imply control without confirmation.
+The visual system is restrained rather than decorative. Near-neutral surfaces establish a clean desktop canvas, black-and-white contrast marks commitment and state, and Georgia type creates a brief reflective pause only where the product asks the user to orient. The system explicitly rejects project-management density, calendar/time-blocking metaphors, and AI surfaces that imply control without confirmation.
 
 **Key Characteristics:**
 
@@ -123,37 +128,37 @@ Slate’s application mark is a rounded warm-ivory tile over a charcoal underlay
 
 ## Colors
 
-The palette is a warm-neutral desktop canvas with a muted teal commitment signal and a red destructive state. The same semantic roles drive light and dark themes; components should use CSS variables rather than literal values.
+The palette is a neutral monochrome desktop canvas with black-and-white primary contrast and a red destructive state. The same semantic roles drive light and dark themes; components should use CSS variables rather than literal values.
 
 ### Primary
 
-- **Muted teal commitment signal** (`oklch(0.43 0.09 160)`): Use for committed capacity progress, selected or checked state, confirmed configuration, and the primary in-flow action. Keep it scarce so it retains meaning.
-- **Teal focus ring** (`oklch(0.62 0.12 160)`): Use for keyboard focus and active control emphasis. It must remain distinct from the primary fill.
+- **Primary contrast** (`oklch(0 0 0)` in light mode, `oklch(1 0 0)` in dark mode): Use for committed capacity progress, selected or checked state, confirmed configuration, and the primary in-flow action.
+- **Primary focus ring** (`oklch(0 0 0)` in light mode, `oklch(0.7200 0 0)` in dark mode): Use for keyboard focus and active control emphasis.
 
 ### Neutral
 
-- **Canvas** (`oklch(0.985 0.003 85)`): The main light-theme background.
-- **Surface** (`oklch(0.998 0.002 85)`): Cards, popovers, and contained summaries.
-- **Ink** (`oklch(0.28 0.016 68)`): Primary readable text and active navigation.
-- **Muted surface** (`oklch(0.95 0.006 85)`): Navigation tray, hover state, capacity rail, and secondary regions.
-- **Muted text** (`oklch(0.55 0.014 68)`): Supporting labels and metadata. It remains body-text contrast, not decoration.
-- **Boundary** (`oklch(0.87 0.008 85)`): Hairline structure between tasks, fields, and sections.
-- **Destructive red** (`oklch(0.577 0.245 27.325)`): Invalid, delete, and over-capacity states only.
-- **Capacity caution** (`oklch(0.56 0.11 80)`): Use for the remaining-capacity value as the day approaches its limit. It is distinct from the destructive over-capacity state.
-- **Dark canvas** (`oklch(0.22 0.012 68)`): The dark-theme background.
-- **Dark surface** (`oklch(0.27 0.014 68)`): Dark cards and popovers.
+- **Canvas** (`oklch(0.9900 0 0)`): The main light-theme background.
+- **Surface** (`oklch(1 0 0)`): Cards and contained summaries.
+- **Ink** (`oklch(0 0 0)`): Primary readable text and active navigation.
+- **Muted surface** (`oklch(0.9700 0 0)`): Navigation tray, hover state, capacity rail, and secondary regions.
+- **Muted text** (`oklch(0.4400 0 0)`): Supporting labels and metadata. It remains body-text contrast, not decoration.
+- **Boundary** (`oklch(0.9200 0 0)`): Hairline structure between tasks, fields, and sections.
+- **Destructive red** (`oklch(0.6300 0.1900 23.0300)`): Invalid, delete, and over-capacity states only.
+- **Capacity caution** (a readable blend of `chart-1` and the foreground): Use for the remaining-capacity value as the day approaches its limit and for recoverable warnings.
+- **Dark canvas** (`oklch(0 0 0)`): The dark-theme background.
+- **Dark surface** (`oklch(0.1400 0 0)`): Dark cards; popovers use `oklch(0.1800 0 0)`.
 
 ### Named Rules
 
-**The One Signal Rule.** Use the primary teal only when it communicates action, progress, selection, focus, or meaningful state. Do not use it as page decoration.
+**The One Contrast Rule.** Use the primary black/white contrast only when it communicates action, progress, selection, focus, or meaningful state. Do not use it as page decoration.
 
 **The Token Rule.** Use the semantic CSS variables from `src/styles.css`. Do not introduce near-matching neutral or accent values in component classes.
 
 ## Typography
 
-**Display / Orientation Font:** Iowan Old Style with Palatino Linotype, Palatino fallbacks.
+**Display / Orientation Font:** Georgia with the system serif fallback.
 
-**Body / UI Font:** Avenir Next with Helvetica Neue fallbacks.
+**Body / UI Font:** Geist with the system sans-serif fallback.
 
 **Character:** The serif face creates a measured pause around orientation and the daily decision. The sans-serif face carries labels, controls, task data, and settings so active work stays familiar and compact.
 
@@ -248,7 +253,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 ### Do:
 
 - **Do** use `background`, `foreground`, `card`, `border`, `muted`, `primary`, and `ring` as semantic roles from `src/styles.css`.
-- **Do** reserve the teal accent for an explicit task decision, progress, selection, focus, or meaningful state.
+- **Do** reserve the primary black/white contrast for an explicit task decision, progress, selection, focus, or meaningful state.
 - **Do** keep the core workflow understandable at 360 × 520 before optimizing the full window.
 - **Do** use standard keyboard-operable controls with visible focus and 150–250ms state transitions.
 - **Do** provide empty, completed, over-capacity, persistence-error, loading, and disabled states with concise explanatory copy.
