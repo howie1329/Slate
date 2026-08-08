@@ -1,16 +1,20 @@
 import { useState } from "react";
+import NumberFlow from "@number-flow/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { InboxIcon, Sun01Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 import { DailyCommandBar } from "@/components/daily-command-bar";
+import { PlannerEmptyState } from "@/components/planner-empty-state";
 import { TaskGroup } from "@/components/task-group";
 import { useTaskMotion, type TaskMotionTransition } from "@/components/task-motion";
 import { useTaskSelection } from "@/components/task-selection";
-import { Button } from "@/components/ui/button";
 import { selectDailyWorkspace } from "@/lib/daily-workspace";
 import type { PlannerSnapshot, Task } from "@/lib/planner";
 import { usePlannerState, useReorderTasks, useSetTaskCompleted } from "@/lib/planner-query";
 import { useWindowMode } from "@/lib/window-mode";
+
+const numberTransformTiming = { duration: 180, easing: "ease-out" };
+const numberOpacityTiming = { duration: 120, easing: "ease-out" };
 
 export function DailyWorkspace() {
   const planner = usePlannerState();
@@ -91,13 +95,16 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
       >
         <div className={`mx-auto w-full max-w-xl ${windowMode === "full" ? "max-w-3xl" : ""}`}>
           {model.hasQuery && !model.hasMatches ? (
-            <EmptyWorkspaceMessage
+            <PlannerEmptyState
               actionLabel="Clear search"
+              compact
               description="Clear the search to return to the full Daily workspace."
-              icon={InboxIcon}
               onAction={() => setQuery("")}
               title="No matching tasks"
-            />
+              transition={taskMutation?.transition ?? "instant"}
+            >
+              <HugeiconsIcon aria-hidden="true" icon={InboxIcon} size={20} strokeWidth={1.8} />
+            </PlannerEmptyState>
           ) : (
             <>
               <section aria-labelledby="daily-today-heading" className="pt-3">
@@ -106,16 +113,32 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
                     <h1 className="m-0 font-heading text-xl font-semibold leading-6 tracking-tight" id="daily-today-heading">
                       Today
                     </h1>
-                    <p className={`m-0 mt-0.5 text-xs tabular-nums ${model.today.capacity.isOverCapacity ? "text-destructive" : "text-muted-foreground"}`}>
-                      <span className="font-semibold text-foreground">
-                        {model.today.capacity.isOverCapacity ? `${model.today.capacity.overageMinutes}m` : `${model.today.capacity.remainingMinutes}m`}
-                      </span>{" "}
+                    <p
+                      aria-label={capacityStatus(model.today.capacity)}
+                      className={`m-0 mt-0.5 text-xs tabular-nums ${model.today.capacity.isOverCapacity ? "text-destructive" : "text-muted-foreground"}`}
+                      role="status"
+                    >
+                      <NumberFlow
+                        aria-hidden="true"
+                        className="font-semibold text-foreground"
+                        opacityTiming={numberOpacityTiming}
+                        respectMotionPreference
+                        suffix="m"
+                        transformTiming={numberTransformTiming}
+                        value={model.today.capacity.isOverCapacity ? model.today.capacity.overageMinutes : model.today.capacity.remainingMinutes}
+                      />{" "}
                       {model.today.capacity.isOverCapacity ? "over capacity" : "remaining"}
                     </p>
                   </div>
                   {model.today.unsizedTaskCount > 0 ? (
-                    <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
-                      {model.today.unsizedTaskCount} unsized
+                    <span aria-label={`${model.today.unsizedTaskCount} unsized tasks`} className="shrink-0 text-[10px] tabular-nums text-muted-foreground" role="status">
+                      <NumberFlow
+                        aria-hidden="true"
+                        opacityTiming={numberOpacityTiming}
+                        respectMotionPreference
+                        transformTiming={numberTransformTiming}
+                        value={model.today.unsizedTaskCount}
+                      />{" "}unsized
                     </span>
                   ) : null}
                 </div>
@@ -154,13 +177,16 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
                   tasks={model.today.active.tasks}
                 />
               ) : (
-                <EmptyWorkspaceMessage
+                <PlannerEmptyState
                   actionLabel="Add a task"
+                  compact
                   description="Capture work above, then commit it to Today from its details."
-                  icon={Sun01Icon}
                   onAction={() => document.getElementById("task-composer-input")?.focus()}
                   title="Your day is open"
-                />
+                  transition={taskMutation?.transition ?? "instant"}
+                >
+                  <HugeiconsIcon aria-hidden="true" icon={Sun01Icon} size={20} strokeWidth={1.8} />
+                </PlannerEmptyState>
               )}
 
               <section aria-labelledby="daily-backlog-heading" className="mt-5 border-t border-border pt-3">
@@ -173,7 +199,15 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
                 >
                   <span className="flex min-w-0 items-baseline gap-2">
                     <span className="font-heading text-base font-semibold leading-5" id="daily-backlog-heading">Backlog</span>
-                    <span className="text-[10px] tabular-nums text-muted-foreground">{model.backlog.totalTaskCount}</span>
+                    <span aria-label={`${model.backlog.totalTaskCount} tasks in backlog`} className="text-[10px] tabular-nums text-muted-foreground" role="status">
+                      <NumberFlow
+                        aria-hidden="true"
+                        opacityTiming={numberOpacityTiming}
+                        respectMotionPreference
+                        transformTiming={numberTransformTiming}
+                        value={model.backlog.totalTaskCount}
+                      />
+                    </span>
                   </span>
                   <span aria-hidden="true" className="text-xs text-muted-foreground">{backlogExpanded ? "⌃" : "⌄"}</span>
                 </button>
@@ -214,25 +248,4 @@ function capacityPercentage(committedMinutes: number, capacityMinutes: number) {
 
 function capacityStatus(capacity: ReturnType<typeof selectDailyWorkspace>["today"]["capacity"]) {
   return capacity.isOverCapacity ? `${capacity.overageMinutes} min over capacity` : `${capacity.remainingMinutes} min remaining`;
-}
-
-type EmptyWorkspaceMessageProps = {
-  actionLabel: string;
-  description: string;
-  icon: typeof Sun01Icon;
-  onAction: () => void;
-  title: string;
-};
-
-function EmptyWorkspaceMessage({ actionLabel, description, icon, onAction, title }: EmptyWorkspaceMessageProps) {
-  return (
-    <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
-      <HugeiconsIcon aria-hidden="true" className="text-muted-foreground" icon={icon} size={20} strokeWidth={1.8} />
-      <p className="m-0 text-sm font-medium">{title}</p>
-      <p className="m-0 max-w-[30ch] text-xs leading-4 text-muted-foreground">{description}</p>
-      <Button className="mt-1 h-7 rounded-md px-2.5 text-xs" onClick={onAction} size="sm" type="button" variant="outline">
-        {actionLabel}
-      </Button>
-    </div>
-  );
 }

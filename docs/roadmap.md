@@ -64,11 +64,11 @@ Slate 1.0.0 is the shipped baseline for the first usable daily planning loop:
 - Tauri macOS host with a compact menu-bar popover and full application window.
 - A unified Daily workspace and a separate Settings route using the same workspace shell.
 - Local SQLite persistence for tasks, ordering, and non-sensitive preferences.
-- Native task creation, editing, completion, deletion, scheduling, and persisted pointer/keyboard reordering.
+- Native task creation, editing, completion, deletion, scheduling, and persisted pointer/keyboard reordering within the active Today list.
 - Daily capacity state with visible remaining and over-capacity behavior.
 - macOS Keychain storage for provider API keys.
 - Renderer caching and cross-window invalidation through TanStack Query and native change events.
-- Compact task-detail interaction above the persistent footer.
+- Compact task-detail interaction above the Settings utility strip.
 - Light and dark themes with a restrained visual system.
 - Pointer-only Motion transitions for task presence/layout, task-detail entry and exit, route changes, empty states, and pending-save feedback.
 - Reviewable AI Assist and atomic Plan My Day flows through the Keychain-backed packaged Node sidecar.
