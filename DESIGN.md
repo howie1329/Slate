@@ -267,7 +267,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 
 - **Structure:** A slim top command row holds the search-and-capture field and reviewable AI action. Enter submits a captured title; there is no separate save button. The row remains visible while the task list scrolls.
 - **Hierarchy:** The command row is visually quiet; the task list and Today capacity carry the main emphasis. Enter-to-save stays implicit and keyboard-first.
-- **Persistent footer:** The 28px tray uses a slight muted tint and hairline divider. Labels and icons stay quiet at `10px`, with the popover split between Open full app and Settings and the full app keeping Settings on the right.
+- **Persistent footer:** The 28px tray uses a slight muted tint and hairline divider. Labels and icons stay quiet at `8px`, with the popover split between Open full app and Settings and the full app keeping Settings on the right.
 - **Transient panels:** Task details and AI review panels attach above the footer when active and disappear with the selection or review state.
 
 ### Task Detail Panel
