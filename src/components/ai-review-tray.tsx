@@ -10,10 +10,11 @@ import {
 } from "@hugeicons/core-free-icons";
 import { motion } from "motion/react";
 import { toast } from "sonner";
-import { useCreateTask } from "@/lib/planner-query";
+import { useCreateTask, usePlannerState } from "@/lib/planner-query";
 import { dateFromLocalDate, formatDueDate, localDateFromDate } from "@/lib/local-date";
 import type { AiAssistProposal, AiPlanProposal, LocalDate } from "@/lib/planner";
 import { useTaskMotion } from "@/components/task-motion";
+import { useTaskMoveUndo } from "@/components/task-move-undo";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -176,7 +177,9 @@ function PlanStaleState({ onDismiss, onRedo }: { onDismiss: () => void; onRedo: 
 
 function AssistResult({ onDismiss, onRedo, proposal }: { onDismiss: () => void; onRedo: () => void; proposal: AiAssistProposal }) {
   const createTask = useCreateTask();
+  const planner = usePlannerState();
   const { recordTaskMutation } = useTaskMotion();
+  const { reportFeedback } = useTaskMoveUndo();
   const [title, setTitle] = useState(proposal.title);
   const [estimate, setEstimate] = useState(String(proposal.estimateMinutes));
   const [scheduledDate, setScheduledDate] = useState<LocalDate | null>(proposal.scheduledDate);
@@ -209,8 +212,9 @@ function AssistResult({ onDismiss, onRedo, proposal }: { onDismiss: () => void; 
       { title: nextTitle, estimateMinutes: nextEstimate, scheduledDate, source: "ai-assist" },
       {
         onSuccess: () => {
+          const destination = scheduledDate === planner.data?.today ? "today" : "backlog";
+          reportFeedback(`${nextTitle} added to ${destination === "today" ? "Today" : "Backlog"}.`, false, destination);
           onDismiss();
-          toast.success("Task saved.");
         },
         onError: (error) => {
           toast.error(error instanceof Error ? error.message : "Could not save task.");

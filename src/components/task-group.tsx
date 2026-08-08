@@ -18,6 +18,7 @@ type TaskGroupProps = {
   draggable?: boolean;
   emphasized?: boolean;
   emptyMessage?: string;
+  feedback?: ReactNode;
   forceExpanded?: boolean;
   getTaskMetadata?: (task: Task) => string | null;
   getTaskOrderDetails?: (task: Task) => TaskOrderDetails | undefined;
@@ -29,7 +30,9 @@ type TaskGroupProps = {
   overflowTaskId?: string | null;
   pending: boolean;
   reorderDisabled?: boolean;
+  renderWhenEmpty?: boolean;
   selectedTaskId: string | null;
+  sectionId?: string;
   taskMutation?: TaskMutationMotion | null;
   tasks: Task[];
 };
@@ -48,6 +51,7 @@ export function TaskGroup({
   draggable = false,
   emphasized = false,
   emptyMessage,
+  feedback,
   forceExpanded = false,
   getTaskMetadata,
   getTaskOrderDetails,
@@ -59,7 +63,9 @@ export function TaskGroup({
   overflowTaskId = null,
   pending,
   reorderDisabled = false,
+  renderWhenEmpty = false,
   selectedTaskId,
+  sectionId,
   taskMutation = null,
   tasks,
 }: TaskGroupProps) {
@@ -67,20 +73,26 @@ export function TaskGroup({
   const contentId = useId();
   const [hasRenderedTasks, setHasRenderedTasks] = useState(tasks.length > 0);
   const [isManuallyCollapsed, setIsManuallyCollapsed] = useState(defaultCollapsed);
+  const sectionRef = useRef<HTMLElement>(null);
   const previousTaskIdsRef = useRef(new Set(tasks.map((task) => task.id)));
   const handledMotionVersionRef = useRef<number | null>(null);
   const previousTaskIds = previousTaskIdsRef.current;
   const canAnimateEntry =
     taskMutation?.transition === "animate" && handledMotionVersionRef.current !== taskMutation.version;
   const addedTasks = tasks.filter((task) => !previousTaskIds.has(task.id));
-  const enteringTaskId = canAnimateEntry
-    ? taskMutation?.kind === "create"
-      ? addedTasks[0]?.id ?? null
-      : addedTasks.some((task) => task.id === taskMutation?.taskId)
-        ? taskMutation?.taskId ?? null
-        : null
-    : null;
-  const isCollapsed = collapsible && isManuallyCollapsed && !enteringTaskId && !forceExpanded;
+  const revealedTaskId = taskMutation?.kind === "create"
+    ? addedTasks[0]?.id ?? null
+    : addedTasks.some((task) => task.id === taskMutation?.taskId)
+      ? taskMutation?.taskId ?? null
+      : null;
+  const enteringTaskId = canAnimateEntry ? revealedTaskId : null;
+  const taskIsInThisGroup = taskMutation?.taskId !== undefined
+    && (previousTaskIds.has(taskMutation.taskId) || tasks.some((task) => task.id === taskMutation.taskId));
+  const shouldAnimateLayout = Boolean(
+    taskMutation?.transition === "animate"
+      && (taskMutation.kind === "create" ? revealedTaskId : taskIsInThisGroup),
+  );
+  const isCollapsed = collapsible && isManuallyCollapsed && !revealedTaskId && !forceExpanded;
   const taskIds = tasks.map((task) => task.id);
 
   useEffect(() => {
@@ -94,12 +106,30 @@ export function TaskGroup({
   }, [enteringTaskId, taskMutation, tasks]);
 
   useEffect(() => {
-    if (collapsible && enteringTaskId) {
+    if (collapsible && revealedTaskId) {
       setIsManuallyCollapsed(false);
     }
-  }, [collapsible, enteringTaskId]);
+  }, [collapsible, revealedTaskId]);
 
-  if (tasks.length === 0 && !hasRenderedTasks && !emptyMessage && !dragTargetId) {
+  useEffect(() => {
+    const section = sectionRef.current;
+    const workspace = section?.closest("[data-planning-workspace]");
+    if (!revealedTaskId || !section || !workspace) {
+      return;
+    }
+
+    const sectionBounds = section.getBoundingClientRect();
+    const workspaceBounds = workspace.getBoundingClientRect();
+    const isOutsideViewport = sectionBounds.top < workspaceBounds.top || sectionBounds.bottom > workspaceBounds.bottom;
+    if (isOutsideViewport) {
+      section.scrollIntoView({
+        behavior: "auto",
+        block: "nearest",
+      });
+    }
+  }, [revealedTaskId]);
+
+  if (tasks.length === 0 && !hasRenderedTasks && !emptyMessage && !renderWhenEmpty && !forceExpanded) {
     return null;
   }
 
@@ -108,10 +138,6 @@ export function TaskGroup({
       custom={taskMutation}
       initial={false}
       onExitComplete={() => {
-        if (taskMutation) {
-          const completedVersion = taskMutation.version;
-          window.setTimeout(() => clearTaskMutation(completedVersion), 50);
-        }
         if (tasks.length === 0) {
           setHasRenderedTasks(false);
           onTasksExitComplete?.();
@@ -129,6 +155,7 @@ export function TaskGroup({
           onSelectTask,
           onToggleTask,
           shouldAnimateEnter: task.id === enteringTaskId,
+          shouldAnimateLayout,
           task,
           taskMutation,
         };
@@ -151,7 +178,7 @@ export function TaskGroup({
   );
 
   return (
-    <section aria-label={label} className={cn("mt-5", className)}>
+    <section aria-label={label} className={cn("mt-5", className)} data-task-section={sectionId} ref={sectionRef}>
       <h2 className={cn("m-0 border-b border-border pb-2 text-menu-label font-semibold", emphasized ? "text-foreground" : "text-muted-foreground")}>
         {collapsible ? (
           <button
@@ -176,6 +203,7 @@ export function TaskGroup({
           label
         )}
       </h2>
+      {feedback}
       {isCollapsed ? null : (
         <div id={contentId}>
           {tasks.length === 0 && emptyMessage ? (

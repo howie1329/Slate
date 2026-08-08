@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { PlannerEmptyState } from "@/components/planner-empty-state";
 import { TaskGroup, type TaskOrderDetails } from "@/components/task-group";
 import { useTaskMotion, type TaskMotionTransition } from "@/components/task-motion";
-import { useTaskMoveUndo, WorkspaceMoveFeedback } from "@/components/task-move-undo";
+import { useTaskMoveUndo, WorkspaceMoveFeedback, type WorkspaceFeedbackSection } from "@/components/task-move-undo";
 import { useTaskSelection } from "@/components/task-selection";
 import { Button } from "@/components/ui/button";
 import { focusTaskComposer } from "@/lib/task-composer";
@@ -150,7 +150,17 @@ function UnifiedWorkspace({ planner }: { planner: PlannerSnapshot }) {
     });
     setTaskCompleted.mutate(
       { id: taskId, completed: task.completedAt === null, expectedRevision: task.revision },
-      { onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update task.") },
+      {
+        onSuccess: () => {
+          const destination = task.completedAt === null ? "done" : feedbackSectionForActiveTask(task, today);
+          reportFeedback(
+            task.completedAt === null ? `${task.title} moved to Done.` : `${task.title} restored to ${destination === "today" ? "Today" : "Backlog"}.`,
+            false,
+            destination,
+          );
+        },
+        onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update task."),
+      },
     );
   }
 
@@ -165,10 +175,10 @@ function UnifiedWorkspace({ planner }: { planner: PlannerSnapshot }) {
         }),
       },
       {
-        onError: () => reportFeedback("Could not save task order. Your previous order was restored.", true),
+        onError: () => reportFeedback("Could not save task order. Your previous order was restored.", true, feedbackSectionForScope(scope, todayScope)),
         onSuccess: () => {
           const position = taskIds.indexOf(task.id) + 1;
-          reportFeedback(`${task.title} moved to position ${position} in ${sectionLabel}.`);
+          reportFeedback(`${task.title} moved to position ${position} in ${sectionLabel}.`, false, feedbackSectionForScope(scope, todayScope));
         },
       },
     );
@@ -316,7 +326,7 @@ function UnifiedWorkspace({ planner }: { planner: PlannerSnapshot }) {
     if (destination === source) {
       if (!overOrder || activeOrder.scope !== overOrder.scope) {
         if (over && String(over.id) !== (destination === "today" ? todayDropTargetId : backlogDropTargetId)) {
-          reportFeedback("Tasks can only be reordered within their current Backlog group.", true);
+          reportFeedback("Tasks can only be reordered within their current Backlog group.", true, destination);
         }
         return;
       }
@@ -362,7 +372,8 @@ function UnifiedWorkspace({ planner }: { planner: PlannerSnapshot }) {
   return (
     <section
       aria-label="Planning workspace"
-      className={`flex h-full min-h-0 flex-col overflow-y-auto px-4 pt-2 sm:px-6 sm:pt-3 ${selectedTaskId ? "pb-72" : "pb-24"}`}
+      className={`flex h-full min-h-0 flex-col overflow-y-auto px-4 pt-2 sm:px-6 sm:pt-3 ${selectedTaskId ? "pb-80" : "pb-28"}`}
+      data-planning-workspace
     >
       <DndContext
         accessibility={{ announcements, screenReaderInstructions: workspaceScreenReaderInstructions }}
@@ -376,7 +387,6 @@ function UnifiedWorkspace({ planner }: { planner: PlannerSnapshot }) {
         sensors={sensors}
       >
         <div className="mx-auto w-full max-w-xl">
-          <WorkspaceMoveFeedback />
           {dragPreview ? <CapacityMovePreview preview={dragPreview} /> : null}
           {pendingMove ? (
             <CapacityMoveConfirmation
@@ -404,6 +414,7 @@ function UnifiedWorkspace({ planner }: { planner: PlannerSnapshot }) {
                 ? "No commitments yet. Drag an estimated Backlog task here when it is ready for today."
                 : undefined
             }
+            feedback={<WorkspaceMoveFeedback section="today" />}
             isDragTarget={dragPreview?.destination === "today"}
             getTaskOrderDetails={(task) => taskOrderDetails.get(task.id)}
             label="Today"
@@ -412,6 +423,8 @@ function UnifiedWorkspace({ planner }: { planner: PlannerSnapshot }) {
             overflowTaskId={capacity.overflowTaskId}
             pending={mutationPending}
             reorderDisabled={mutationPending}
+            renderWhenEmpty
+            sectionId="today"
             selectedTaskId={selectedTaskId}
             taskMutation={taskMutation}
             tasks={todayTasks}
@@ -429,43 +442,53 @@ function UnifiedWorkspace({ planner }: { planner: PlannerSnapshot }) {
             </PlannerEmptyState>
           ) : null}
 
-          {backlogTasks.length > 0 ? (
-            <TaskGroup
-              collapsible
-              dragTargetId={backlogDropTargetId}
-              draggable
-              forceExpanded={activeDragTaskId !== null}
-              getTaskMetadata={(task) => getBacklogTaskMetadata(task, today)}
-              getTaskOrderDetails={(task) => taskOrderDetails.get(task.id)}
-              isDragTarget={dragPreview?.destination === "backlog"}
-              label="Backlog"
-              onSelectTask={selectTask}
-              onToggleTask={toggleTask}
-              pending={mutationPending}
-              reorderDisabled={mutationPending}
-              selectedTaskId={selectedTaskId}
-              taskMutation={taskMutation}
-              tasks={backlogTasks}
-            />
-          ) : null}
+          <TaskGroup
+            collapsible
+            dragTargetId={backlogDropTargetId}
+            draggable
+            feedback={<WorkspaceMoveFeedback section="backlog" />}
+            forceExpanded={activeDragTaskId !== null}
+            getTaskMetadata={(task) => getBacklogTaskMetadata(task, today)}
+            getTaskOrderDetails={(task) => taskOrderDetails.get(task.id)}
+            isDragTarget={dragPreview?.destination === "backlog"}
+            label="Backlog"
+            onSelectTask={selectTask}
+            onToggleTask={toggleTask}
+            pending={mutationPending}
+            reorderDisabled={mutationPending}
+            sectionId="backlog"
+            selectedTaskId={selectedTaskId}
+            taskMutation={taskMutation}
+            tasks={backlogTasks}
+          />
 
-          {completedTasks.length > 0 ? (
-            <TaskGroup
-              collapsible
-              defaultCollapsed
-              label="Done"
-              onSelectTask={selectTask}
-              onToggleTask={toggleTask}
-              pending={mutationPending}
-              selectedTaskId={selectedTaskId}
-              taskMutation={taskMutation}
-              tasks={completedTasks}
-            />
-          ) : null}
+          <TaskGroup
+            collapsible
+            defaultCollapsed
+            feedback={<WorkspaceMoveFeedback section="done" />}
+            label="Done"
+            onSelectTask={selectTask}
+            onToggleTask={toggleTask}
+            pending={mutationPending}
+            sectionId="done"
+            selectedTaskId={selectedTaskId}
+            taskMutation={taskMutation}
+            tasks={completedTasks}
+          />
         </div>
       </DndContext>
     </section>
   );
+}
+
+function feedbackSectionForScope(scope: string, todayScope: string): WorkspaceFeedbackSection {
+  return scope === todayScope ? "today" : "backlog";
+}
+
+function feedbackSectionForActiveTask(task: Task, today: string): WorkspaceFeedbackSection {
+  return task.estimateMinutes !== null && task.estimateMinutes > 0 && task.scheduledDate === today
+    ? "today"
+    : "backlog";
 }
 
 function CapacityMovePreview({ preview }: { preview: TaskMovePreview }) {

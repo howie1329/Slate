@@ -1,9 +1,9 @@
-import { useRef, type CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import { BookmarkCheck01Icon, DragDropVerticalIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { TaskMutationMotion, TaskMotionTransition } from "@/components/task-motion";
 import type { TaskSelectionFocus, TaskSelectionTransition } from "@/components/task-selection";
@@ -20,6 +20,7 @@ type TaskRowProps = {
   onMotionComplete: (version: number) => void;
   onToggleTask: (taskId: string, transition?: TaskMotionTransition) => void;
   shouldAnimateEnter: boolean;
+  shouldAnimateLayout: boolean;
   task: Task;
   taskMutation: TaskMutationMotion | null;
 };
@@ -101,13 +102,14 @@ function TaskRowContent({
   onSelectTask,
   onToggleTask,
   shouldAnimateEnter,
+  shouldAnimateLayout,
   task,
   taskMutation,
   sortable,
 }: TaskRowProps & { sortable?: SortableState }) {
   const isCompleted = task.completedAt !== null;
   const toggleTransitionRef = useRef<TaskMotionTransition>("instant");
-  const canAnimateLayout = taskMutation?.transition === "animate";
+  const prefersReducedMotion = useReducedMotion();
   const sortableStyle: CSSProperties | undefined = sortable
     ? {
         transform: CSS.Transform.toString(sortable.transform),
@@ -143,6 +145,12 @@ function TaskRowContent({
           },
   };
 
+  useEffect(() => {
+    if (prefersReducedMotion && (shouldAnimateEnter || shouldAnimateLayout) && taskMutation) {
+      onMotionComplete(taskMutation.version);
+    }
+  }, [onMotionComplete, prefersReducedMotion, shouldAnimateEnter, shouldAnimateLayout, taskMutation]);
+
   return (
     <li
       className={cn("relative", sortable?.isDragging && "z-10")}
@@ -151,7 +159,7 @@ function TaskRowContent({
       style={sortableStyle}
     >
       <motion.div
-        layout={canAnimateLayout ? "position" : false}
+        layout={shouldAnimateLayout && !prefersReducedMotion ? "position" : false}
         onLayoutAnimationComplete={() => {
           if (taskMutation) {
             onMotionComplete(taskMutation.version);
@@ -168,8 +176,8 @@ function TaskRowContent({
             sortable?.isDragging && "bg-muted ring-1 ring-inset ring-ring",
           )}
           custom={taskMutation}
-          exit="exit"
-          initial={shouldAnimateEnter ? "hidden" : false}
+          exit={prefersReducedMotion ? { opacity: 0, transition: { duration: 0 } } : "exit"}
+          initial={shouldAnimateEnter && !prefersReducedMotion ? "hidden" : false}
           onAnimationComplete={(definition) => {
             if (definition === "visible" && shouldAnimateEnter && taskMutation) {
               onMotionComplete(taskMutation.version);

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 export type TaskMotionTransition = "animate" | "instant";
 export type TaskMutationKind = "complete" | "create" | "delete" | "move" | "restore";
@@ -17,17 +17,45 @@ type TaskMotionContextValue = {
 };
 
 const TaskMotionContext = createContext<TaskMotionContextValue | null>(null);
+const taskMotionFallbackDurationMs = 240;
 
 export function TaskMotionProvider({ children }: { children: ReactNode }) {
   const [taskMutation, setTaskMutation] = useState<TaskMutationMotion | null>(null);
   const motionVersionRef = useRef(0);
+  const settleTimerRef = useRef<number | undefined>(undefined);
   const clearTaskMutation = useCallback((version: number) => {
-    setTaskMutation((current) => (current?.version === version ? null : current));
+    setTaskMutation((current) => {
+      if (current?.version !== version) {
+        return current;
+      }
+      if (settleTimerRef.current !== undefined) {
+        window.clearTimeout(settleTimerRef.current);
+        settleTimerRef.current = undefined;
+      }
+      return null;
+    });
   }, []);
   const recordTaskMutation = useCallback((mutation: Omit<TaskMutationMotion, "version">) => {
+    if (settleTimerRef.current !== undefined) {
+      window.clearTimeout(settleTimerRef.current);
+    }
     motionVersionRef.current += 1;
-    setTaskMutation({ ...mutation, version: motionVersionRef.current });
-  }, []);
+    const version = motionVersionRef.current;
+    setTaskMutation({ ...mutation, version });
+    settleTimerRef.current = window.setTimeout(
+      () => clearTaskMutation(version),
+      mutation.transition === "animate" ? taskMotionFallbackDurationMs : 0,
+    );
+  }, [clearTaskMutation]);
+
+  useEffect(
+    () => () => {
+      if (settleTimerRef.current !== undefined) {
+        window.clearTimeout(settleTimerRef.current);
+      }
+    },
+    [],
+  );
   const value = useMemo(
     () => ({ clearTaskMutation, recordTaskMutation, taskMutation }),
     [clearTaskMutation, recordTaskMutation, taskMutation],

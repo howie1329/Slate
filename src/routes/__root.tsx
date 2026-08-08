@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import NumberFlow from "@number-flow/react";
@@ -9,7 +9,7 @@ import { OnboardingFlow } from "@/components/onboarding-flow";
 import { QuickCaptureWindow } from "@/components/quick-capture-window";
 import { TaskComposerFooter } from "@/components/task-composer-footer";
 import { RouteMotionProvider, useRouteMotion, type RouteMotionTransition } from "@/components/route-motion";
-import { TaskMotionProvider } from "@/components/task-motion";
+import { TaskMotionProvider, useTaskMotion } from "@/components/task-motion";
 import { TaskMoveUndoProvider } from "@/components/task-move-undo";
 import { TaskSelectionProvider, useTaskSelection } from "@/components/task-selection";
 import { Button } from "@/components/ui/button";
@@ -193,7 +193,11 @@ function HeaderSummary({ planner }: HeaderSummaryProps) {
     return <span aria-hidden="true" />;
   }
 
-  const capacity = getTodayCapacity(planner);
+  return <HeaderSummaryValue planner={planner} />;
+}
+
+function HeaderSummaryValue({ planner }: { planner: PlannerSnapshot }) {
+  const capacity = useSettledTodayCapacity(planner);
   const capacityRatio = planner.effectiveCapacityMinutes > 0
     ? capacity.remainingMinutes / planner.effectiveCapacityMinutes
     : 0;
@@ -243,7 +247,11 @@ function TodayCapacityProgress({ planner, windowMode }: { planner: PlannerSnapsh
     return null;
   }
 
-  const capacity = getTodayCapacity(planner);
+  return <TodayCapacityProgressValue planner={planner} windowMode={windowMode} />;
+}
+
+function TodayCapacityProgressValue({ planner, windowMode }: { planner: PlannerSnapshot; windowMode: WindowMode }) {
+  const capacity = useSettledTodayCapacity(planner);
   const capacityPercentage = planner.effectiveCapacityMinutes > 0
     ? Math.min((capacity.committedMinutes / planner.effectiveCapacityMinutes) * 100, 100)
     : 0;
@@ -276,6 +284,19 @@ function getTodayCapacity(planner: PlannerSnapshot) {
   const activeTasks = planner.tasks.filter((task) => scopeForTask(task, planner.today) === todayScope);
 
   return calculateCapacityState(activeTasks, planner.effectiveCapacityMinutes);
+}
+
+function useSettledTodayCapacity(planner: PlannerSnapshot) {
+  const { taskMutation } = useTaskMotion();
+  const capacity = getTodayCapacity(planner);
+  const settledCapacityRef = useRef(capacity);
+
+  if (!taskMutation || taskMutation.transition === "instant") {
+    settledCapacityRef.current = capacity;
+    return capacity;
+  }
+
+  return settledCapacityRef.current;
 }
 
 type PersistenceRecoveryProps = {

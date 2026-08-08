@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useTaskMotion } from "@/components/task-motion";
 import { TaskMoveConfirmation } from "@/components/task-move-confirmation";
-import { useTaskMoveUndo } from "@/components/task-move-undo";
+import { useTaskMoveUndo, type WorkspaceFeedbackSection } from "@/components/task-move-undo";
 import { useDeleteTask, useMoveTask, usePlannerState, useSetTaskCompleted, useUpdateTask } from "@/lib/planner-query";
 import type { LocalDate, Task, TaskMoveDestination } from "@/lib/planner";
 import { dateFromLocalDate, formatDueDate, localDateFromDate } from "@/lib/local-date";
@@ -94,7 +94,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
   const setTaskCompleted = useSetTaskCompleted();
   const updateTask = useUpdateTask();
   const { recordTaskMutation } = useTaskMotion();
-  const { registerSuccessfulMove } = useTaskMoveUndo();
+  const { registerSuccessfulMove, reportFeedback } = useTaskMoveUndo();
   const { clearSelectedTaskFocus, clearSelection, selectTask, selectedTaskFocus } = useTaskSelection();
   const task = planner.data?.tasks.find((candidate) => candidate.id === taskId);
   const lastTaskRef = useRef<Task | null>(null);
@@ -226,8 +226,12 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       },
       {
         onSuccess: () => {
+          reportFeedback(
+            `${trimmedTitle} updated.`,
+            false,
+            activeTask.completedAt !== null ? "done" : feedbackSectionForTaskFields(estimateMinutes, scheduledDate, planner.data?.today),
+          );
           clearSelection(interactionTransitionRef.current);
-          toast.success("Task updated.");
         },
         onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update task."),
       },
@@ -256,16 +260,20 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       return;
     }
 
+    if (draftRevisionRef.current === null) return;
     recordTaskMutation({
       kind: "delete",
       taskId: activeTask.id,
       transition: interactionTransitionRef.current,
     });
-    if (draftRevisionRef.current === null) return;
     deleteTask.mutate({ id: activeTask.id, expectedRevision: draftRevisionRef.current }, {
       onSuccess: () => {
+        reportFeedback(
+          `${activeTask.title} deleted.`,
+          false,
+          activeTask.completedAt !== null ? "done" : feedbackSectionForTaskFields(activeTask.estimateMinutes, activeTask.scheduledDate, planner.data?.today),
+        );
         clearSelection(interactionTransitionRef.current);
-        toast.success("Task deleted.");
       },
       onError: (error) => toast.error(error instanceof Error ? error.message : "Could not delete task."),
     });
@@ -290,8 +298,15 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       { id: activeTask.id, completed, expectedRevision: draftRevisionRef.current },
       {
         onSuccess: () => {
+          const destination = completed
+            ? "done"
+            : feedbackSectionForTaskFields(activeTask.estimateMinutes, activeTask.scheduledDate, planner.data?.today);
+          reportFeedback(
+            completed ? `${activeTask.title} moved to Done.` : `${activeTask.title} restored to ${destination === "today" ? "Today" : "Backlog"}.`,
+            false,
+            destination,
+          );
           clearSelection(interactionTransitionRef.current);
-          toast.success(completed ? "Task completed." : "Task restored.");
         },
         onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update task."),
       },
@@ -629,4 +644,12 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       </span>
     </motion.form>
   );
+}
+
+function feedbackSectionForTaskFields(
+  estimateMinutes: number | null,
+  scheduledDate: LocalDate | null,
+  today: LocalDate | undefined,
+): WorkspaceFeedbackSection {
+  return estimateMinutes !== null && estimateMinutes > 0 && scheduledDate === today ? "today" : "backlog";
 }

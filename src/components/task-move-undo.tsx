@@ -8,6 +8,8 @@ import { getTaskMoveErrorMessage } from "@/lib/task-move";
 const moveUndoDurationMs = 8_000;
 const feedbackDurationMs = 5_000;
 
+export type WorkspaceFeedbackSection = "today" | "backlog" | "done";
+
 type TaskMoveUndo = {
   destination: TaskMoveDestination;
   expectedRevision: number;
@@ -18,13 +20,14 @@ type TaskMoveUndo = {
 type TaskMoveFeedback = {
   isError: boolean;
   message: string;
+  section: WorkspaceFeedbackSection;
   undo: TaskMoveUndo | null;
 };
 
 type TaskMoveUndoContextValue = {
   feedback: TaskMoveFeedback | null;
   isUndoPending: boolean;
-  reportFeedback: (message: string, isError?: boolean) => void;
+  reportFeedback: (message: string, isError?: boolean, section?: WorkspaceFeedbackSection) => void;
   registerSuccessfulMove: (input: {
     destination: TaskMoveDestination;
     revision: number;
@@ -74,6 +77,7 @@ export function TaskMoveUndoProvider({ children }: { children: ReactNode }) {
         {
           isError: true,
           message: `${pendingUndo.taskTitle} changed and can no longer be undone.`,
+          section: sectionForDestination(pendingUndo.destination),
           undo: null,
         },
         feedbackDurationMs,
@@ -87,6 +91,7 @@ export function TaskMoveUndoProvider({ children }: { children: ReactNode }) {
         {
           isError: false,
           message: `${task.title} moved ${destination === "today" ? "to Today" : "to Backlog"}.`,
+          section: sectionForDestination(destination),
           undo: {
             destination: destination === "today" ? "backlog" : "today",
             expectedRevision: revision,
@@ -101,8 +106,8 @@ export function TaskMoveUndoProvider({ children }: { children: ReactNode }) {
   );
 
   const reportFeedback = useCallback(
-    (message: string, isError = false) => {
-      showFeedback({ isError, message, undo: null }, feedbackDurationMs);
+    (message: string, isError = false, section: WorkspaceFeedbackSection = "today") => {
+      showFeedback({ isError, message, section, undo: null }, feedbackDurationMs);
     },
     [showFeedback],
   );
@@ -126,6 +131,7 @@ export function TaskMoveUndoProvider({ children }: { children: ReactNode }) {
             {
               isError: false,
               message: `${pendingUndo.taskTitle} move undone.`,
+              section: sectionForDestination(pendingUndo.destination),
               undo: null,
             },
             feedbackDurationMs,
@@ -136,6 +142,7 @@ export function TaskMoveUndoProvider({ children }: { children: ReactNode }) {
             {
               isError: true,
               message: getTaskMoveErrorMessage(error),
+              section: sectionForDestination(pendingUndo.destination),
               undo: null,
             },
             feedbackDurationMs,
@@ -153,17 +160,17 @@ export function TaskMoveUndoProvider({ children }: { children: ReactNode }) {
   return <TaskMoveUndoContext.Provider value={value}>{children}</TaskMoveUndoContext.Provider>;
 }
 
-export function WorkspaceMoveFeedback() {
+export function WorkspaceMoveFeedback({ section }: { section: WorkspaceFeedbackSection }) {
   const { feedback, isUndoPending, undo } = useTaskMoveUndo();
 
-  if (!feedback) {
+  if (!feedback || feedback.section !== section) {
     return null;
   }
 
   return (
     <aside
       aria-live="polite"
-      className={`mt-2 flex min-h-8 items-center justify-between gap-3 border-b py-2 text-xs leading-4 ${feedback.isError ? "border-destructive/30 text-destructive" : "border-border text-muted-foreground"}`}
+      className={`flex min-h-8 items-center justify-between gap-3 border-b py-2 text-xs leading-4 ${feedback.isError ? "border-destructive/30 text-destructive" : "border-border text-muted-foreground"}`}
       data-task-move-feedback
       role={feedback.isError ? "alert" : "status"}
     >
@@ -181,6 +188,10 @@ export function WorkspaceMoveFeedback() {
       ) : null}
     </aside>
   );
+}
+
+function sectionForDestination(destination: TaskMoveDestination): WorkspaceFeedbackSection {
+  return destination === "today" ? "today" : "backlog";
 }
 
 export function useTaskMoveUndo() {

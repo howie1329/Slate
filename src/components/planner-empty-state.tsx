@@ -1,5 +1,5 @@
 import type { MouseEvent, ReactNode } from "react";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import type { TaskMotionTransition } from "@/components/task-motion";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
@@ -16,11 +16,13 @@ type PlannerEmptyStateProps = {
 const emptyStateEase = [0.23, 1, 0.32, 1] as const;
 
 export function PlannerEmptyState({ actionLabel, children, description, onAction, title, transition = "instant" }: PlannerEmptyStateProps) {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
     <motion.div
       animate={{ opacity: 1, transform: "translateY(0)" }}
-      initial={transition === "animate" ? { opacity: 0, transform: "translateY(6px)" } : false}
-      transition={{ duration: 0.18, ease: emptyStateEase }}
+      initial={transition === "animate" && !prefersReducedMotion ? { opacity: 0, transform: "translateY(6px)" } : false}
+      transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: emptyStateEase }}
     >
       <Empty className="mt-6 min-h-48 justify-center gap-4 px-4 py-6 sm:min-h-64">
         <EmptyHeader>
