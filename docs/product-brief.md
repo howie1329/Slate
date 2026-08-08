@@ -48,7 +48,7 @@ The returned task revision bounds a five-second Undo action. Undo succeeds only 
 - **Daily workspace** is the default workspace. It shows Today as the dominant section and a flat, collapsible Backlog beneath it. Today includes dated work for today, active committed minutes, remaining capacity, unsized commitments that need estimates, over-capacity state, and completed work at the bottom. There is no separate Done section.
 - **Backlog** is the current task record for work that is not committed to Today. Its metadata can identify Needs estimate, Unscheduled, Overdue / needs reschedule, and Upcoming work without making each state a top-level route or section.
 - **Settings** contains daily capacity, AI provider/model/key configuration, and the persistent planning instruction.
-- **Daily command row** is always available at the top of the workspace. It supports search, quick manual capture, Save, and the context-sensitive AI action. Text invokes AI Assist; empty input invokes the Plan My Day review flow. A thin Settings utility strip remains available at the bottom.
+- **Daily command row** is always available at the top of the workspace. It supports search, Enter-to-save quick capture, and the context-sensitive AI action. Text invokes AI Assist; empty input invokes the Plan My Day review flow. A thin Settings utility strip remains available at the bottom, with Open full app alongside it in the popover.
 - **Menu-bar popover** is the primary surface. It dismisses when focus leaves it and must support the essential daily loop within the compact window.
 - **Full window** provides more room for the same workflow. It may later support configuration, comparison, history, and review surfaces, but it must not be required for ordinary daily planning.
 

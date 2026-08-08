@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Settings01Icon } from "@hugeicons/core-free-icons";
+import { ArrowUpRight01Icon, Settings01Icon } from "@hugeicons/core-free-icons";
 import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence } from "motion/react";
 import { AiReviewTray } from "@/components/ai-review-tray";
@@ -9,7 +9,7 @@ import { TaskDetailPanel } from "@/components/task-detail-panel";
 import { useTaskMotion } from "@/components/task-motion";
 import { useTaskSelection } from "@/components/task-selection";
 import { Button } from "@/components/ui/button";
-import type { WindowMode } from "@/lib/window-mode";
+import { openFullApp, type WindowMode } from "@/lib/window-mode";
 
 type TaskComposerFooterProps = {
   windowMode: WindowMode;
@@ -63,6 +63,19 @@ export function TaskComposerFooter({ windowMode }: TaskComposerFooterProps) {
         ) : null}
       </AnimatePresence>
       <div className={`mx-auto flex h-full w-full max-w-xl items-center justify-end ${windowMode === "full" ? "max-w-3xl" : ""}`}>
+        {windowMode === "popover" ? (
+          <Button
+            aria-label="Open full app"
+            className="size-6 rounded-md text-muted-foreground"
+            onClick={() => void openFullApp()}
+            size="icon"
+            title="Open full app"
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon aria-hidden="true" icon={ArrowUpRight01Icon} size={13} strokeWidth={1.8} />
+          </Button>
+        ) : null}
         <Button
           aria-label="Open settings"
           className="h-6 gap-1 rounded-md px-1.5 text-[10px] font-medium text-muted-foreground"

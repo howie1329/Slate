@@ -241,9 +241,9 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 
 ### Daily Command Row and Utility Strip
 
-- **Structure:** A slim top command row holds the search-and-capture field, manual save affordance, and reviewable AI action. It remains visible while the task list scrolls.
-- **Hierarchy:** The command row is visually quiet; the task list and Today capacity carry the main emphasis. Manual save becomes `primary` only when the capture has a valid title.
-- **Utility strip:** A thin bottom strip exposes Settings with a small icon and muted label. It stays available without consuming a large footer band.
+- **Structure:** A slim top command row holds the search-and-capture field and reviewable AI action. Enter submits a captured title; there is no separate save button. The row remains visible while the task list scrolls.
+- **Hierarchy:** The command row is visually quiet; the task list and Today capacity carry the main emphasis. Enter-to-save stays implicit and keyboard-first.
+- **Utility strip:** A thin bottom strip exposes Settings and, in the popover, Open full app with small muted controls. It stays available without consuming a large footer band.
 
 ### Task Detail Panel
 

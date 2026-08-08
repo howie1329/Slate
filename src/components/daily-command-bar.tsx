@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { ArrowUpRight01Icon, Loading03Icon, Search01Icon, SentIcon, Settings01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
+import { Search01Icon, SparklesIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { taskComposerInputId } from "@/lib/task-composer";
 import type { WindowMode } from "@/lib/window-mode";
-import { openFullApp } from "@/lib/window-mode";
 import { useCreateTask, usePlannerState } from "@/lib/planner-query";
 
 type DailyCommandBarProps = {
@@ -114,22 +113,6 @@ export function DailyCommandBar({ onValueChange, value, windowMode }: DailyComma
           />
         </div>
         <Button
-          aria-label={createTask.isPending ? "Saving task" : "Add task to Backlog"}
-          className="size-7 rounded-md"
-          disabled={!hasValue || createTask.isPending}
-          size="icon"
-          title={createTask.isPending ? "Saving task" : "Add task to Backlog"}
-          type="submit"
-          variant={hasValue ? "default" : "ghost"}
-        >
-          <HugeiconsIcon
-            className={createTask.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
-            icon={createTask.isPending ? Loading03Icon : SentIcon}
-            size={14}
-            strokeWidth={1.8}
-          />
-        </Button>
-        <Button
           aria-label={
             aiUnavailable
               ? "Configure AI in Settings"
@@ -157,24 +140,11 @@ export function DailyCommandBar({ onValueChange, value, windowMode }: DailyComma
         >
           <HugeiconsIcon
             className={aiBusy ? "animate-pulse motion-reduce:animate-none" : undefined}
-            icon={aiUnavailable ? Settings01Icon : SparklesIcon}
+            icon={SparklesIcon}
             size={14}
             strokeWidth={1.8}
           />
         </Button>
-        {windowMode === "popover" ? (
-          <Button
-            aria-label="Open full app"
-            className="size-7 rounded-md"
-            onClick={() => void openFullApp()}
-            size="icon"
-            title="Open full app"
-            type="button"
-            variant="ghost"
-          >
-            <HugeiconsIcon aria-hidden="true" icon={ArrowUpRight01Icon} size={14} strokeWidth={1.8} />
-          </Button>
-        ) : null}
       </form>
     </header>
   );
