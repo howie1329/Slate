@@ -190,6 +190,7 @@ The palette is a neutral monochrome desktop canvas with black-and-white primary 
 - **Composer** (400, `0.8125rem`, `1rem`): The compact search and capture field in the Daily workspace.
 - **Label** (600, `0.6875rem`, `0.875rem`): Section labels, capacity metadata, and small status text. Use uppercase only when it improves recognition, never as repeated scaffolding.
 - **Supporting** (400, `0.75rem`, `1rem`): Secondary descriptions and recoverable messages.
+- **Estimate** (400, `0.625rem`, `0.75rem`): Quiet right-aligned duration text in task rows.
 - **Metadata** (400, `0.625rem`, `0.75rem`): Compact task state, counts, and utility labels that support scanning without competing with the task title.
 - **Numeric data** (tabular numerals): Durations, capacity, overages, and counts should align clearly.
 
@@ -250,7 +251,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 
 ### Task Rows
 
-- **Structure:** A quiet divided list with a circular completion affordance, a flexible task title, a smaller muted metadata line beneath it when needed, and tabular duration aligned to the right.
+- **Structure:** A quiet divided list with a circular completion affordance, a flexible task title, a smaller muted metadata line beneath it when needed, and a quiet right-aligned duration.
 - **Density:** Active rows target roughly `34–36px` of vertical height. Metadata is smaller and lighter than the title so it supports scanning without competing with the work.
 - **State:** Selected rows use `muted`; completed rows remain at the bottom of their owning list with `muted-foreground` and a line-through; over-capacity rows use a restrained `destructive` boundary.
 - **Interaction:** The entire row remains keyboard-operable with a visible focus ring. Completion and edit affordances must not rely on color alone.

@@ -11,6 +11,8 @@
   --text-menu-label--line-height: 0.875rem;
   --text-composer: 0.8125rem;
   --text-composer--line-height: 1rem;
+  --text-estimate: 0.625rem;
+  --text-estimate--line-height: 0.75rem;
   --text-metadata: 0.625rem;
   --text-metadata--line-height: 0.75rem;
 }

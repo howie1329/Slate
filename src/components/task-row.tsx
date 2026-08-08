@@ -225,12 +225,7 @@ function TaskRowContent({
                 </span>
               ) : null}
             </span>
-            <span
-              className={cn(
-                "w-14 shrink-0 text-right text-metadata leading-3 tabular-nums",
-                isSelected ? "text-foreground/70" : "text-muted-foreground",
-              )}
-            >
+            <span className="w-14 shrink-0 text-right text-estimate font-normal leading-3 tabular-nums text-muted-foreground">
               {formatMinutes(task.estimateMinutes)}
             </span>
             {task.completedAt === null && task.anchorDate !== null ? (
