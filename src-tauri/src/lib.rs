@@ -67,6 +67,7 @@ pub fn run() {
             persistence::update_task,
             persistence::set_task_completed,
             persistence::set_task_scheduled_date,
+            persistence::move_task,
             persistence::delete_task,
             persistence::reorder_tasks,
             persistence::save_settings,

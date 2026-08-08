@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import {
+  ArrowDown01Icon,
+  ArrowUp01Icon,
   Calendar01Icon,
   Cancel01Icon,
   Clock01Icon,
@@ -16,10 +18,18 @@ import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useTaskMotion } from "@/components/task-motion";
-import { useDeleteTask, usePlannerState, useUpdateTask } from "@/lib/planner-query";
-import type { LocalDate, Task } from "@/lib/planner";
+import { TaskMoveConfirmation } from "@/components/task-move-confirmation";
+import { useTaskMoveUndo, type WorkspaceFeedbackSection } from "@/components/task-move-undo";
+import { useDeleteTask, useMoveTask, usePlannerState, useSetTaskCompleted, useUpdateTask } from "@/lib/planner-query";
+import type { LocalDate, Task, TaskMoveDestination } from "@/lib/planner";
 import { dateFromLocalDate, formatDueDate, localDateFromDate } from "@/lib/local-date";
 import { useTaskSelection, type TaskSelectionTransition } from "@/components/task-selection";
+import {
+  buildTaskMoveInput,
+  getTaskMoveErrorMessage,
+  getTaskMovePreview,
+  isEstimateRequiredMoveError,
+} from "@/lib/task-move";
 import type { WindowMode } from "@/lib/window-mode";
 
 type EditingField = "estimate" | "title" | null;
@@ -79,10 +89,13 @@ type TaskDetailPanelProps = {
 
 export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPanelProps) {
   const planner = usePlannerState();
-  const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
+  const moveTask = useMoveTask();
+  const setTaskCompleted = useSetTaskCompleted();
+  const updateTask = useUpdateTask();
   const { recordTaskMutation } = useTaskMotion();
-  const { clearSelection } = useTaskSelection();
+  const { registerSuccessfulMove, reportFeedback } = useTaskMoveUndo();
+  const { clearSelectedTaskFocus, clearSelection, selectTask, selectedTaskFocus } = useTaskSelection();
   const task = planner.data?.tasks.find((candidate) => candidate.id === taskId);
   const lastTaskRef = useRef<Task | null>(null);
   if (task) {
@@ -95,8 +108,12 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
   const [anchorDate, setAnchorDate] = useState<LocalDate | null>(null);
   const [editingField, setEditingField] = useState<EditingField>(null);
   const [deleteArmed, setDeleteArmed] = useState(false);
+  const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isStale, setIsStale] = useState(false);
+  const [pendingMoveDestination, setPendingMoveDestination] = useState<TaskMoveDestination | null>(null);
   const draftRevisionRef = useRef<number | null>(null);
+  const estimateInputRef = useRef<HTMLInputElement>(null);
   const keepTaskButtonRef = useRef<HTMLButtonElement>(null);
   const interactionTransitionRef = useRef<TaskSelectionTransition>(transition);
 
@@ -120,6 +137,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
     setIsStale(false);
     setEditingField(null);
     setDeleteArmed(false);
+    setPendingMoveDestination(null);
   }, [task]);
 
   useEffect(() => {
@@ -128,6 +146,20 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
     }
   }, [deleteArmed]);
 
+  useEffect(() => {
+    if (selectedTaskFocus === "estimate") {
+      setIsExpanded(true);
+      setEditingField("estimate");
+    }
+  }, [selectedTaskFocus]);
+
+  useEffect(() => {
+    if (selectedTaskFocus === "estimate" && editingField === "estimate") {
+      estimateInputRef.current?.focus();
+      clearSelectedTaskFocus();
+    }
+  }, [clearSelectedTaskFocus, editingField, selectedTaskFocus]);
+
   const normalizedEstimate = useMemo(() => estimate.trim(), [estimate]);
   const isDirty =
     selectedTask !== null &&
@@ -135,13 +167,19 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       normalizedEstimate !== (selectedTask.estimateMinutes?.toString() ?? "") ||
       scheduledDate !== selectedTask.scheduledDate ||
       anchorDate !== selectedTask.anchorDate);
-  const isSaving = updateTask.isPending || deleteTask.isPending;
-  const controlsDisabled = isSaving || deleteArmed || isStale;
+  const isSaving = updateTask.isPending || deleteTask.isPending || moveTask.isPending || setTaskCompleted.isPending;
+  const controlsDisabled = isSaving || deleteArmed || isStale || pendingMoveDestination !== null;
 
   if (!selectedTask) {
     return null;
   }
   const activeTask = selectedTask;
+  const todayTasks = planner.data?.tasks.filter(
+    (candidate) => candidate.completedAt === null && candidate.scheduledDate === planner.data?.today,
+  ) ?? [];
+  const movePreview = pendingMoveDestination
+    ? getTaskMovePreview(activeTask, pendingMoveDestination, todayTasks, planner.data?.effectiveCapacityMinutes ?? 0)
+    : null;
 
   function parseEstimate() {
     if (!normalizedEstimate) {
@@ -188,8 +226,12 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       },
       {
         onSuccess: () => {
+          reportFeedback(
+            `${trimmedTitle} updated.`,
+            false,
+            activeTask.completedAt !== null ? "done" : feedbackSectionForTaskFields(estimateMinutes, scheduledDate, planner.data?.today),
+          );
           clearSelection(interactionTransitionRef.current);
-          toast.success("Task updated.");
         },
         onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update task."),
       },
@@ -218,18 +260,110 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       return;
     }
 
+    if (draftRevisionRef.current === null) return;
     recordTaskMutation({
       kind: "delete",
       taskId: activeTask.id,
       transition: interactionTransitionRef.current,
     });
-    if (draftRevisionRef.current === null) return;
     deleteTask.mutate({ id: activeTask.id, expectedRevision: draftRevisionRef.current }, {
       onSuccess: () => {
+        reportFeedback(
+          `${activeTask.title} deleted.`,
+          false,
+          activeTask.completedAt !== null ? "done" : feedbackSectionForTaskFields(activeTask.estimateMinutes, activeTask.scheduledDate, planner.data?.today),
+        );
         clearSelection(interactionTransitionRef.current);
-        toast.success("Task deleted.");
       },
       onError: (error) => toast.error(error instanceof Error ? error.message : "Could not delete task."),
+    });
+  }
+
+  function handleSetCompleted() {
+    if (isDirty) {
+      toast.error("Save or discard your edits before changing completion.");
+      return;
+    }
+    if (isStale || draftRevisionRef.current === null) {
+      return;
+    }
+
+    const completed = activeTask.completedAt === null;
+    recordTaskMutation({
+      kind: completed ? "complete" : "restore",
+      taskId: activeTask.id,
+      transition: interactionTransitionRef.current,
+    });
+    setTaskCompleted.mutate(
+      { id: activeTask.id, completed, expectedRevision: draftRevisionRef.current },
+      {
+        onSuccess: () => {
+          const destination = completed
+            ? "done"
+            : feedbackSectionForTaskFields(activeTask.estimateMinutes, activeTask.scheduledDate, planner.data?.today);
+          reportFeedback(
+            completed ? `${activeTask.title} moved to Done.` : `${activeTask.title} restored to ${destination === "today" ? "Today" : "Backlog"}.`,
+            false,
+            destination,
+          );
+          clearSelection(interactionTransitionRef.current);
+        },
+        onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update task."),
+      },
+    );
+  }
+
+  function beginMove(destination: TaskMoveDestination) {
+    if (isDirty) {
+      toast.error("Save or discard your edits before moving this task.");
+      return;
+    }
+    if (isStale || draftRevisionRef.current === null) {
+      return;
+    }
+
+    const preview = getTaskMovePreview(
+      activeTask,
+      destination,
+      todayTasks,
+      planner.data?.effectiveCapacityMinutes ?? 0,
+    );
+    if (preview.requiresEstimate) {
+      selectTask(activeTask.id, "animate", "estimate");
+      toast.error("Set an estimate before committing this task to Today.");
+      return;
+    }
+    setIsExpanded(true);
+    setPendingMoveDestination(destination);
+  }
+
+  function confirmMove() {
+    if (!pendingMoveDestination || draftRevisionRef.current === null) {
+      return;
+    }
+
+    recordTaskMutation({
+      kind: "move",
+      taskId: activeTask.id,
+      transition: interactionTransitionRef.current,
+    });
+    moveTask.mutate(buildTaskMoveInput(activeTask, pendingMoveDestination), {
+      onSuccess: (moved) => {
+        registerSuccessfulMove({
+          destination: pendingMoveDestination,
+          revision: moved.revision,
+          task: activeTask,
+        });
+        clearSelection(interactionTransitionRef.current);
+      },
+      onError: (error) => {
+        if (isEstimateRequiredMoveError(error)) {
+          selectTask(activeTask.id, "animate", "estimate");
+          toast.error("Set an estimate before committing this task to Today.");
+          return;
+        }
+        toast.error(getTaskMoveErrorMessage(error));
+      },
     });
   }
 
@@ -319,6 +453,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
                 }
               }}
               placeholder="Minutes"
+              ref={estimateInputRef}
               type="number"
               value={estimate}
             />
@@ -335,14 +470,14 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
             </button>
           )}
 
-          <Popover>
+          <Popover onOpenChange={setIsDatePopoverOpen} open={isDatePopoverOpen}>
             <PopoverTrigger
               render={
                 <Button
-                  aria-label="Edit due date"
+                  aria-label="Edit task date"
                   className="h-8 min-w-0 justify-start px-2 text-[var(--task-detail-foreground)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
                   disabled={controlsDisabled}
-                  title="Edit due date"
+                  title="Edit task date"
                   type="button"
                   variant="ghost"
                 />
@@ -356,12 +491,23 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
                 mode="single"
                 onSelect={(date) => {
                   if (date) {
-                    setScheduledDate(localDateFromDate(date));
+                    const nextScheduledDate = localDateFromDate(date);
+                    if (nextScheduledDate === planner.data?.today && !normalizedEstimate) {
+                      selectTask(activeTask.id, "animate", "estimate");
+                      toast.error("Set an estimate before committing this task to Today.");
+                      return;
+                    }
+                    if (nextScheduledDate === planner.data?.today && scheduledDate !== nextScheduledDate) {
+                      setIsDatePopoverOpen(false);
+                      beginMove("today");
+                      return;
+                    }
+                    setScheduledDate(nextScheduledDate);
                   }
                 }}
                 selected={scheduledDate ? dateFromLocalDate(scheduledDate) : undefined}
               />
-              {scheduledDate !== null ? (
+              {scheduledDate !== null && scheduledDate !== planner.data?.today ? (
                 <div className="border-t border-border p-2">
                   <Button
                     className="w-full justify-center text-menu"
@@ -369,82 +515,141 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
                     type="button"
                     variant="ghost"
                   >
-                    Return to Backlog
+                    Clear date
                   </Button>
                 </div>
               ) : null}
             </PopoverContent>
           </Popover>
 
-          {activeTask.completedAt === null && activeTask.estimateMinutes !== null && activeTask.scheduledDate === planner.data?.today ? (
-            <Button
-              aria-label={anchorDate === planner.data.today ? "Remove Anchor for today" : "Anchor task for today"}
-              aria-pressed={anchorDate === planner.data.today}
-              className={anchorDate === planner.data.today ? "text-primary" : "text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"}
-              disabled={controlsDisabled}
-              onClick={() => setAnchorDate(anchorDate === planner.data?.today ? null : planner.data?.today ?? null)}
-              size="icon-sm"
-              title={anchorDate === planner.data.today ? "Remove Anchor for today" : "Anchor for today"}
-              type="button"
-              variant="ghost"
-            >
-              <HugeiconsIcon aria-hidden="true" icon={BookmarkCheck01Icon} strokeWidth={1.7} />
-            </Button>
-          ) : null}
-
           <Button
-            aria-label={deleteArmed ? (deleteTask.isPending ? "Deleting task" : "Confirm delete task") : "Delete task"}
-            aria-pressed={deleteArmed}
-            className={deleteArmed ? undefined : "text-[var(--task-detail-muted)] hover:bg-destructive/10 hover:text-destructive"}
-            disabled={isSaving}
-            onClick={handleDelete}
+            aria-expanded={isExpanded}
+            aria-label={isExpanded ? "Collapse task details" : "Expand task details"}
+            className="text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
+            disabled={controlsDisabled}
+            onClick={() => setIsExpanded((current) => !current)}
             size="icon-sm"
-            title={deleteArmed ? (deleteTask.isPending ? "Deleting task" : "Confirm delete task") : "Delete task"}
+            title={isExpanded ? "Collapse task details" : "Expand task details"}
             type="button"
-            variant={deleteArmed ? "destructive" : "ghost"}
+            variant="ghost"
+          >
+            <HugeiconsIcon aria-hidden="true" icon={isExpanded ? ArrowDown01Icon : ArrowUp01Icon} strokeWidth={1.7} />
+          </Button>
+          <Button
+            aria-label={updateTask.isPending ? "Saving changes" : "Save changes"}
+            className={isDirty ? undefined : "text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-muted)]"}
+            disabled={!isDirty || isSaving}
+            size="icon-sm"
+            title={updateTask.isPending ? "Saving changes" : "Save changes"}
+            type="submit"
+            variant={isDirty ? "default" : "ghost"}
           >
             <HugeiconsIcon
-              className={deleteTask.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
-              icon={deleteTask.isPending ? Loading03Icon : Delete02Icon}
+              className={updateTask.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
+              icon={updateTask.isPending ? Loading03Icon : Tick02Icon}
               strokeWidth={1.7}
             />
           </Button>
-          {deleteArmed ? (
-            <Button
-              aria-label="Keep task"
-              className="text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
-              disabled={isSaving}
-              onClick={() => setDeleteArmed(false)}
-              ref={keepTaskButtonRef}
-              size="icon-sm"
-              title="Keep task"
-              type="button"
-              variant="ghost"
-            >
-              <HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.7} />
-            </Button>
-          ) : (
-            <Button
-              aria-label={updateTask.isPending ? "Saving changes" : "Save changes"}
-              className={isDirty ? undefined : "text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-muted)]"}
-              disabled={!isDirty || isSaving}
-              size="icon-sm"
-              title={updateTask.isPending ? "Saving changes" : "Save changes"}
-              type="submit"
-              variant={isDirty ? "default" : "ghost"}
-            >
-              <HugeiconsIcon
-                className={updateTask.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
-                icon={updateTask.isPending ? Loading03Icon : Tick02Icon}
-                strokeWidth={1.7}
-              />
-            </Button>
-          )}
         </div>
       </motion.div>
+      <AnimatePresence initial={false}>
+        {isExpanded ? (
+          <motion.section
+            animate={{ opacity: 1, transform: "translateY(0)" }}
+            aria-label="Task actions"
+            className={`border-t border-[var(--task-detail-border)] px-4 py-3 sm:px-6 ${windowMode === "full" ? "px-8" : ""}`}
+            exit={{ opacity: 0, transform: "translateY(3px)", transition: { duration: 0.12 } }}
+            initial={{ opacity: 0, transform: "translateY(3px)" }}
+            transition={{ duration: 0.16, ease: panelEnterEase }}
+          >
+            <div className={`mx-auto w-full max-w-xl ${windowMode === "full" ? "max-w-3xl" : ""}`}>
+              <p className="m-0 text-xs leading-4 text-[var(--task-detail-muted)]">
+                {activeTask.completedAt !== null
+                  ? "Completed tasks remain in Done until restored."
+                  : movePreview
+                    ? "Review the commitment change before saving it."
+                    : estimate.trim()
+                      ? "Changes stay local until you save them."
+                      : "Set an estimate before this task can enter Today."}
+              </p>
+              {movePreview ? <TaskMoveConfirmation onCancel={() => setPendingMoveDestination(null)} onConfirm={confirmMove} pending={isSaving} preview={movePreview} /> : null}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {activeTask.completedAt === null && activeTask.scheduledDate === planner.data?.today ? (
+                  <Button disabled={controlsDisabled || movePreview !== null} onClick={() => beginMove("backlog")} type="button" variant="outline">
+                    Return to Backlog
+                  </Button>
+                ) : null}
+                {activeTask.completedAt === null && activeTask.scheduledDate !== planner.data?.today ? (
+                  <Button disabled={controlsDisabled || movePreview !== null} onClick={() => beginMove("today")} type="button" variant="outline">
+                    Move to Today
+                  </Button>
+                ) : null}
+                <Button
+                  disabled={controlsDisabled}
+                  onClick={handleSetCompleted}
+                  type="button"
+                  variant="outline"
+                >
+                  <HugeiconsIcon aria-hidden="true" icon={Tick02Icon} strokeWidth={1.7} />
+                  {activeTask.completedAt === null ? "Complete task" : "Restore task"}
+                </Button>
+                {activeTask.completedAt === null && activeTask.estimateMinutes !== null && activeTask.scheduledDate === planner.data?.today ? (
+                  <Button
+                    aria-label={anchorDate === planner.data.today ? "Remove Anchor for today" : "Anchor task for today"}
+                    aria-pressed={anchorDate === planner.data.today}
+                    className={anchorDate === planner.data.today ? "text-primary" : undefined}
+                    disabled={controlsDisabled}
+                    onClick={() => setAnchorDate(anchorDate === planner.data?.today ? null : planner.data?.today ?? null)}
+                    type="button"
+                    variant="outline"
+                  >
+                    <HugeiconsIcon aria-hidden="true" icon={BookmarkCheck01Icon} strokeWidth={1.7} />
+                    {anchorDate === planner.data.today ? "Unanchor today" : "Anchor today"}
+                  </Button>
+                ) : null}
+                <Button
+                  aria-label={deleteArmed ? (deleteTask.isPending ? "Deleting task" : "Confirm delete task") : "Delete task"}
+                  aria-pressed={deleteArmed}
+                  disabled={isSaving}
+                  onClick={handleDelete}
+                  type="button"
+                  variant={deleteArmed ? "destructive" : "ghost"}
+                >
+                  <HugeiconsIcon
+                    className={deleteTask.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
+                    icon={deleteTask.isPending ? Loading03Icon : Delete02Icon}
+                    strokeWidth={1.7}
+                  />
+                  {deleteArmed ? "Confirm delete" : "Delete"}
+                </Button>
+                {deleteArmed ? (
+                  <Button
+                    disabled={isSaving}
+                    onClick={() => setDeleteArmed(false)}
+                    ref={keepTaskButtonRef}
+                    type="button"
+                    variant="ghost"
+                  >
+                    <HugeiconsIcon aria-hidden="true" icon={Cancel01Icon} strokeWidth={1.7} />
+                    Keep task
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          </motion.section>
+        ) : null}
+      </AnimatePresence>
       <span aria-live="polite" className="sr-only">
         {deleteArmed ? "Delete confirmation. Choose Keep task or Confirm delete task." : ""}
       </span>
     </motion.form>
   );
+}
+
+function feedbackSectionForTaskFields(
+  estimateMinutes: number | null,
+  scheduledDate: LocalDate | null,
+  today: LocalDate | undefined,
+): WorkspaceFeedbackSection {
+  return estimateMinutes !== null && estimateMinutes > 0 && scheduledDate === today ? "today" : "backlog";
 }

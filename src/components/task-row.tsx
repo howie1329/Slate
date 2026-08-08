@@ -1,12 +1,12 @@
-import { useRef, type CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import { BookmarkCheck01Icon, DragDropVerticalIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { TaskMutationMotion, TaskMotionTransition } from "@/components/task-motion";
-import type { TaskSelectionTransition } from "@/components/task-selection";
+import type { TaskSelectionFocus, TaskSelectionTransition } from "@/components/task-selection";
 import type { Task } from "@/lib/planner";
 import { formatMinutes } from "@/lib/task-groups";
 import { cn } from "@/lib/utils";
@@ -15,10 +15,12 @@ type TaskRowProps = {
   isOverflow?: boolean;
   isPending: boolean;
   isSelected: boolean;
-  onSelectTask: (taskId: string, transition?: TaskSelectionTransition) => void;
+  metadata?: string | null;
+  onSelectTask: (taskId: string, transition?: TaskSelectionTransition, focus?: TaskSelectionFocus) => void;
   onMotionComplete: (version: number) => void;
   onToggleTask: (taskId: string, transition?: TaskMotionTransition) => void;
   shouldAnimateEnter: boolean;
+  shouldAnimateLayout: boolean;
   task: Task;
   taskMutation: TaskMutationMotion | null;
 };
@@ -27,6 +29,7 @@ type SortableTaskRowProps = TaskRowProps & {
   disabled: boolean;
   itemCount: number;
   position: number;
+  sectionLabel: string;
   showDragHandle: boolean;
 };
 
@@ -43,6 +46,7 @@ type SortableState = Pick<
   disabled: boolean;
   itemCount: number;
   position: number;
+  sectionLabel: string;
   showDragHandle: boolean;
 };
 
@@ -57,6 +61,7 @@ export function SortableTaskRow({
   disabled,
   itemCount,
   position,
+  sectionLabel,
   showDragHandle,
   task,
   ...props
@@ -76,6 +81,7 @@ export function SortableTaskRow({
         itemCount,
         listeners: sortable.listeners,
         position,
+        sectionLabel,
         setActivatorNodeRef: sortable.setActivatorNodeRef,
         setNodeRef: sortable.setNodeRef,
         showDragHandle,
@@ -91,17 +97,19 @@ function TaskRowContent({
   isOverflow = false,
   isPending,
   isSelected,
+  metadata,
   onMotionComplete,
   onSelectTask,
   onToggleTask,
   shouldAnimateEnter,
+  shouldAnimateLayout,
   task,
   taskMutation,
   sortable,
 }: TaskRowProps & { sortable?: SortableState }) {
   const isCompleted = task.completedAt !== null;
   const toggleTransitionRef = useRef<TaskMotionTransition>("instant");
-  const canAnimateLayout = taskMutation?.transition === "animate";
+  const prefersReducedMotion = useReducedMotion();
   const sortableStyle: CSSProperties | undefined = sortable
     ? {
         transform: CSS.Transform.toString(sortable.transform),
@@ -137,6 +145,12 @@ function TaskRowContent({
           },
   };
 
+  useEffect(() => {
+    if (prefersReducedMotion && (shouldAnimateEnter || shouldAnimateLayout) && taskMutation) {
+      onMotionComplete(taskMutation.version);
+    }
+  }, [onMotionComplete, prefersReducedMotion, shouldAnimateEnter, shouldAnimateLayout, taskMutation]);
+
   return (
     <li
       className={cn("relative", sortable?.isDragging && "z-10")}
@@ -145,7 +159,7 @@ function TaskRowContent({
       style={sortableStyle}
     >
       <motion.div
-        layout={canAnimateLayout ? "position" : false}
+        layout={shouldAnimateLayout && !prefersReducedMotion ? "position" : false}
         onLayoutAnimationComplete={() => {
           if (taskMutation) {
             onMotionComplete(taskMutation.version);
@@ -162,8 +176,8 @@ function TaskRowContent({
             sortable?.isDragging && "bg-muted ring-1 ring-inset ring-ring",
           )}
           custom={taskMutation}
-          exit="exit"
-          initial={shouldAnimateEnter ? "hidden" : false}
+          exit={prefersReducedMotion ? { opacity: 0, transition: { duration: 0 } } : "exit"}
+          initial={shouldAnimateEnter && !prefersReducedMotion ? "hidden" : false}
           onAnimationComplete={(definition) => {
             if (definition === "visible" && shouldAnimateEnter && taskMutation) {
               onMotionComplete(taskMutation.version);
@@ -191,15 +205,18 @@ function TaskRowContent({
             onClick={(event) => onSelectTask(task.id, event.detail > 0 ? "animate" : "instant")}
             type="button"
           >
-            <span
-              className={cn(
-                "min-w-0 flex-1 truncate text-menu font-medium",
-                isCompleted
-                  ? cn("font-normal line-through", isSelected ? "text-foreground/70" : "text-muted-foreground")
-                  : cn("text-foreground", isSelected && "font-semibold"),
-              )}
-            >
-              {task.title}
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5 py-2">
+              <span
+                className={cn(
+                  "truncate text-menu font-medium",
+                  isCompleted
+                    ? cn("font-normal line-through", isSelected ? "text-foreground/70" : "text-muted-foreground")
+                    : cn("text-foreground", isSelected && "font-semibold"),
+                )}
+              >
+                {task.title}
+              </span>
+              {metadata ? <span className="text-xs leading-4 text-muted-foreground">{metadata}</span> : null}
             </span>
             <span
               className={cn(
@@ -219,7 +236,7 @@ function TaskRowContent({
             <button
               {...sortable.attributes}
               {...sortable.listeners}
-              aria-label={`Reorder ${task.title}, position ${sortable.position} of ${sortable.itemCount}`}
+              aria-label={`Move ${task.title} within ${sortable.sectionLabel}, position ${sortable.position} of ${sortable.itemCount}`}
               className={cn(
                 "mr-1 flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground opacity-25 outline-none transition-[color,background-color,opacity] duration-150 group-hover/task-row:opacity-70 hover:bg-background hover:text-foreground hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring active:cursor-grabbing motion-reduce:transition-none",
                 sortable.disabled && "cursor-default opacity-20 group-hover/task-row:opacity-35",

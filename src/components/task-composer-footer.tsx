@@ -12,9 +12,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { TaskDetailPanel } from "@/components/task-detail-panel";
 import { useRouteMotion } from "@/components/route-motion";
 import { useTaskMotion, type TaskMotionTransition } from "@/components/task-motion";
+import { useTaskMoveUndo } from "@/components/task-move-undo";
 import { useTaskSelection } from "@/components/task-selection";
 import type { LocalDate } from "@/lib/planner";
 import { taskComposerInputId } from "@/lib/task-composer";
+import { buildTaskComposerInput, parseTaskComposerCommands } from "@/lib/task-composer-commands";
 import type { WindowMode } from "@/lib/window-mode";
 import { useCreateTask, usePlannerState } from "@/lib/planner-query";
 
@@ -27,13 +29,19 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
   const navigate = useNavigate();
   const createTask = useCreateTask();
   const planner = usePlannerState();
-  const { clearTaskMutation, recordTaskMutation, taskMutation } = useTaskMotion();
+  const { recordTaskMutation } = useTaskMotion();
+  const { reportFeedback } = useTaskMoveUndo();
   const { setRouteTransition } = useRouteMotion();
   const { clearSelection, selectedTaskId, selectedTaskTransition } = useTaskSelection();
   const aiReview = useAiReview();
   const [title, setTitle] = useState("");
   const createTransitionRef = useRef<TaskMotionTransition>("instant");
   const hasTitle = title.trim().length > 0;
+  const parsedCommands = parseTaskComposerCommands(title);
+  const taskInput = planner.data
+    ? buildTaskComposerInput(parsedCommands, { scheduledDate, today: planner.data.today })
+    : null;
+  const hasComposerFeedback = parsedCommands.commands.length > 0 || Boolean(parsedCommands.error && hasTitle);
   const aiUnavailable = planner.data?.aiAvailability !== "configured";
   const aiKeyMissing = planner.data?.aiAvailability === "unconfigured";
   const aiButtonDisabled = aiUnavailable || aiReview.state.kind === "assist-loading" || aiReview.state.kind === "plan-loading" || aiReview.state.kind === "plan-accepting";
@@ -52,22 +60,21 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const trimmedTitle = title.trim();
 
-    if (!trimmedTitle || createTask.isPending) {
+    if (!taskInput || createTask.isPending) {
       return;
     }
 
     recordTaskMutation({ kind: "create", transition: createTransitionRef.current });
     createTask.mutate(
       {
-        title: trimmedTitle,
-        estimateMinutes: null,
-        scheduledDate,
+        ...taskInput,
         source: "manual",
       },
       {
         onSuccess: () => {
+          const destination = taskInput.scheduledDate === planner.data?.today ? "today" : "backlog";
+          reportFeedback(`${taskInput.title} added to ${destination === "today" ? "Today" : "Backlog"}.`, false, destination);
           setTitle("");
         },
         onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save task."),
@@ -87,17 +94,11 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
   return (
     <footer
       aria-label="Task composer"
-      className={`absolute inset-x-0 bottom-0 z-10 h-16 bg-background px-4 py-3 sm:px-6 ${selectedTaskId ? "" : "border-t border-border"} ${windowMode === "full" ? "px-8" : ""}`}
+      className={`absolute inset-x-0 bottom-0 z-10 min-h-16 bg-background px-4 py-3 sm:px-6 ${selectedTaskId ? "" : "border-t border-border"} ${windowMode === "full" ? "px-8" : ""}`}
     >
       <AnimatePresence
         custom={selectedTaskTransition}
         initial={false}
-        onExitComplete={() => {
-          if (taskMutation) {
-            const completedVersion = taskMutation.version;
-            window.setTimeout(() => clearTaskMutation(completedVersion), 50);
-          }
-        }}
       >
         {selectedTaskId && aiReview.state.kind === "idle" ? (
           <TaskDetailPanel
@@ -134,6 +135,8 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
       >
         <Input
           aria-label="New task"
+          aria-describedby={hasComposerFeedback ? "task-composer-status" : undefined}
+          aria-invalid={Boolean(parsedCommands.error && hasTitle)}
           className="h-10 text-menu"
           disabled={createTask.isPending}
           id={taskComposerInputId}
@@ -144,11 +147,11 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
         <Button
           aria-label={createTask.isPending ? "Saving task" : "Create task"}
           className="size-8 rounded-md"
-          disabled={!hasTitle || createTask.isPending}
+          disabled={!taskInput || createTask.isPending}
           size="icon"
           title={createTask.isPending ? "Saving task" : "Save task"}
           type="submit"
-          variant={hasTitle ? "default" : "outline"}
+          variant={taskInput ? "default" : "outline"}
         >
           <HugeiconsIcon
             className={createTask.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
@@ -221,6 +224,33 @@ export function TaskComposerFooter({ scheduledDate, windowMode }: TaskComposerFo
           <HugeiconsIcon icon={Settings01Icon} strokeWidth={1.8} />
         </Button>
       </form>
+      {hasComposerFeedback ? (
+        <div
+          aria-live="polite"
+          className={`mx-auto mt-1.5 flex min-h-4 w-full max-w-xl gap-1.5 text-menu-label ${parsedCommands.error ? "flex-col items-start" : "items-center"} ${windowMode === "full" ? "max-w-3xl" : ""}`}
+          id="task-composer-status"
+          role={parsedCommands.error ? "alert" : "status"}
+        >
+          {parsedCommands.commands.length > 0 ? (
+            <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <span className="shrink-0 text-muted-foreground">Capture:</span>
+              <span className="flex min-w-0 flex-wrap items-center gap-1">
+                {parsedCommands.commands.map((command, index) => (
+                  <span
+                    className="inline-flex h-5 items-center rounded-full border border-border bg-muted px-1.5 font-medium text-foreground"
+                    key={`${command.kind}-${command.label}-${index}`}
+                  >
+                    {command.label}
+                  </span>
+                ))}
+              </span>
+            </span>
+          ) : null}
+          {parsedCommands.error ? (
+            <span className="min-w-0 text-destructive">{parsedCommands.error}</span>
+          ) : null}
+        </div>
+      ) : null}
     </footer>
   );
 }

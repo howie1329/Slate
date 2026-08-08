@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BacklogRouteImport } from './routes/backlog'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TodayRouteImport } from './routes/today'
+import { Route as WorkspaceRouteImport } from './routes/workspace'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +35,25 @@ const TodayRoute = TodayRouteImport.update({
   path: '/today',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceRoute = WorkspaceRouteImport.update({
+  id: '/workspace',
+  path: '/workspace',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/backlog': typeof BacklogRoute
   '/settings': typeof SettingsRoute
   '/today': typeof TodayRoute
+  '/workspace': typeof WorkspaceRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/backlog': typeof BacklogRoute
   '/settings': typeof SettingsRoute
   '/today': typeof TodayRoute
+  '/workspace': typeof WorkspaceRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,14 @@ export interface FileRoutesById {
   '/backlog': typeof BacklogRoute
   '/settings': typeof SettingsRoute
   '/today': typeof TodayRoute
+  '/workspace': typeof WorkspaceRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/backlog' | '/settings' | '/today'
+  fullPaths: '/' | '/backlog' | '/settings' | '/today' | '/workspace'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/backlog' | '/settings' | '/today'
-  id: '__root__' | '/' | '/backlog' | '/settings' | '/today'
+  to: '/' | '/backlog' | '/settings' | '/today' | '/workspace'
+  id: '__root__' | '/' | '/backlog' | '/settings' | '/today' | '/workspace'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +76,7 @@ export interface RootRouteChildren {
   BacklogRoute: typeof BacklogRoute
   SettingsRoute: typeof SettingsRoute
   TodayRoute: typeof TodayRoute
+  WorkspaceRoute: typeof WorkspaceRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +109,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TodayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workspace': {
+      id: '/workspace'
+      path: '/workspace'
+      fullPath: '/workspace'
+      preLoaderRoute: typeof WorkspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +124,7 @@ const rootRouteChildren: RootRouteChildren = {
   BacklogRoute: BacklogRoute,
   SettingsRoute: SettingsRoute,
   TodayRoute: TodayRoute,
+  WorkspaceRoute: WorkspaceRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

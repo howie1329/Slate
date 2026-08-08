@@ -37,7 +37,7 @@ export function OnboardingFlow({ isSettingsPage, pathname, planner, windowMode }
       return;
     }
 
-    if (step === "capture" && pathname === "/backlog") {
+    if (step === "capture" && pathname === "/workspace") {
       const focusFrame = window.requestAnimationFrame(() => focusTaskComposer());
       return () => window.cancelAnimationFrame(focusFrame);
     }
@@ -97,7 +97,7 @@ export function OnboardingFlow({ isSettingsPage, pathname, planner, windowMode }
         },
         onSuccess: () => {
           setRouteTransition("animate");
-          void navigate({ to: "/today" });
+          void navigate({ to: "/workspace" });
         },
       },
     );
@@ -133,15 +133,15 @@ export function OnboardingFlow({ isSettingsPage, pathname, planner, windowMode }
           baselineTaskIdsRef.current = new Set(planner.tasks.map((task) => task.id));
           setStep("capture");
           setRouteTransition("animate");
-          void navigate({ to: "/backlog" });
+          void navigate({ to: "/workspace" });
         },
       },
     );
   }
 
-  function handleOpenBacklog() {
+  function handleOpenWorkspace() {
     setRouteTransition("animate");
-    void navigate({ to: "/backlog" });
+    void navigate({ to: "/workspace" });
   }
 
   function handleContinue() {
@@ -228,11 +228,11 @@ export function OnboardingFlow({ isSettingsPage, pathname, planner, windowMode }
       {step === "capture" ? (
         <>
           <p className="mb-0 mt-2 max-w-[48ch] text-sm leading-5 text-muted-foreground">
-            Backlog is where work waits before you decide whether it belongs in Today.
+            New tasks begin in Backlog. You will see it beneath Today in the workspace.
           </p>
-          {pathname !== "/backlog" ? (
-            <Button className="mt-4" onClick={handleOpenBacklog} type="button">
-              Open Backlog
+          {pathname !== "/workspace" ? (
+            <Button className="mt-4" onClick={handleOpenWorkspace} type="button">
+              Open workspace
             </Button>
           ) : (
             <p className="mb-0 mt-4 text-sm font-medium text-foreground">Add a task in the composer below.</p>
@@ -245,9 +245,9 @@ export function OnboardingFlow({ isSettingsPage, pathname, planner, windowMode }
           <p className="mb-0 mt-2 max-w-[48ch] text-sm leading-5 text-muted-foreground">
             A rough estimate is enough. Set the time, choose Today, and save the task to see what remains.
           </p>
-          {pathname !== "/backlog" ? (
-            <Button className="mt-4" onClick={handleOpenBacklog} type="button" variant="outline">
-              Open Backlog
+          {pathname !== "/workspace" ? (
+            <Button className="mt-4" onClick={handleOpenWorkspace} type="button" variant="outline">
+              Open workspace
             </Button>
           ) : (
             <p className="mb-0 mt-4 text-sm font-medium text-foreground">Use the selected task’s Set time and Set date controls below.</p>

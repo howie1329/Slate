@@ -15,6 +15,7 @@ import {
   generateDailyPlan,
   getPlannerSnapshot,
   isTauriWindow,
+  moveTask,
   reorderTasks,
   saveSettings,
   setTaskCompleted,
@@ -31,6 +32,7 @@ import {
   type TaskInput,
   type UpdateTaskInput,
   type DeleteTaskInput,
+  type MoveTaskInput,
   type UndoQuickCaptureInput,
 } from "@/lib/planner";
 
@@ -133,6 +135,10 @@ export function useSetTaskCompleted() {
 
 export function useSetTaskScheduledDate() {
   return usePlannerMutation<SetTaskScheduledDateInput>(setTaskScheduledDate);
+}
+
+export function useMoveTask() {
+  return usePlannerMutation<MoveTaskInput, Awaited<ReturnType<typeof moveTask>>>(moveTask);
 }
 
 export function useDeleteTask() {
