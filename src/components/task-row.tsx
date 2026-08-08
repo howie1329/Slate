@@ -227,7 +227,7 @@ function TaskRowContent({
             </span>
             <span
               className={cn(
-                "w-14 shrink-0 text-right text-xs leading-4 tabular-nums",
+                "w-14 shrink-0 text-right text-metadata leading-3 tabular-nums",
                 isSelected ? "text-foreground/70" : "text-muted-foreground",
               )}
             >

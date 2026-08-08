@@ -121,12 +121,12 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
               <section aria-labelledby="daily-today-heading" className="sticky top-0 z-[1] -mx-4 bg-background px-4 pb-2 pt-3 sm:-mx-6 sm:px-6">
                 <div className="flex items-end justify-between gap-3">
                   <div className="min-w-0">
-                    <h1 className="m-0 font-heading text-xl font-semibold leading-6 tracking-tight" id="daily-today-heading">
+                    <h1 className="m-0 font-heading text-menu font-semibold leading-5 tracking-tight" id="daily-today-heading">
                       Today
                     </h1>
                     <p
                       aria-label={capacityStatus(model.today.capacity)}
-                      className={`m-0 mt-0.5 text-xs tabular-nums ${model.today.capacity.isOverCapacity ? "text-destructive" : "text-muted-foreground"}`}
+                      className={`m-0 mt-0.5 text-menu-label tabular-nums ${model.today.capacity.isOverCapacity ? "text-destructive" : "text-muted-foreground"}`}
                       role="status"
                     >
                       <NumberFlow
@@ -210,7 +210,7 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
                   type="button"
                 >
                   <span className="flex min-w-0 items-baseline gap-2">
-                    <span className="font-heading text-base font-semibold leading-5" id="daily-backlog-heading">Backlog</span>
+                    <span className="font-heading text-xs font-semibold leading-4" id="daily-backlog-heading">Backlog</span>
                     <span aria-label={`${model.backlog.totalTaskCount} ${model.backlog.totalTaskCount === 1 ? "task" : "tasks"} in backlog`} className="text-metadata tabular-nums text-muted-foreground" role="status">
                       <NumberFlow
                         aria-hidden="true"

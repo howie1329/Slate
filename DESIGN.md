@@ -43,9 +43,14 @@ typography:
     lineHeight: 1.5
   menu:
     fontFamily: "Inter, ui-sans-serif, sans-serif, system-ui"
-    fontSize: "0.8125rem"
+    fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.125rem
+  composer:
+    fontFamily: "Inter, ui-sans-serif, sans-serif, system-ui"
+    fontSize: "0.8125rem"
+    fontWeight: 400
+    lineHeight: 1rem
   label:
     fontFamily: "Inter, ui-sans-serif, sans-serif, system-ui"
     fontSize: "0.6875rem"
@@ -181,7 +186,8 @@ The palette is a neutral monochrome desktop canvas with black-and-white primary 
 
 - **Title** (600, `1.5rem`, `1.25`): Concise page or recovery headings where the user needs orientation.
 - **Body** (400, `1rem`, `1.5`): Explanatory copy and comfortable supporting text.
-- **Menu** (400–600, `0.8125rem`, `1.125rem`): Task titles, controls, navigation, and compact data.
+- **Menu** (400–600, `0.875rem`, `1.125rem`): Task titles, controls, navigation, and compact data.
+- **Composer** (400, `0.8125rem`, `1rem`): The compact search and capture field in the Daily workspace.
 - **Label** (600, `0.6875rem`, `0.875rem`): Section labels, capacity metadata, and small status text. Use uppercase only when it improves recognition, never as repeated scaffolding.
 - **Supporting** (400, `0.75rem`, `1rem`): Secondary descriptions and recoverable messages.
 - **Metadata** (400, `0.625rem`, `0.75rem`): Compact task state, counts, and utility labels that support scanning without competing with the task title.
