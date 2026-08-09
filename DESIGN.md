@@ -192,7 +192,8 @@ The palette is a neutral monochrome desktop canvas with black-and-white primary 
 - **Supporting** (400, `0.75rem`, `1rem`): Secondary descriptions and recoverable messages.
 - **Estimate** (400, `0.625rem`, `0.75rem`): Quiet right-aligned duration text in task rows.
 - **Metadata** (400, `0.5rem`, `0.625rem`): Compact task state, counts, and utility labels that support scanning without competing with the task title.
-- **Daily section** (500, `0.8125rem`, `0.875rem`): Quiet Today and Backlog labels that establish structure without competing with task content.
+- **Daily section** (500, `0.8125rem`, `0.875rem`): Quiet Today label that establishes structure without competing with task content.
+- **Daily subsection** (500, `0.75rem`, `0.875rem`): Smaller Backlog label that keeps the secondary list subordinate to Today.
 - **Task** (400, `0.75rem`, `0.875rem`): Regular-weight task titles sized for the compact popover.
 - **Capacity** (400, `0.6875rem`, `0.875rem`): Remaining-minute and capacity status text.
 - **Numeric data** (tabular numerals): Durations, capacity, overages, and counts should align clearly.
@@ -263,7 +264,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 ### Capacity Summary
 
 - **Structure:** The Today header shows the remaining-minute value and thin `2px` progress rail. The rail stays with the capacity value while task content scrolls.
-- **Progress:** `primary` represents committed minutes; `destructive` represents over-capacity. The remaining-minute text shifts from `primary`, to `foreground`, to `capacity-caution` as capacity is used, then to `destructive` when over capacity.
+- **Progress:** A quiet `primary` fill represents committed minutes; `destructive` represents over-capacity. The remaining-minute text shifts from `primary`, to `foreground`, to `capacity-caution` as capacity is used, then to `destructive` when over capacity.
 - **Behavior:** The rail is a signal, not a chart or performance score.
 
 ### Daily Command Row and Persistent Footer

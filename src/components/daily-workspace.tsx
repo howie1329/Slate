@@ -163,7 +163,7 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
                   role="progressbar"
                 >
                   <span
-                    className={`block h-full rounded-full transition-[width,background-color] duration-200 motion-reduce:transition-none ${model.today.capacity.isOverCapacity ? "bg-destructive" : "bg-primary"}`}
+                    className={`block h-full rounded-full transition-[width,background-color] duration-200 motion-reduce:transition-none ${model.today.capacity.isOverCapacity ? "bg-destructive/80" : "bg-primary/70"}`}
                     style={{ width: `${capacityPercentage(model.today.capacity.committedMinutes, planner.effectiveCapacityMinutes)}%` }}
                   />
                 </div>
@@ -210,7 +210,7 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
                   type="button"
                 >
                   <span className="flex min-w-0 items-baseline gap-2">
-                    <span className="font-heading text-section font-medium" id="daily-backlog-heading">Backlog</span>
+                    <span className="font-heading text-section-secondary font-medium" id="daily-backlog-heading">Backlog</span>
                     <span aria-label={`${model.backlog.totalTaskCount} ${model.backlog.totalTaskCount === 1 ? "task" : "tasks"} in backlog`} className="text-metadata tabular-nums text-muted-foreground" role="status">
                       <NumberFlow
                         aria-hidden="true"

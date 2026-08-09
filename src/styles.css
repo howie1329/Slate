@@ -7,6 +7,8 @@
 @theme {
   --text-section: 0.8125rem;
   --text-section--line-height: 0.875rem;
+  --text-section-secondary: 0.75rem;
+  --text-section-secondary--line-height: 0.875rem;
   --text-task: 0.75rem;
   --text-task--line-height: 0.875rem;
   --text-menu: 0.875rem;
