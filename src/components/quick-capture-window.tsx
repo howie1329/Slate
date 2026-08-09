@@ -181,7 +181,7 @@ export function QuickCaptureWindow() {
   return (
     <main
       aria-label="Quick capture"
-      className="flex h-dvh min-h-0 flex-col justify-center overflow-hidden rounded-[14px] bg-background px-3 py-2 text-foreground ring-1 ring-border/70"
+      className="flex h-dvh min-h-0 flex-col justify-center overflow-hidden rounded-[14px] bg-background px-3 py-1.5 text-foreground ring-1 ring-border/70"
       data-window-mode="quick-capture"
       onKeyDown={(event) => {
         if (event.key === "Escape" && !event.defaultPrevented) {
@@ -190,16 +190,16 @@ export function QuickCaptureWindow() {
         }
       }}
     >
-      <form className="flex h-8 min-w-0 items-center" onSubmit={handleSubmit}>
+      <form className="flex h-7 min-w-0 items-center" onSubmit={handleSubmit}>
         <label className="sr-only" htmlFor="quick-capture-title">
           Quick capture title
         </label>
-        <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-input bg-transparent transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30">
+        <div className="flex h-7 min-w-0 flex-1 items-center rounded-md border border-input bg-transparent transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30">
           <Input
             ref={inputRef}
             aria-describedby="quick-capture-status"
             aria-invalid={Boolean(error)}
-            className="h-7 min-w-0 flex-1 rounded-md border-0 bg-transparent px-2.5 py-1 text-composer shadow-none focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
+            className="h-6 min-w-0 flex-1 rounded-md border-0 bg-transparent px-2.5 py-1 text-composer shadow-none focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
             disabled={createTask.isPending || undoQuickCapture.isPending}
             id="quick-capture-title"
             onChange={(event) => handleTitleChange(event.target.value)}
@@ -208,7 +208,7 @@ export function QuickCaptureWindow() {
           />
           <span aria-hidden="true" className="h-4 w-px shrink-0 bg-border" />
           <Button
-            className="h-7 min-w-10 rounded-md px-2 text-composer font-medium text-foreground"
+            className="h-6 min-w-10 rounded-md px-2 text-composer font-medium text-foreground"
             disabled={!title.trim() || createTask.isPending || undoQuickCapture.isPending}
             type="submit"
             variant="ghost"
@@ -224,7 +224,7 @@ export function QuickCaptureWindow() {
 
       <div
         aria-live="polite"
-        className={`flex min-h-4 items-center justify-between gap-2 pt-1 ${error ? "text-capacity" : "text-metadata"}`}
+        className={`flex min-h-3 items-center justify-between gap-2 pt-0.5 ${error ? "text-capacity" : "text-metadata"}`}
         id="quick-capture-status"
         role={error ? "alert" : "status"}
       >

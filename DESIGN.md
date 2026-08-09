@@ -277,7 +277,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 ### Quick Capture Window
 
 - **Purpose:** A dedicated global-shortcut launcher for capturing one thought into Backlog without opening the planner workspace.
-- **Structure:** A compact `520 × 100` panel uses one integrated capture row with a 12px input, a quiet Add action, and an 8px secondary status line beneath it.
+- **Structure:** A compact `520 × 72` panel uses one integrated capture row with a 12px input, a quiet Add action, and an 8px secondary status line beneath it.
 - **Interaction:** Enter and Add submit; Escape preserves the draft and hides the panel; Discard clears a draft and hides the panel. Successful captures expose bounded Undo feedback.
 - **Scope:** Quick capture remains title-only, unscheduled, and unestimated. It does not introduce AI, destination, date, estimate, or task-navigation controls.
 

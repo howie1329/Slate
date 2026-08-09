@@ -55,13 +55,13 @@ The dedicated surface should feel like a fast command panel, not a miniature Tod
 
 The implemented hidden `quick-capture` webview window in `src-tauri/tauri.conf.json` uses this compact launcher geometry:
 
-- Initial size 520 × 100.
-- Minimum size 360 × 100.
+- Initial size 520 × 72.
+- Minimum size 360 × 72.
 - Undecorated, non-resizable, transparent, shadowed, and skipped from the taskbar.
 - Initially hidden and created once during app setup.
 - No normal title-bar or application navigation chrome.
 
-The dimensions match the final two-line command-bar UI. The window does not inherit the planner popover’s 360 × 520 minimum simply because both are compact surfaces.
+The dimensions match the final two-line command-bar UI without excess vertical room. The window does not inherit the planner popover’s 360 × 520 minimum simply because both are compact surfaces.
 
 ### macOS panel behavior
 
