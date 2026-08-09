@@ -1,6 +1,6 @@
 # Implementation plan: AI Assist, Plan My Day, and review tray
 
-> Status: Product behavior reference only. The native HTTP transport in this historical plan is superseded by the packaged Node sidecar in plan 007. AI Assist and Plan My Day ship in Slate 1.0.0 through the implementations in plans 011 and 012.
+> Status: Product behavior reference only. The native HTTP transport in this historical plan is superseded by the packaged Node sidecar implementations in plans 011 and 012. AI Assist and Plan My Day ship in Slate 1.0.0 through those two slices.
 
 ## Objective
 

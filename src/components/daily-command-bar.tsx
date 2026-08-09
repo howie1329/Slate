@@ -84,9 +84,9 @@ export function DailyCommandBar({ onValueChange, value, windowMode }: DailyComma
   }
 
   return (
-    <header className={`sticky top-0 z-10 shrink-0 border-b border-border/70 bg-background px-4 pb-1.5 pt-2 sm:px-6 ${windowMode === "full" ? "px-8" : ""}`}>
+    <header className={`sticky top-0 z-10 shrink-0 border-b border-border/70 bg-background pb-1.5 pt-2 ${windowMode === "full" ? "px-8" : "px-4 sm:px-6"}`}>
       <form
-        className={`mx-auto flex h-7 w-full max-w-xl items-center gap-1 ${windowMode === "full" ? "max-w-3xl" : ""}`}
+        className={`mx-auto flex h-7 w-full items-center gap-1 ${windowMode === "full" ? "max-w-3xl" : "max-w-xl"}`}
         onKeyDownCapture={() => {
           createTransitionRef.current = "instant";
         }}

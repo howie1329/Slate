@@ -102,9 +102,9 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
       <DailyCommandBar onValueChange={setQuery} value={query} windowMode={windowMode} />
       <section
         aria-label="Daily workspace"
-        className={`min-h-0 flex-1 overflow-y-auto px-4 pb-10 sm:px-6 ${selectedTaskId ? "pb-48" : ""}`}
+        className={`min-h-0 flex-1 overflow-y-auto px-4 sm:px-6 ${selectedTaskId ? "pb-48" : "pb-10"}`}
       >
-        <div className={`mx-auto w-full max-w-xl ${windowMode === "full" ? "max-w-3xl" : ""}`}>
+        <div className={`mx-auto w-full ${windowMode === "full" ? "max-w-3xl" : "max-w-xl"}`}>
           {model.hasQuery && !model.hasMatches ? (
             <PlannerEmptyState
               actionLabel="Clear search"

@@ -2,7 +2,7 @@
 
 > **Status:** Directional roadmap
 >
-> **Updated:** 2026-07-28
+> **Updated:** 2026-08-08
 >
 > This document describes the order in which Slate should earn new capabilities. It is not a fixed release schedule. Each stage should be validated against the product thesis before the next stage expands the model.
 
@@ -74,9 +74,9 @@ Slate 1.0.0 is the shipped baseline for the first usable daily planning loop:
 - Reviewable AI Assist and atomic Plan My Day flows through the Keychain-backed packaged Node sidecar.
 - An ad-hoc-signed Apple Silicon DMG for macOS 13.5 or later, with an explicit first-launch security warning and published checksum.
 
-Stage 1 is complete. The next eligible work is Stage 2 capture and foundation validation, not Spaces, sync, mobile, or integrations. The larger unfinished-day and changed-day review experiences are intentionally deferred to the full-window workspace and remain evidence-gated. The distinction between the shipped Backlog view and a future richer Log view stays deliberate.
+Stage 1 is complete, and the Stage 2 capture and foundation implementation is present in the current 1.1 release candidate. The next roadmap gate is Stage 2 validation and evidence gathering, not Spaces, sync, mobile, or integrations. The larger unfinished-day and changed-day review experiences are intentionally deferred to the full-window workspace and remain evidence-gated. The distinction between the shipped Backlog view and a future richer Log view stays deliberate.
 
-The 1.1 implementation slice is global quick capture: a configurable macOS shortcut opens a dedicated 520 × 100 command-bar capture window (360 × 100 minimum), restores an in-process draft, and creates a title-only Backlog task with revision-safe Undo. Clipboard, selected text, application context, AI enrichment, and destination selection remain deferred. The unfinished-day and changed-day review concepts are not popover requirements; they are conditional full-window work in Stage 3.
+The 1.1 implementation slice is global quick capture: a configurable macOS shortcut opens a dedicated 520 × 72 command-bar capture window (360 × 72 minimum), restores an in-process draft, and creates a title-only Backlog task with revision-safe Undo. Clipboard, selected text, application context, AI enrichment, and destination selection remain deferred. The unfinished-day and changed-day review concepts are not popover requirements; they are conditional full-window work in Stage 3.
 
 ## Stage 1 — Shipped local daily planner
 

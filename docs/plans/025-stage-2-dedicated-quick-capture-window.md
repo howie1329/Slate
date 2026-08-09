@@ -5,6 +5,7 @@
 ## Status
 
 - **Status:** Implemented on 2026-07-28.
+- **Current-tree note:** The final capture window is 520 × 72 with a 360 × 72 minimum. The former `task-composer-footer.tsx` was replaced by `workspace-footer.tsx`; references to the former path below describe the implementation sequence and are not current file locations.
 - **Priority:** P1 follow-up to Plan 024
 - **Effort:** M
 - **Risk:** MEDIUM — a third Tauri webview, macOS panel focus, window dismissal, and shared renderer/native state must remain deterministic
@@ -111,7 +112,7 @@ The dedicated surface may still use the planner query boundary for theme and mut
 
 Add a focused component such as `src/components/quick-capture-window.tsx` using the existing UI primitives and tokens:
 
-- One clearly labelled title input with an intentionally short placeholder such as “Capture a thought”, paired with a separate 40px Add action in the primary row.
+- One clearly labelled title input with an intentionally short placeholder such as “Capture a thought”, paired with a compact Add action in the primary row.
 - Enter submits when the trimmed title is non-empty.
 - A compact submit affordance that reflects pending state without moving the layout.
 - An explicit Discard action only when a draft exists.
@@ -135,7 +136,7 @@ Use Slate’s existing warm-neutral surfaces, muted teal commitment signal, sans
 
 ## Existing renderer cleanup
 
-Move the global quick-capture interaction out of `src/components/task-composer-footer.tsx`:
+Remove the global quick-capture interaction from the former `src/components/task-composer-footer.tsx`:
 
 - Remove the footer’s listener for the global `quick-capture://opened` event.
 - Remove the footer-only quick-capture mode, draft persistence, dedicated discard action, and quick-capture source branching.
@@ -175,7 +176,7 @@ Files: `src/lib/window-mode.ts`, `src/routes/__root.tsx`, new `src/components/qu
 
 ### 4. Remove global capture behavior from the footer
 
-Files: `src/components/task-composer-footer.tsx`, focused interaction helpers
+Files: `src/components/workspace-footer.tsx`, focused interaction helpers
 
 - Restore the footer to the ordinary manual capture path.
 - Confirm AI Assist, Plan My Day, Today scheduling context, selection dismissal, and settings access remain unchanged.
@@ -186,7 +187,7 @@ Files: `src/components/task-composer-footer.tsx`, focused interaction helpers
 Files: `src/styles.css` or existing UI primitives only if required
 
 - Verify the dedicated window at its minimum size in light and dark themes.
-- Verify the 520 × 100 default and 360 × 100 minimum geometry in light and dark themes.
+- Verify the 520 × 72 default and 360 × 72 minimum geometry in light and dark themes.
 - Verify keyboard-only flow, visible focus, labelled input, Escape dismissal, Discard, Enter submission, pending state, and Undo.
 - Keep motion reduced and avoid adding a decorative animation system.
 - Confirm the main planner popover remains usable at 360 × 520 after the footer cleanup.
@@ -249,7 +250,7 @@ Files: `docs/roadmap.md`, `docs/product-brief.md`, `docs/daily-resilience.md`, `
 
 - The global shortcut opens a dedicated, reusable capture window rather than the planner popover.
 - The dedicated surface is one focused title-to-Backlog interaction with draft preservation and revision-safe Undo.
-- The dedicated surface remains a compact two-line command bar at 520 × 100 and 360 × 100.
+- The dedicated surface remains a compact two-line command bar at 520 × 72 and 360 × 72.
 - Tray, full-app, manual footer capture, AI review, Settings, SQLite events, and cross-window planner refresh remain unchanged in behavior.
 - The dedicated window is keyboard-operable, accessible, theme-aware, reduced-motion-safe, and usable at its minimum size.
 - `cargo test --manifest-path src-tauri/Cargo.toml`, `npm run build`, and renderer helper tests pass.

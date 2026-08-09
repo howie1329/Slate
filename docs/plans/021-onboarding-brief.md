@@ -1,6 +1,6 @@
 # Plan 021: Slate first-run onboarding brief
 
-> **Status:** Proposed
+> **Status:** Delivered; implemented by [Plan 022](022-onboarding-implementation.md)
 > **Priority:** P1 after 1.0 validation
 > **Effort:** S–M
 > **Risk:** LOW–MEDIUM
@@ -222,4 +222,3 @@ The go/no-go bar is behavioral, not completion-rate theater: users should reach 
 ## Decision
 
 Proceed with a small first-run first-plan experience after a short usability check of the current 1.0 empty states. The right Slate onboarding is a guided first success embedded in the product—not a tour of the product.
-

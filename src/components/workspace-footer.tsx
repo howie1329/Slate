@@ -30,9 +30,7 @@ export function WorkspaceFooter({ windowMode }: WorkspaceFooterProps) {
   return (
     <footer
       aria-label="Workspace utilities"
-      className={`absolute inset-x-0 bottom-0 z-10 h-7 border-t border-border bg-muted/40 px-4 sm:px-6 ${
-        windowMode === "full" ? "px-8" : ""
-      }`}
+      className={`absolute inset-x-0 bottom-0 z-10 h-7 border-t border-border bg-muted/40 ${windowMode === "full" ? "px-8" : "px-4 sm:px-6"}`}
     >
       <div className={`mx-auto flex h-full w-full items-center gap-2 ${windowMode === "popover" ? "justify-between" : "justify-end"}`}>
         {windowMode === "popover" ? (
