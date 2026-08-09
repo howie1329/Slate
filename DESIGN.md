@@ -274,6 +274,13 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 - **Persistent footer:** The 28px tray uses a slight muted tint and hairline divider. Labels and icons stay quiet at `8px`, with the popover split between Open full app and Settings and the full app keeping Settings on the right.
 - **Transient panels:** Task details and AI review panels attach above the footer when active and disappear with the selection or review state.
 
+### Quick Capture Window
+
+- **Purpose:** A dedicated global-shortcut launcher for capturing one thought into Backlog without opening the planner workspace.
+- **Structure:** A compact `520 × 100` panel uses one integrated capture row with a 12px input, a quiet Add action, and an 8px secondary status line beneath it.
+- **Interaction:** Enter and Add submit; Escape preserves the draft and hides the panel; Discard clears a draft and hides the panel. Successful captures expose bounded Undo feedback.
+- **Scope:** Quick capture remains title-only, unscheduled, and unestimated. It does not introduce AI, destination, date, estimate, or task-navigation controls.
+
 ### Task Detail Panel
 
 - **Placement:** A utility-strip-adjacent transient panel using `12px` top corners and a bounded compact height.
