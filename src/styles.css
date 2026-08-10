@@ -15,20 +15,20 @@
   --text-menu--line-height: 1.125rem;
   --text-menu-label: 0.6875rem;
   --text-menu-label--line-height: 0.875rem;
-  --text-composer: 0.75rem;
-  --text-composer--line-height: 0.875rem;
+  --text-composer: 0.8125rem;
+  --text-composer--line-height: 1rem;
   --text-capacity: 0.6875rem;
   --text-capacity--line-height: 0.875rem;
   --text-estimate: 0.625rem;
   --text-estimate--line-height: 0.75rem;
-  --text-footer: 0.5rem;
-  --text-footer--line-height: 0.625rem;
-  --text-metadata: 0.5rem;
-  --text-metadata--line-height: 0.625rem;
+  --text-footer: 0.625rem;
+  --text-footer--line-height: 0.75rem;
+  --text-metadata: 0.625rem;
+  --text-metadata--line-height: 0.75rem;
 }
 
 @theme inline {
-  --font-heading: var(--font-serif);
+  --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
   --font-serif: var(--font-serif);
   --font-mono: var(--font-mono);
@@ -115,8 +115,8 @@
   --sidebar-accent-foreground: oklch(0 0 0);
   --sidebar-border: oklch(0.9400 0 0);
   --sidebar-ring: oklch(0 0 0);
-  --font-sans: Inter, ui-sans-serif, sans-serif, system-ui;
-  --font-serif: Inter, ui-sans-serif, sans-serif, system-ui;
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Inter, ui-sans-serif, system-ui, sans-serif;
   --font-mono: Intel One Mono, ui-monospace, monospace;
   --radius: 0.5rem;
   --shadow-x: 0px;
@@ -179,8 +179,8 @@
   --sidebar-accent-foreground: oklch(1 0 0);
   --sidebar-border: oklch(0.3200 0 0);
   --sidebar-ring: oklch(0.7200 0 0);
-  --font-sans: Inter, ui-sans-serif, sans-serif, system-ui;
-  --font-serif: Inter, ui-sans-serif, sans-serif, system-ui;
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Inter, ui-sans-serif, system-ui, sans-serif;
   --font-mono: Intel One Mono, ui-monospace, monospace;
   --radius: 0.5rem;
   --shadow-x: 0px;
@@ -216,6 +216,7 @@
   }
   html {
     @apply font-sans;
+    font-kerning: normal;
   }
 
   html:has([data-window-mode="popover"]),
@@ -358,14 +359,12 @@
   }
 
   .planning-workspace-inspector {
-    position: absolute;
-    inset-block: 0;
-    right: 0;
-    z-index: 20;
-    width: min(360px, calc(100% - 24px));
+    position: relative;
+    width: var(--planning-inspector-width);
+    flex: 0 0 var(--planning-inspector-width);
     overflow: hidden;
     border-left: 1px solid var(--border);
-    background: var(--task-detail);
+    background: var(--background);
   }
 
   .planning-workspace-inspector:focus-visible {
@@ -415,16 +414,6 @@
 
   .planning-window-control:focus-visible {
     box-shadow: 0 0 0 2px var(--ring);
-  }
-
-  @container planning-workspace (min-width: 960px) {
-    .planning-workspace-inspector {
-      position: relative;
-      inset: auto;
-      z-index: 1;
-      width: var(--planning-inspector-width);
-      flex: 0 0 var(--planning-inspector-width);
-    }
   }
 
   @container planning-workspace (min-width: 1200px) {
