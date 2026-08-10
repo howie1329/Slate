@@ -228,6 +228,10 @@
 }
 
 @layer components {
+  .settings-error-text {
+    color: color-mix(in oklch, var(--destructive) 72%, var(--foreground));
+  }
+
   .toaster[data-sonner-toaster] .cn-toast {
     left: 50%;
     right: auto;
