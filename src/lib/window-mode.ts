@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export type WindowMode = "full" | "popover" | "quick-capture";
 
-function isTauriWindow() {
+export function isTauriWindow() {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
@@ -28,6 +28,68 @@ export function useWindowMode() {
   const [windowMode] = useState<WindowMode>(currentWindowMode);
 
   return windowMode;
+}
+
+export function useMainWindowFullscreen() {
+  const [isFullscreen, setIsFullscreen] = useState<boolean | null>(() =>
+    isTauriWindow() ? null : false,
+  );
+
+  useEffect(() => {
+    if (!isTauriWindow()) {
+      return;
+    }
+
+    const currentWindow = getCurrentWindow();
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+
+    async function refreshFullscreenState() {
+      const nextIsFullscreen = await currentWindow.isFullscreen();
+      if (!disposed) {
+        setIsFullscreen(nextIsFullscreen);
+      }
+    }
+
+    void refreshFullscreenState();
+    void currentWindow.onResized(() => {
+      void refreshFullscreenState();
+    }).then((stopListening) => {
+      if (disposed) {
+        stopListening();
+      } else {
+        unlisten = stopListening;
+      }
+    });
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
+
+  return isFullscreen;
+}
+
+export async function closeMainWindow() {
+  if (isTauriWindow()) {
+    await getCurrentWindow().close();
+  }
+}
+
+export async function minimizeMainWindow() {
+  if (isTauriWindow()) {
+    await getCurrentWindow().minimize();
+  }
+}
+
+export async function toggleMainWindowFullscreen() {
+  if (!isTauriWindow()) {
+    return;
+  }
+
+  const currentWindow = getCurrentWindow();
+  await currentWindow.setFullscreen(!(await currentWindow.isFullscreen()));
 }
 
 export async function openFullApp() {

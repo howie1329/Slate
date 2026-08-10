@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, Loading03Icon, Tick02Icon } from "@hugeicons/core-free-icons";
@@ -52,6 +52,7 @@ function SettingsPage() {
   const planner = usePlannerState();
   const saveSettings = useSaveSettings();
   const { setRouteTransition } = useRouteMotion();
+  const returnLinkRef = useRef<HTMLAnchorElement>(null);
   const [draft, setDraft] = useState<SettingsDraft | null>(null);
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
   const [shortcutError, setShortcutError] = useState<string | null>(null);
@@ -67,6 +68,11 @@ function SettingsPage() {
         : createSettingsDraft(planner.data),
     );
   }, [planner.data]);
+
+  useEffect(() => {
+    const focusFrame = window.requestAnimationFrame(() => returnLinkRef.current?.focus());
+    return () => window.cancelAnimationFrame(focusFrame);
+  }, []);
 
   useEffect(() => {
     if (!isTauriWindow()) {
@@ -146,9 +152,10 @@ function SettingsPage() {
       <header className="shrink-0 px-4 pt-3 sm:px-6">
         <div className="mx-auto flex h-10 w-full max-w-xl items-center">
           <Link
-            aria-label="Back to Daily workspace"
+            aria-label="Back to Planning"
             className="inline-flex h-8 items-center gap-1.5 rounded-md px-1 text-sm font-semibold text-foreground no-underline outline-none transition-colors duration-150 hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none"
             onClick={handleBackToWorkspace}
+            ref={returnLinkRef}
             to="/"
           >
             <HugeiconsIcon aria-hidden="true" icon={ArrowLeft01Icon} size={16} strokeWidth={2} />

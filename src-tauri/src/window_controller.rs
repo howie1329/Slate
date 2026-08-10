@@ -158,7 +158,6 @@ pub fn open_full_app<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     }
 
     let main = main_window(app)?;
-    main.set_decorations(false)?;
     main.unminimize()?;
     main.show()?;
     main.set_focus()?;

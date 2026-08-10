@@ -292,7 +292,11 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
     <motion.form
       aria-label={`Edit ${selectedTask.title}`}
       animate="visible"
-      className="task-detail-panel absolute inset-x-4 bottom-full rounded-t-xl border-x border-t border-[var(--task-detail-border)] bg-[var(--task-detail)] text-[var(--task-detail-foreground)]"
+      className={
+        windowMode === "full"
+          ? "task-detail-panel relative h-full w-full overflow-y-auto bg-[var(--task-detail)] text-[var(--task-detail-foreground)]"
+          : "task-detail-panel absolute inset-x-4 bottom-full rounded-t-xl border-x border-t border-[var(--task-detail-border)] bg-[var(--task-detail)] text-[var(--task-detail-foreground)]"
+      }
       exit="exit"
       id="task-detail-panel"
       initial={transition === "animate" ? "hidden" : false}
@@ -323,11 +327,15 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
       ) : null}
       <motion.div
         animate="visible"
-        className={`mx-auto flex min-h-12 w-full max-w-xl min-w-0 items-center gap-1 px-4 py-2 sm:px-6 ${windowMode === "full" ? "max-w-3xl px-8" : ""}`}
+        className={
+          windowMode === "full"
+            ? "flex w-full min-w-0 flex-wrap items-center gap-1 px-3 py-3"
+            : "mx-auto flex min-h-12 w-full max-w-xl min-w-0 items-center gap-1 px-4 py-2 sm:px-6"
+        }
         initial={transition === "animate" ? "hidden" : false}
         variants={panelContentVariants}
       >
-        <div className="min-w-0 flex-1">
+        <div className={windowMode === "full" ? "min-w-0 basis-full" : "min-w-0 flex-1"}>
           {editingField === "title" ? (
             <Input
               aria-label="Task title"
@@ -357,7 +365,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className={windowMode === "full" ? "mt-1 flex w-full flex-wrap items-center gap-1" : "flex shrink-0 items-center gap-1"}>
           {editingField === "estimate" ? (
             <Input
               aria-label="Estimate in minutes"

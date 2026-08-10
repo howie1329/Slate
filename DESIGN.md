@@ -26,6 +26,9 @@ colors:
   chart-4: "oklch(0.9200 0 0)"
   chart-5: "oklch(0.5600 0 0)"
   capacity-caution: "color-mix(in oklch, var(--chart-1) 70%, var(--foreground))"
+  window-control-close: "oklch(0.6600 0.2100 27)"
+  window-control-minimize: "oklch(0.8200 0.1700 83)"
+  window-control-fullscreen: "oklch(0.6900 0.1700 148)"
   dark-background: "oklch(0 0 0)"
   dark-foreground: "oklch(1 0 0)"
   dark-card: "oklch(0.1400 0 0)"
@@ -143,6 +146,7 @@ Slate’s application mark is a rounded warm-ivory tile over a charcoal underlay
 - `src-tauri/assets/slate-icon-transparent.png` preserves the mark while making only the outer corners transparent for non-bundle uses.
 - Generated macOS bundle outputs live in `src-tauri/icons/slate/` and are the files referenced by `src-tauri/tauri.conf.json`.
 - The menu-bar icon is a separate 18×18 monochrome template glyph in `src-tauri/src/window_controller.rs`. Do not reuse the full-color app icon in the menu bar; macOS tints the template glyph for light and dark menu bars.
+- The full app's windowed custom toolbar uses the named close, minimize, and full-screen control colors from `src/styles.css`. These colors reproduce the familiar macOS traffic-light vocabulary and are hidden in native full-screen.
 
 ## Colors
 
