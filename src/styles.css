@@ -355,14 +355,12 @@
   }
 
   .planning-workspace-inspector {
-    position: absolute;
-    inset-block: 0;
-    right: 0;
-    z-index: 20;
-    width: min(360px, calc(100% - 24px));
+    position: relative;
+    width: var(--planning-inspector-width);
+    flex: 0 0 var(--planning-inspector-width);
     overflow: hidden;
     border-left: 1px solid var(--border);
-    background: var(--task-detail);
+    background: var(--background);
   }
 
   .planning-workspace-inspector:focus-visible {
@@ -412,16 +410,6 @@
 
   .planning-window-control:focus-visible {
     box-shadow: 0 0 0 2px var(--ring);
-  }
-
-  @container planning-workspace (min-width: 960px) {
-    .planning-workspace-inspector {
-      position: relative;
-      inset: auto;
-      z-index: 1;
-      width: var(--planning-inspector-width);
-      flex: 0 0 var(--planning-inspector-width);
-    }
   }
 
   @container planning-workspace (min-width: 1200px) {

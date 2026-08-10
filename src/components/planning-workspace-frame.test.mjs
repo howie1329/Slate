@@ -73,8 +73,7 @@ describe("Planning workspace frame", () => {
   it("exposes the approved compact and responsive geometry", () => {
     assert.deepEqual(PLANNING_SHELL_METRICS, {
       dailyMaxWidth: 720,
-      dockedInspectorWidth: 320,
-      inspectorDockThreshold: 960,
+      dockedInspectorWidth: 410,
       statusBarHeight: 24,
       toolbarControlHeight: 24,
       toolbarHeight: 32,
