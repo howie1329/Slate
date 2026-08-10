@@ -13,6 +13,7 @@ function renderFrame(overrides = {}) {
       futureViewsCue: createElement("p", null, "More Planning views are coming soon."),
       globalLayer: null,
       inspector: null,
+      mainContentLayout: "bounded",
       mainContent: createElement("div", null, "Daily content"),
       mainLabel: "Planning content",
       showFutureViewsCue: true,
@@ -75,8 +76,15 @@ describe("Planning workspace frame", () => {
       dockedInspectorWidth: 320,
       inspectorDockThreshold: 960,
       statusBarHeight: 24,
-      toolbarControlHeight: 28,
-      toolbarHeight: 40,
+      toolbarControlHeight: 24,
+      toolbarHeight: 32,
     });
+  });
+
+  it("supports a full-width main-content slot for desktop placeholders", () => {
+    const markup = renderFrame({ mainContentLayout: "full" });
+
+    assert.match(markup, /planning-workspace-content-route/);
+    assert.doesNotMatch(markup, /planning-workspace-content-daily/);
   });
 });

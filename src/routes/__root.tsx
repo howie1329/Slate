@@ -3,6 +3,7 @@ import { Outlet, createRootRoute, useNavigate, useRouterState } from "@tanstack/
 import { motion } from "motion/react";
 import { useAiReview } from "@/components/ai-review";
 import { OnboardingFlow } from "@/components/onboarding-flow";
+import { PlanningComingSoon } from "@/components/planning-coming-soon";
 import { PlanningWorkspaceShell } from "@/components/planning-workspace-shell";
 import { QuickCaptureWindow } from "@/components/quick-capture-window";
 import { WorkspaceFooter } from "@/components/workspace-footer";
@@ -10,7 +11,6 @@ import { RouteMotionProvider, useRouteMotion, type RouteMotionTransition } from 
 import { TaskMotionProvider } from "@/components/task-motion";
 import { TaskSelectionProvider, useTaskSelection } from "@/components/task-selection";
 import { Button } from "@/components/ui/button";
-import { WorkspaceInspector } from "@/components/workspace-inspector";
 import { retryPersistence } from "@/lib/planner";
 import { hidePopover, useWindowMode } from "@/lib/window-mode";
 import { usePlannerState } from "@/lib/planner-query";
@@ -93,10 +93,8 @@ function SlateShell() {
     </RouteFade>
   );
   const contentKind = planner.isError ? "recovery" : isSettingsPage ? "settings" : "planning";
-  const inspector = contentKind === "planning" && (selectedTaskId || aiReviewState.kind !== "idle")
-    ? <WorkspaceInspector />
-    : null;
-  const onboarding = planner.data ? (
+  const fullAppContent = contentKind === "planning" ? <PlanningComingSoon /> : routeContent;
+  const onboarding = planner.data && windowMode === "popover" ? (
     <OnboardingFlow
       isSettingsPage={isSettingsPage}
       pathname={pathname}
@@ -145,11 +143,10 @@ function SlateShell() {
         <PlanningWorkspaceShell
           contentKind={contentKind}
           globalLayer={onboarding}
-          inspector={inspector}
           onOpenSettings={handleOpenSettings}
           statusMessage={isReconnecting ? "Reconnecting to local data…" : reconnectFailed ? "Local data is still unavailable." : undefined}
         >
-          {routeContent}
+          {fullAppContent}
         </PlanningWorkspaceShell>
       ) : (
         <main className="flex h-full min-h-0 flex-col overflow-hidden">

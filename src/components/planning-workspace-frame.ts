@@ -9,14 +9,15 @@ export const PLANNING_SHELL_METRICS = {
   dockedInspectorWidth: 320,
   inspectorDockThreshold: 960,
   statusBarHeight: 24,
-  toolbarControlHeight: 28,
-  toolbarHeight: 40,
+  toolbarControlHeight: 24,
+  toolbarHeight: 32,
 } as const;
 
 type PlanningWorkspaceFrameProps = {
   futureViewsCue: ReactNode;
   globalLayer?: ReactNode;
   inspector: ReactNode | null;
+  mainContentLayout?: "bounded" | "full";
   mainContent: ReactNode;
   mainLabel: "Planning content" | "Settings content" | "Local data recovery";
   showFutureViewsCue: boolean;
@@ -37,6 +38,7 @@ export function PlanningWorkspaceFrame({
   futureViewsCue,
   globalLayer,
   inspector,
+  mainContentLayout = "bounded",
   mainContent,
   mainLabel,
   showFutureViewsCue,
@@ -84,7 +86,7 @@ export function PlanningWorkspaceFrame({
         createElement(
           "div",
           {
-            className: `planning-workspace-content ${mainLabel === "Planning content" ? "planning-workspace-content-daily" : "planning-workspace-content-route"}`,
+            className: `planning-workspace-content ${mainContentLayout === "bounded" ? "planning-workspace-content-daily" : "planning-workspace-content-route"}`,
           },
           mainContent,
         ),

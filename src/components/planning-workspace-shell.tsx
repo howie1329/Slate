@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { LayoutGridIcon, Settings01Icon } from "@hugeicons/core-free-icons";
+import { Settings01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PlanningToolbar } from "@/components/planning-toolbar";
 import { PlanningWorkspaceFrame } from "@/components/planning-workspace-frame";
@@ -24,9 +24,10 @@ export function PlanningWorkspaceShell({
 }: PlanningWorkspaceShellProps) {
   return (
     <PlanningWorkspaceFrame
-      futureViewsCue={<FutureViewsCue />}
+      futureViewsCue={null}
       globalLayer={globalLayer}
       inspector={inspector}
+      mainContentLayout="full"
       mainContent={children}
       mainLabel={
         contentKind === "settings"
@@ -35,7 +36,7 @@ export function PlanningWorkspaceShell({
             ? "Local data recovery"
             : "Planning content"
       }
-      showFutureViewsCue={contentKind === "planning" && inspector === null}
+      showFutureViewsCue={false}
       statusBar={(
         <WorkspaceStatusBar
           isSettingsPage={contentKind === "settings"}
@@ -45,17 +46,6 @@ export function PlanningWorkspaceShell({
       )}
       toolbar={<PlanningToolbar />}
     />
-  );
-}
-
-function FutureViewsCue() {
-  return (
-    <div className="flex max-w-48 flex-col items-center text-center text-muted-foreground">
-      <span className="flex size-8 items-center justify-center rounded-lg border border-border bg-background">
-        <HugeiconsIcon aria-hidden="true" icon={LayoutGridIcon} size={15} strokeWidth={1.7} />
-      </span>
-      <p className="mb-0 mt-2 text-xs leading-4">More Planning views are coming soon.</p>
-    </div>
   );
 }
 

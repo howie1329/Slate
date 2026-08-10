@@ -258,6 +258,10 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 - **Transient panels:** Task details and AI review panels attach above the persistent footer only while active.
 - **Density:** Preserve the normal daily loop at `360 × 520`. Prefer compact hierarchy and metadata over extra panels or route-level navigation.
 
+### Full-app Planning placeholder
+
+The desktop Planning route currently uses a centered, border-light Coming Soon state while future Planning views are designed. Do not duplicate the Daily workspace into the full app; the menu-bar popover remains its home until those views ship.
+
 ### Task Rows
 
 - **Structure:** A quiet divided list with a circular completion affordance, a flexible task title, a smaller muted metadata line beneath it when needed, and a quiet right-aligned duration.

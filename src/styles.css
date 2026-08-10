@@ -375,8 +375,8 @@
 
   .planning-window-control {
     display: inline-flex;
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     align-items: center;
     justify-content: center;
     border: 0;
@@ -387,8 +387,8 @@
   }
 
   .planning-window-control > span {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border: 1px solid color-mix(in oklch, var(--foreground) 18%, transparent);
     border-radius: 999px;
   }
