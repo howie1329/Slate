@@ -23,6 +23,19 @@ function snapshot() {
   return {
     today,
     planning: {
+      lanes: {
+        capture: { tasks: [task("capture", { scheduledDate: "2026-08-12", badges: ["upcoming"] })], reorder: null },
+        ready: { tasks: [task("ready", { estimateMinutes: 45 })], reorder: null },
+        today: { tasks: [task("today", { scheduledDate: today })], reorder: null },
+        done: {
+          tasks: [
+            task("done-today", { completedAt: "2026-08-10T14:00:00Z" }),
+            task("done-backlog", { completedAt: "2026-08-09T14:00:00Z" }),
+          ],
+          reorder: null,
+        },
+        counts: { capture: 1, ready: 1, today: 1, done: 2 },
+      },
       today: {
         active: { tasks: [task("today", { scheduledDate: today })], reorder: null },
         completed: { tasks: [task("done-today", { completedAt: "2026-08-10T14:00:00Z" })], reorder: null },

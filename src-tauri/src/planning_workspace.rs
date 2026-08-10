@@ -1,23 +1,28 @@
 use std::collections::HashMap;
 
+use chrono::NaiveDate;
 use rusqlite::{params, OptionalExtension, Transaction};
 use serde::{Deserialize, Serialize};
 
 use crate::persistence::{Task, TaskRevision};
+
+pub(crate) const CAPTURE_SCOPE: &str = "planning:capture";
+pub(crate) const READY_SCOPE: &str = "planning:ready";
 
 pub(crate) const NEEDS_ESTIMATE_SCOPE: &str = "log:needs-estimate";
 pub(crate) const UNSCHEDULED_SCOPE: &str = "log:unscheduled";
 pub(crate) const OVERDUE_SCOPE: &str = "log:overdue";
 pub(crate) const UPCOMING_SCOPE: &str = "log:upcoming";
 
-const BACKLOG_SCOPES: [&str; 4] = [
-    NEEDS_ESTIMATE_SCOPE,
-    OVERDUE_SCOPE,
-    UPCOMING_SCOPE,
-    UNSCHEDULED_SCOPE,
-];
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PlanningLane {
+    Capture,
+    Ready,
+    Today,
+    Done,
+}
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum WorkspaceBadge {
     NeedsEstimate,
@@ -46,6 +51,25 @@ pub(crate) struct ReorderGuard {
 pub(crate) struct PlanningSection {
     pub(crate) tasks: Vec<PlanningTask>,
     pub(crate) reorder: Option<ReorderGuard>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct PlanningLaneCounts {
+    pub(crate) capture: usize,
+    pub(crate) ready: usize,
+    pub(crate) today: usize,
+    pub(crate) done: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct PlanningLanes {
+    pub(crate) capture: PlanningSection,
+    pub(crate) ready: PlanningSection,
+    pub(crate) today: PlanningSection,
+    pub(crate) done: PlanningSection,
+    pub(crate) counts: PlanningLaneCounts,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -81,8 +105,16 @@ pub(crate) struct BacklogPlanningView {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct PlanningView {
+    pub(crate) lanes: PlanningLanes,
     pub(crate) today: TodayPlanningView,
     pub(crate) backlog: BacklogPlanningView,
+}
+
+struct PlanningState<'a> {
+    capture: Vec<&'a Task>,
+    ready: Vec<&'a Task>,
+    today: Vec<&'a Task>,
+    done: Vec<&'a Task>,
 }
 
 pub(crate) struct PlanningWorkspace<'a> {
@@ -108,65 +140,64 @@ impl<'a> PlanningWorkspace<'a> {
     }
 
     pub(crate) fn view(&self) -> PlanningView {
+        let state = self.state();
         let today_scope = today_scope(self.today);
-        let today_active = self.ordered_active(&today_scope);
-        let today_completed = self.completed_tasks(true);
-        let backlog_active = BACKLOG_SCOPES
+        let today_active = self.section(&state.today, Some(today_scope));
+        let today_completed_tasks = state
+            .done
             .iter()
-            .flat_map(|scope| self.ordered_active(scope))
+            .copied()
+            .filter(|task| task.scheduled_date.as_deref() == Some(self.today))
             .collect::<Vec<_>>();
-        let backlog_completed = self.completed_tasks(false);
-        let capacity = capacity_view(&today_active, self.effective_capacity_minutes);
-        let unsized_task_count = today_active
+        let backlog_completed_tasks = state
+            .done
+            .iter()
+            .copied()
+            .filter(|task| task.scheduled_date.as_deref() != Some(self.today))
+            .collect::<Vec<_>>();
+        let today_completed = self.section(&today_completed_tasks, None);
+        let backlog_active = state
+            .capture
+            .iter()
+            .chain(state.ready.iter())
+            .copied()
+            .collect::<Vec<_>>();
+        let backlog_active_section = self.section(&backlog_active, None);
+        let backlog_completed = self.section(&backlog_completed_tasks, None);
+        let done = self.section(&state.done, None);
+        let capacity = capacity_view(&state.today, self.effective_capacity_minutes);
+        let unsized_task_count = state
+            .today
             .iter()
             .filter(|task| task.estimate_minutes.is_none())
             .count();
 
+        let lanes = PlanningLanes {
+            capture: self.section(&state.capture, Some(CAPTURE_SCOPE.into())),
+            ready: self.section(&state.ready, Some(READY_SCOPE.into())),
+            today: today_active.clone(),
+            done,
+            counts: PlanningLaneCounts {
+                capture: state.capture.len(),
+                ready: state.ready.len(),
+                today: state.today.len(),
+                done: state.done.len(),
+            },
+        };
+
         PlanningView {
+            lanes,
             today: TodayPlanningView {
-                active: PlanningSection {
-                    tasks: today_active
-                        .iter()
-                        .map(|task| self.planning_task(task, true))
-                        .collect(),
-                    reorder: Some(ReorderGuard {
-                        scope: today_scope,
-                        expected_revisions: today_active
-                            .iter()
-                            .map(|task| TaskRevision {
-                                id: task.id.clone(),
-                                revision: task.revision,
-                            })
-                            .collect(),
-                    }),
-                },
-                completed: PlanningSection {
-                    tasks: today_completed
-                        .iter()
-                        .map(|task| self.planning_task(task, true))
-                        .collect(),
-                    reorder: None,
-                },
+                active: today_active,
+                completed: today_completed,
                 capacity,
-                total_task_count: today_active.len() + today_completed.len(),
+                total_task_count: state.today.len() + today_completed_tasks.len(),
                 unsized_task_count,
             },
             backlog: BacklogPlanningView {
-                active: PlanningSection {
-                    tasks: backlog_active
-                        .iter()
-                        .map(|task| self.planning_task(task, false))
-                        .collect(),
-                    reorder: None,
-                },
-                completed: PlanningSection {
-                    tasks: backlog_completed
-                        .iter()
-                        .map(|task| self.planning_task(task, false))
-                        .collect(),
-                    reorder: None,
-                },
-                total_task_count: backlog_active.len() + backlog_completed.len(),
+                active: backlog_active_section,
+                completed: backlog_completed,
+                total_task_count: backlog_active.len() + backlog_completed_tasks.len(),
                 active_task_count: backlog_active.len(),
             },
         }
@@ -177,31 +208,33 @@ impl<'a> PlanningWorkspace<'a> {
     }
 
     pub(crate) fn today_active(&self) -> Vec<&'a Task> {
-        self.ordered_active(&today_scope(self.today))
+        self.state().today
     }
 
     pub(crate) fn plan_candidates(&self) -> Vec<PlanCandidate<'a>> {
-        [UNSCHEDULED_SCOPE, OVERDUE_SCOPE]
+        self.state()
+            .ready
             .into_iter()
-            .flat_map(|scope| {
-                self.ordered_active(scope)
-                    .into_iter()
-                    .enumerate()
-                    .filter_map(move |(position, task)| {
-                        task.estimate_minutes.map(|estimate_minutes| PlanCandidate {
-                            task,
-                            estimate_minutes,
-                            source_scope: scope,
-                            backlog_position: position,
-                        })
-                    })
+            .enumerate()
+            .filter_map(|(position, task)| {
+                let scheduled_date = task.scheduled_date.as_deref();
+                if scheduled_date.is_some_and(|date| date >= self.today) {
+                    return None;
+                }
+                task.estimate_minutes.map(|estimate_minutes| PlanCandidate {
+                    task,
+                    estimate_minutes,
+                    source_scope: READY_SCOPE,
+                    backlog_position: position,
+                })
             })
             .collect()
     }
 
     pub(crate) fn remaining_minutes(&self) -> i64 {
         let committed = self
-            .today_active()
+            .state()
+            .today
             .into_iter()
             .filter_map(|task| task.estimate_minutes)
             .fold(0_i64, i64::saturating_add);
@@ -263,31 +296,38 @@ impl<'a> PlanningWorkspace<'a> {
         }
     }
 
-    fn completed_tasks(&self, today: bool) -> Vec<&'a Task> {
-        let mut tasks = self
-            .tasks
-            .iter()
-            .filter(|task| {
-                task.completed_at.is_some()
-                    && (task.scheduled_date.as_deref() == Some(self.today)) == today
-            })
-            .collect::<Vec<_>>();
-        tasks.sort_by(|first, second| {
-            second
-                .completed_at
-                .cmp(&first.completed_at)
-                .then_with(|| second.created_at.cmp(&first.created_at))
-                .then_with(|| second.id.cmp(&first.id))
-        });
-        tasks
+    fn state(&self) -> PlanningState<'a> {
+        PlanningState {
+            capture: self.ordered_active(CAPTURE_SCOPE),
+            ready: self.ordered_active(READY_SCOPE),
+            today: self.ordered_active(&today_scope(self.today)),
+            done: completed_tasks(self.tasks),
+        }
     }
 
-    fn planning_task(&self, task: &Task, today: bool) -> PlanningTask {
+    fn section(&self, tasks: &[&Task], scope: Option<String>) -> PlanningSection {
+        PlanningSection {
+            tasks: tasks.iter().map(|task| self.planning_task(task)).collect(),
+            reorder: scope.map(|scope| ReorderGuard {
+                scope,
+                expected_revisions: tasks
+                    .iter()
+                    .map(|task| TaskRevision {
+                        id: task.id.clone(),
+                        revision: task.revision,
+                    })
+                    .collect(),
+            }),
+        }
+    }
+
+    fn planning_task(&self, task: &Task) -> PlanningTask {
+        let lane = planning_lane(task, self.today);
         let mut badges = Vec::new();
-        if task.completed_at.is_none() && task.estimate_minutes.is_none() {
+        if lane != PlanningLane::Done && task.estimate_minutes.is_none() {
             badges.push(WorkspaceBadge::NeedsEstimate);
         }
-        if task.completed_at.is_none() && !today {
+        if lane != PlanningLane::Done && lane != PlanningLane::Today {
             match task.scheduled_date.as_deref() {
                 None => badges.push(WorkspaceBadge::Unscheduled),
                 Some(date) if date < self.today => badges.push(WorkspaceBadge::Overdue),
@@ -344,10 +384,23 @@ pub(crate) fn active_scope(
 ) -> String {
     match scheduled_date {
         Some(date) if date == today => today_scope(today),
-        _ if estimate_minutes.is_none() => NEEDS_ESTIMATE_SCOPE.into(),
-        None => UNSCHEDULED_SCOPE.into(),
-        Some(date) if date < today => OVERDUE_SCOPE.into(),
-        Some(_) => UPCOMING_SCOPE.into(),
+        _ if estimate_minutes.is_none() => CAPTURE_SCOPE.into(),
+        _ => READY_SCOPE.into(),
+    }
+}
+
+pub(crate) fn validate_reorder_scope(scope: &str) -> Result<(), String> {
+    if scope == CAPTURE_SCOPE
+        || scope == READY_SCOPE
+        || scope.strip_prefix("today:").is_some_and(|date| {
+            NaiveDate::parse_from_str(date, "%Y-%m-%d")
+                .map(|parsed| parsed.format("%Y-%m-%d").to_string() == date)
+                .unwrap_or(false)
+        })
+    {
+        Ok(())
+    } else {
+        Err("Task ordering scope is invalid.".into())
     }
 }
 
@@ -451,6 +504,33 @@ pub(crate) fn validate_reorder_guard(
     Ok(current_ids)
 }
 
+fn planning_lane(task: &Task, today: &str) -> PlanningLane {
+    if task.completed_at.is_some() {
+        PlanningLane::Done
+    } else if task.scheduled_date.as_deref() == Some(today) {
+        PlanningLane::Today
+    } else if task.estimate_minutes.is_none() {
+        PlanningLane::Capture
+    } else {
+        PlanningLane::Ready
+    }
+}
+
+fn completed_tasks<'a>(tasks: &'a [Task]) -> Vec<&'a Task> {
+    let mut completed = tasks
+        .iter()
+        .filter(|task| task.completed_at.is_some())
+        .collect::<Vec<_>>();
+    completed.sort_by(|first, second| {
+        second
+            .completed_at
+            .cmp(&first.completed_at)
+            .then_with(|| second.created_at.cmp(&first.created_at))
+            .then_with(|| second.id.cmp(&first.id))
+    });
+    completed
+}
+
 fn ordered_tasks<'a>(
     tasks: &'a [Task],
     order_by_scope: &HashMap<String, Vec<String>>,
@@ -465,10 +545,9 @@ fn ordered_tasks<'a>(
         .collect::<HashMap<_, _>>();
     let mut scoped_tasks = tasks
         .iter()
+        .filter(|task| planning_lane(task, today) != PlanningLane::Done)
         .filter(|task| {
-            task.completed_at.is_none()
-                && active_scope(task.estimate_minutes, task.scheduled_date.as_deref(), today)
-                    == scope
+            active_scope(task.estimate_minutes, task.scheduled_date.as_deref(), today) == scope
         })
         .collect::<Vec<_>>();
     scoped_tasks.sort_by(|first, second| {
@@ -550,7 +629,8 @@ mod tests {
         let state = PlanningWorkspace::new(&tasks, &orders, "2026-08-09", 60);
         let view = state.view();
 
-        assert_eq!(view.today.active.tasks.len(), 2);
+        assert_eq!(view.lanes.today.tasks.len(), 2);
+        assert_eq!(view.lanes.counts.today, 2);
         assert_eq!(view.today.unsized_task_count, 1);
         assert_eq!(view.today.capacity.committed_minutes, 90);
         assert_eq!(view.today.capacity.overage_minutes, 30);
@@ -559,39 +639,49 @@ mod tests {
     }
 
     #[test]
-    fn projects_backlog_in_product_precedence_order() {
+    fn projects_exhaustive_derived_lanes() {
         let tasks = vec![
-            task("1", Some(30), None, None),
-            task("2", Some(30), Some("2026-08-08"), None),
-            task("3", Some(30), Some("2026-08-10"), None),
-            task("4", None, None, None),
+            task("capture", None, None, None),
+            task("overdue", Some(30), Some("2026-08-08"), None),
+            task("upcoming", Some(30), Some("2026-08-10"), None),
+            task("today", Some(30), Some("2026-08-09"), None),
+            task("done", None, None, Some("2026-08-09T12:00:00Z")),
         ];
         let orders = HashMap::new();
         let state = PlanningWorkspace::new(&tasks, &orders, "2026-08-09", 120);
-        let ids = state
-            .view()
-            .backlog
-            .active
-            .tasks
-            .into_iter()
-            .map(|task| task.task.id)
-            .collect::<Vec<_>>();
+        let view = state.view();
 
-        assert_eq!(ids, vec!["4", "2", "3", "1"]);
+        assert_eq!(view.lanes.counts.capture, 1);
+        assert_eq!(view.lanes.counts.ready, 2);
+        assert_eq!(view.lanes.counts.today, 1);
+        assert_eq!(view.lanes.counts.done, 1);
+        assert_eq!(
+            view.backlog
+                .active
+                .tasks
+                .iter()
+                .map(|task| task.task.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["capture", "overdue", "upcoming"]
+        );
+        assert_eq!(
+            view.lanes.ready.tasks[0].badges,
+            vec![WorkspaceBadge::Overdue]
+        );
     }
 
     #[test]
-    fn plan_candidates_share_authoritative_scope_and_order_rules() {
+    fn plan_candidates_are_a_filtered_ready_projection() {
         let tasks = vec![
-            task("1", Some(30), None, None),
-            task("2", Some(30), Some("2026-08-08"), None),
-            task("3", None, None, None),
-            task("4", Some(30), Some("2026-08-10"), None),
+            task("future", Some(30), Some("2026-08-10"), None),
+            task("unscheduled", Some(30), None, None),
+            task("overdue", Some(30), Some("2026-08-08"), None),
+            task("capture", None, None, None),
         ];
-        let orders = HashMap::from([
-            (UNSCHEDULED_SCOPE.into(), vec!["1".into()]),
-            (OVERDUE_SCOPE.into(), vec!["2".into()]),
-        ]);
+        let orders = HashMap::from([(
+            READY_SCOPE.into(),
+            vec!["future".into(), "overdue".into(), "unscheduled".into()],
+        )]);
         let state = PlanningWorkspace::new(&tasks, &orders, "2026-08-09", 120);
         let candidates = state.plan_candidates();
 
@@ -600,7 +690,86 @@ mod tests {
                 .iter()
                 .map(|candidate| candidate.task.id.as_str())
                 .collect::<Vec<_>>(),
-            vec!["1", "2"]
+            vec!["overdue", "unscheduled"]
         );
+        assert_eq!(candidates[0].source_scope, READY_SCOPE);
+        assert_eq!(candidates[0].backlog_position, 1);
+    }
+
+    #[test]
+    fn done_is_ordered_by_completion_recency() {
+        let tasks = vec![
+            task("older", Some(30), None, Some("2026-08-09T10:00:00Z")),
+            task("newer", Some(30), None, Some("2026-08-09T11:00:00Z")),
+        ];
+        let orders = HashMap::new();
+        let state = PlanningWorkspace::new(&tasks, &orders, "2026-08-09", 120);
+
+        assert_eq!(state.view().lanes.done.tasks[0].task.id, "newer");
+    }
+
+    #[test]
+    fn changing_the_local_date_rederives_membership_without_reordering_ready_work() {
+        let tasks = vec![
+            task("yesterday", Some(30), Some("2026-08-09"), None),
+            task("ready", Some(30), None, None),
+        ];
+        let orders = HashMap::from([(READY_SCOPE.into(), vec!["ready".into()])]);
+        let state = PlanningWorkspace::new(&tasks, &orders, "2026-08-10", 120);
+
+        assert_eq!(
+            state
+                .view()
+                .lanes
+                .ready
+                .tasks
+                .iter()
+                .map(|task| task.task.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["ready", "yesterday"]
+        );
+        assert_eq!(
+            state.view().lanes.ready.tasks[1]
+                .task
+                .scheduled_date
+                .as_deref(),
+            Some("2026-08-09")
+        );
+    }
+
+    #[test]
+    fn compatibility_sections_are_reshaped_from_the_same_lane_state() {
+        let tasks = vec![
+            task("capture", None, None, None),
+            task("ready", Some(30), None, None),
+            task("today", Some(30), Some("2026-08-09"), None),
+            task("done", Some(30), None, Some("2026-08-09T12:00:00Z")),
+        ];
+        let orders = HashMap::new();
+        let view = PlanningWorkspace::new(&tasks, &orders, "2026-08-09", 120).view();
+
+        let lane_backlog_ids = view
+            .lanes
+            .capture
+            .tasks
+            .iter()
+            .chain(view.lanes.ready.tasks.iter())
+            .map(|task| task.task.id.as_str())
+            .collect::<Vec<_>>();
+        let compatibility_backlog_ids = view
+            .backlog
+            .active
+            .tasks
+            .iter()
+            .map(|task| task.task.id.as_str())
+            .collect::<Vec<_>>();
+
+        assert_eq!(lane_backlog_ids, compatibility_backlog_ids);
+        assert_eq!(
+            view.lanes.today.tasks[0].task.id,
+            view.today.active.tasks[0].task.id
+        );
+        assert_eq!(view.lanes.done.tasks.len(), 1);
+        assert_eq!(view.backlog.completed.tasks.len(), 1);
     }
 }

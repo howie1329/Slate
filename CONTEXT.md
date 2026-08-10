@@ -45,7 +45,7 @@ One of the four exhaustive commitment groupings in the Planning workspace: Captu
 _Avoid_: stored status, optional category, filter result
 
 **Lane order**:
-The user-controlled order of active work within Capture, Ready, or Today, shared by every Planning view. Date context does not create hidden ordering groups inside a lane.
+The user-controlled order of active work within Capture, Ready, or Today, shared by every Planning view and the Daily workspace's flat Backlog. Date context does not create hidden ordering groups inside a lane.
 _Avoid_: automatic urgency sort, view-specific order, date-group order
 
 **Capture lane**:
@@ -67,8 +67,12 @@ Captured work that is not currently committed to Today. It may need an estimate,
 _Avoid_: inbox, queue
 
 **Unsized commitment**:
-A task deliberately placed in Today before the user knows its duration. It is visible as needing an estimate, does not contribute known minutes to capacity, and is not eligible for AI planning until it is sized.
+A task deliberately moved directly from Capture into Today before the user knows its duration. It is visible as needing an estimate, does not contribute known minutes to capacity, and is not eligible for AI planning until it is sized.
 _Avoid_: zero-minute task, placeholder estimate, draft commitment
+
+**Plan candidate**:
+A Ready task that Plan My Day may propose for Today. It is estimated and either unscheduled or overdue; future-dated Ready work remains outside AI planning eligibility.
+_Avoid_: every Ready task, future commitment, automatic commitment
 
 **Daily capture**:
 A newly typed task from the Daily workspace that is saved to the persisted Backlog by default. Capture records work; an explicit movement action creates a Today commitment.

@@ -34,6 +34,7 @@ These are intentional relationships, not duplicate plans:
 - **023 → 024 → 025:** Plan 023 owns durable Stage 2 foundations. Plan 024 defines the quick-capture task, draft, event, and Undo contracts. Plan 025 supersedes only Plan 024’s original popover surface with the dedicated capture window and owns the current UI/native surface.
 - **026 → 027, 028, 029 → 030 → 031:** Plan 026 is the unified workspace parent. Plans 027–029 are focused implementation slices, Plan 030 is their final polish/cleanup pass, and Plan 031 is the proposed behavior-preserving architecture hardening of the resulting planning boundary.
 - **031 → 032:** Plan 031 provides the authoritative planning projection that the Stage 3 Planning workspace will reuse. Plan 032 establishes only the full-app shell that will host later 2.0 Planning views.
+- **031 → 033:** Plan 033 deepens Plan 031's native projection into the exhaustive Capture / Ready / Today / Done contract and shared Lane order required before Board and List. It is backend-only and can proceed independently of the Plan 032 shell.
 
 Do not create a new plan to restate one of these items. Update the owning plan, or add a narrowly scoped child plan with an explicit relationship here.
 
@@ -71,6 +72,7 @@ Do not create a new plan to restate one of these items. Update the owning plan, 
 | [030 Daily workspace polish](030-daily-workspace-polish-cleanup.md) | Complete | Final polish and cleanup pass for the 026–029 workspace sequence. |
 | [031 planning workspace boundary](031-deepen-planning-workspace-boundary.md) | Complete | The shipped Daily workspace now uses one authoritative native projection and planning-order mutation boundary. |
 | [032 Planning workspace shell](032-planning-workspace-shell.md) | Proposed | Ready-for-agent shell-only Stage 3 slice; establishes the full-app composition without Board/List contents or new planning behavior. |
+| [033 authoritative Planning lane projection](033-authoritative-planning-lane-projection.md) | Proposed | Ready-for-agent backend-only Stage 3 slice; establishes exhaustive derived lanes, shared order, migration, and compatibility before UI work. |
 
 Plan numbers 007 and 010 are intentionally unused. Do not invent placeholder files to fill those gaps; add a new numbered plan only when a genuinely new, scoped work item is approved.
 

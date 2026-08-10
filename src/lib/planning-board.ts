@@ -24,16 +24,12 @@ export function planningBoardLanes(
   filter: PlanningBoardFilter,
   sort: PlanningBoardSort,
 ): PlanningBoardLane[] {
-  const backlog = snapshot.planning.backlog.active.tasks;
-  const completed = [
-    ...snapshot.planning.today.completed.tasks,
-    ...snapshot.planning.backlog.completed.tasks,
-  ];
+  const lanes = snapshot.planning.lanes;
   const source: PlanningBoardLane[] = [
-    { id: "capture", label: "Capture", tasks: backlog.filter((task) => task.estimateMinutes === null) },
-    { id: "ready", label: "Ready", tasks: backlog.filter((task) => task.estimateMinutes !== null) },
-    { id: "today", label: "Today", tasks: snapshot.planning.today.active.tasks },
-    { id: "done", label: "Done", tasks: completed },
+    { id: "capture", label: "Capture", tasks: lanes.capture.tasks },
+    { id: "ready", label: "Ready", tasks: lanes.ready.tasks },
+    { id: "today", label: "Today", tasks: lanes.today.tasks },
+    { id: "done", label: "Done", tasks: lanes.done.tasks },
   ];
 
   const normalizedQuery = query.trim().toLocaleLowerCase();

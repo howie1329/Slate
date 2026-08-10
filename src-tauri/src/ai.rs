@@ -520,7 +520,7 @@ mod tests {
                 context_title: "Backlog task".into(),
                 estimate_minutes: 30,
                 scheduled_date: None,
-                source_scope: "log:unscheduled".into(),
+                source_scope: "planning:ready".into(),
                 backlog_position: 0,
                 revision: 1,
             }],
@@ -612,7 +612,7 @@ mod tests {
             context_title: context_title.clone(),
             estimate_minutes: 30,
             scheduled_date: None,
-            source_scope: "log:unscheduled".into(),
+            source_scope: "planning:ready".into(),
             backlog_position: 0,
             revision: 1,
         };
