@@ -3,7 +3,8 @@ import { Outlet, createRootRoute, useNavigate, useRouterState } from "@tanstack/
 import { motion } from "motion/react";
 import { useAiReview } from "@/components/ai-review";
 import { OnboardingFlow } from "@/components/onboarding-flow";
-import { PlanningComingSoon } from "@/components/planning-coming-soon";
+import { PlanningBoard } from "@/components/planning-board";
+import { PlanningToolbar } from "@/components/planning-toolbar";
 import { PlanningWorkspaceShell } from "@/components/planning-workspace-shell";
 import { QuickCaptureWindow } from "@/components/quick-capture-window";
 import { WorkspaceFooter } from "@/components/workspace-footer";
@@ -12,6 +13,7 @@ import { TaskMotionProvider } from "@/components/task-motion";
 import { TaskSelectionProvider, useTaskSelection } from "@/components/task-selection";
 import { Button } from "@/components/ui/button";
 import { retryPersistence } from "@/lib/planner";
+import type { PlanningBoardFilter, PlanningBoardSort } from "@/lib/planning-board";
 import { hidePopover, useWindowMode } from "@/lib/window-mode";
 import { usePlannerState } from "@/lib/planner-query";
 
@@ -34,6 +36,9 @@ function SlateShell() {
   const navigate = useNavigate();
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectFailed, setReconnectFailed] = useState(false);
+  const [planningFilter, setPlanningFilter] = useState<PlanningBoardFilter>("all");
+  const [planningQuery, setPlanningQuery] = useState("");
+  const [planningSort, setPlanningSort] = useState<PlanningBoardSort>("planning");
   const windowMode = useWindowMode();
   const isSettingsPage = useRouterState({
     select: (state) => state.location.pathname === "/settings",
@@ -93,7 +98,14 @@ function SlateShell() {
     </RouteFade>
   );
   const contentKind = planner.isError ? "recovery" : isSettingsPage ? "settings" : "planning";
-  const fullAppContent = contentKind === "planning" ? <PlanningComingSoon /> : routeContent;
+  const fullAppContent = contentKind === "planning" ? (
+    <PlanningBoard
+      filter={planningFilter}
+      query={planningQuery}
+      snapshot={planner.data}
+      sort={planningSort}
+    />
+  ) : routeContent;
   const onboarding = planner.data && windowMode === "popover" ? (
     <OnboardingFlow
       isSettingsPage={isSettingsPage}
@@ -111,7 +123,7 @@ function SlateShell() {
       data-window-mode={windowMode}
       onPointerDownCapture={(event) => {
         const target = event.target instanceof Element ? event.target : null;
-        const isInsideInspector = target?.closest("[data-contextual-inspector]");
+        const isInsideInspector = target?.closest("[data-contextual-inspector], [data-task-sheet]");
         const isInsideReview = target?.closest("[data-ai-review], [data-ai-review-calendar]");
         const isInsideOnboarding = target?.closest("[data-onboarding]");
 
@@ -144,7 +156,18 @@ function SlateShell() {
           contentKind={contentKind}
           globalLayer={onboarding}
           onOpenSettings={handleOpenSettings}
-          statusMessage={isReconnecting ? "Reconnecting to local data…" : reconnectFailed ? "Local data is still unavailable." : undefined}
+          statusMessage={isReconnecting ? "Reconnecting to local data…" : reconnectFailed ? "Local data is still unavailable." : contentKind === "planning" && planner.data ? "Saved locally" : undefined}
+          toolbar={contentKind === "planning" ? (
+            <PlanningToolbar
+              date={planner.data?.today}
+              filter={planningFilter}
+              onFilterChange={setPlanningFilter}
+              onQueryChange={setPlanningQuery}
+              onSortChange={setPlanningSort}
+              query={planningQuery}
+              sort={planningSort}
+            />
+          ) : undefined}
         >
           {fullAppContent}
         </PlanningWorkspaceShell>

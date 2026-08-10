@@ -1,4 +1,26 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowDown01Icon,
+  ArrowUp01Icon,
+  Calendar01Icon,
+  Search01Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import type { PlanningBoardFilter, PlanningBoardSort } from "@/lib/planning-board";
+import type { LocalDate } from "@/lib/planner";
+import { dateFromLocalDate } from "@/lib/local-date";
 import {
   closeMainWindow,
   minimizeMainWindow,
@@ -6,35 +28,149 @@ import {
   useMainWindowFullscreen,
 } from "@/lib/window-mode";
 
-export function PlanningToolbar() {
+type PlanningToolbarProps = {
+  date?: LocalDate;
+  filter?: PlanningBoardFilter;
+  onFilterChange?: (filter: PlanningBoardFilter) => void;
+  onQueryChange?: (query: string) => void;
+  onSortChange?: (sort: PlanningBoardSort) => void;
+  query?: string;
+  sort?: PlanningBoardSort;
+};
+
+export function PlanningToolbar({
+  date,
+  filter = "all",
+  onFilterChange,
+  onQueryChange,
+  onSortChange,
+  query = "",
+  sort = "planning",
+}: PlanningToolbarProps) {
   const isFullscreen = useMainWindowFullscreen();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const isBoardToolbar = Boolean(onQueryChange && onFilterChange && onSortChange);
+
+  useEffect(() => {
+    if (searchOpen) searchRef.current?.focus();
+  }, [searchOpen]);
 
   async function handleToggleFullscreen() {
     await toggleMainWindowFullscreen();
     window.requestAnimationFrame(() => titleRef.current?.focus());
   }
 
-  return (
-    <div
-      className="grid h-full grid-cols-[minmax(5rem,1fr)_auto_minmax(5rem,1fr)] items-center px-2"
-      {...(isFullscreen === false ? { "data-tauri-drag-region": "" } : {})}
-    >
-      <div className="justify-self-start">
-        {isFullscreen === false ? (
-          <WindowControls onToggleFullscreen={handleToggleFullscreen} />
-        ) : null}
+  if (!isBoardToolbar) {
+    return (
+      <div className="grid h-full grid-cols-[minmax(5rem,1fr)_auto_minmax(5rem,1fr)] items-center px-2" {...(isFullscreen === false ? { "data-tauri-drag-region": "" } : {})}>
+        <div className="justify-self-start">{isFullscreen === false ? <WindowControls onToggleFullscreen={handleToggleFullscreen} /> : null}</div>
+        <h1 className="m-0 text-menu font-semibold tracking-tight outline-none" ref={titleRef} tabIndex={-1}>Planning</h1>
+        <div aria-hidden="true" />
       </div>
-      <h1
-        className="m-0 text-menu font-semibold tracking-tight outline-none"
-        ref={titleRef}
-        tabIndex={-1}
-      >
-        Planning
-      </h1>
-      <div aria-hidden="true" />
+    );
+  }
+
+  return (
+    <div className="flex h-full min-w-0 items-center gap-1 px-2" {...(isFullscreen === false ? { "data-tauri-drag-region": "" } : {})}>
+      {isFullscreen === false ? <WindowControls onToggleFullscreen={handleToggleFullscreen} /> : null}
+      <time className="ml-1 flex min-w-0 items-center gap-1.5 text-menu text-muted-foreground" dateTime={date}>
+        <HugeiconsIcon aria-hidden="true" icon={Calendar01Icon} size={14} strokeWidth={1.7} />
+        <span className="truncate">{date ? formatToolbarDate(date) : "Loading…"}</span>
+      </time>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button className="ml-2 h-6 min-w-20 justify-between px-2 text-menu font-normal" size="xs" type="button" variant="outline" />}>
+          Board
+          <HugeiconsIcon aria-hidden="true" icon={ArrowDown01Icon} size={11} strokeWidth={1.8} />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-32">
+          <DropdownMenuItem disabled>Week <span className="ml-auto text-metadata text-muted-foreground">Soon</span></DropdownMenuItem>
+          <DropdownMenuItem disabled>List <span className="ml-auto text-metadata text-muted-foreground">Soon</span></DropdownMenuItem>
+          <DropdownMenuItem>Board</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <div className="min-w-2 flex-1" />
+
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button className="h-6 px-2 text-menu font-normal" size="xs" type="button" variant={filter === "all" ? "ghost" : "secondary"} />}>
+          Filter
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-44">
+          <DropdownMenuLabel>Show</DropdownMenuLabel>
+          <DropdownMenuRadioGroup onValueChange={(value) => onFilterChange?.(value as PlanningBoardFilter)} value={filter}>
+            <DropdownMenuRadioItem value="all">All tasks</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="attention">Needs attention</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="scheduled">Scheduled</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="unscheduled">Unscheduled</DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button className="h-6 px-2 text-menu font-normal" size="xs" type="button" variant={sort === "planning" ? "ghost" : "secondary"} />}>
+          <HugeiconsIcon aria-hidden="true" icon={ArrowUp01Icon} size={12} strokeWidth={1.7} />
+          Sort
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-44">
+          <DropdownMenuLabel>Order within lanes</DropdownMenuLabel>
+          <DropdownMenuRadioGroup onValueChange={(value) => onSortChange?.(value as PlanningBoardSort)} value={sort}>
+            <DropdownMenuRadioItem value="planning">Planning order</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="newest">Newest first</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="title">Title</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="estimate">Estimate</DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {searchOpen ? (
+        <div className="relative w-40 shrink-0">
+          <HugeiconsIcon aria-hidden="true" className="pointer-events-none absolute left-2 top-1.5 text-muted-foreground" icon={Search01Icon} size={13} strokeWidth={1.7} />
+          <Input
+            aria-label="Search tasks"
+            className="h-6 rounded-md pl-7 pr-2 text-menu"
+            onBlur={() => !query && setSearchOpen(false)}
+            onChange={(event) => onQueryChange?.(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.stopPropagation();
+                onQueryChange?.("");
+                setSearchOpen(false);
+              }
+            }}
+            placeholder="Search tasks…"
+            ref={searchRef}
+            value={query}
+          />
+        </div>
+      ) : (
+        <Button aria-label="Search tasks" className="h-6 w-6" onClick={() => setSearchOpen(true)} size="icon-xs" title="Search tasks" type="button" variant="ghost">
+          <HugeiconsIcon icon={Search01Icon} strokeWidth={1.7} />
+        </Button>
+      )}
+
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button aria-label="More planning options" className="h-6 w-6 text-base leading-none" size="icon-xs" title="More planning options" type="button" variant="ghost" />}>
+          <span aria-hidden="true">•••</span>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Planning</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem disabled>Export board</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
+}
+
+function formatToolbarDate(value: LocalDate) {
+  return dateFromLocalDate(value).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    weekday: "short",
+  });
 }
 
 function WindowControls({ onToggleFullscreen }: { onToggleFullscreen: () => Promise<void> }) {
@@ -47,24 +183,9 @@ function WindowControls({ onToggleFullscreen }: { onToggleFullscreen: () => Prom
   );
 }
 
-function WindowControl({
-  action,
-  label,
-  tone,
-}: {
-  action: () => Promise<void>;
-  label: string;
-  tone: "close" | "fullscreen" | "minimize";
-}) {
+function WindowControl({ action, label, tone }: { action: () => Promise<void>; label: string; tone: "close" | "fullscreen" | "minimize" }) {
   return (
-    <button
-      aria-label={label}
-      className="planning-window-control"
-      data-tone={tone}
-      onClick={() => void action()}
-      title={label}
-      type="button"
-    >
+    <button aria-label={label} className="planning-window-control" data-tone={tone} onClick={() => void action()} title={label} type="button">
       <span aria-hidden="true" />
     </button>
   );

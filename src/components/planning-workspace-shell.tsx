@@ -12,6 +12,7 @@ type PlanningWorkspaceShellProps = {
   inspector?: ReactNode;
   onOpenSettings: () => void;
   statusMessage?: string;
+  toolbar?: ReactNode;
 };
 
 export function PlanningWorkspaceShell({
@@ -21,6 +22,7 @@ export function PlanningWorkspaceShell({
   inspector = null,
   onOpenSettings,
   statusMessage,
+  toolbar,
 }: PlanningWorkspaceShellProps) {
   return (
     <PlanningWorkspaceFrame
@@ -44,7 +46,7 @@ export function PlanningWorkspaceShell({
           onOpenSettings={onOpenSettings}
         />
       )}
-      toolbar={<PlanningToolbar />}
+      toolbar={toolbar ?? <PlanningToolbar />}
     />
   );
 }
