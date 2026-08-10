@@ -14,7 +14,6 @@ import {
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  arrayMove,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
@@ -41,6 +40,13 @@ import {
   type PlanningBoardSort,
   type PlanningLaneId,
 } from "@/lib/planning-board";
+import {
+  idlePlanningInteraction,
+  planningInteraction,
+  type CapacityPreview,
+  type PlanningBoardEvent,
+  type PlanningInteractionEffect,
+} from "@/lib/planning-interaction";
 import type { PlannerSnapshot, PlanningTask } from "@/lib/planner";
 import {
   useReorderTasks,
@@ -63,11 +69,6 @@ type LaneFeedback = {
   message: string;
 };
 
-type CapacityPreview = {
-  committedMinutes: number;
-  message: string;
-};
-
 const laneIcons = {
   capture: InboxIcon,
   ready: Calendar01Icon,
@@ -81,9 +82,7 @@ export function PlanningBoard({ filter, query, snapshot, sort }: PlanningBoardPr
   const setTaskCompleted = useSetTaskCompleted();
   const setTaskScheduledDate = useSetTaskScheduledDate();
   const updateTask = useUpdateTask();
-  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [overLane, setOverLane] = useState<PlanningLaneId | null>(null);
-  const [overTaskId, setOverTaskId] = useState<string | null>(null);
+  const [interaction, setInteraction] = useState(idlePlanningInteraction);
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<LaneFeedback | null>(null);
   const sensors = useSensors(
@@ -95,11 +94,8 @@ export function PlanningBoard({ filter, query, snapshot, sort }: PlanningBoardPr
     [filter, query, snapshot, sort],
   );
   const tasks = useMemo(() => lanes.flatMap((lane) => lane.tasks), [lanes]);
-  const activeTask = tasks.find((task) => task.id === activeTaskId) ?? null;
-  const activeLane = activeTask ? laneContainingTask(lanes, activeTask.id) : null;
-  const capacityPreview = snapshot && activeTask && activeLane && overLane
-    ? previewCapacity(snapshot, activeTask, activeLane, overLane)
-    : null;
+  const activeTask = tasks.find((task) => task.id === interaction.activeTaskId) ?? null;
+  const activeLane = interaction.sourceLane;
   const canReorder = filter === "all" && !query.trim() && sort === "planning";
   const mutationPending = reorderTasks.isPending
     || setTaskCompleted.isPending
@@ -113,94 +109,76 @@ export function PlanningBoard({ filter, query, snapshot, sort }: PlanningBoardPr
   }, [feedback]);
 
   if (!snapshot) return <PlanningBoardLoading />;
-  const today = snapshot.today;
 
-  function resetDragState() {
-    setActiveTaskId(null);
-    setOverLane(null);
-    setOverTaskId(null);
+  const interactionContext = {
+    lanes,
+    today: snapshot.today,
+    capacity: snapshot.planning.capacity,
+    canReorder,
+  };
+
+  function transitionInteraction(event: PlanningBoardEvent) {
+    const result = planningInteraction({
+      kind: "board",
+      context: interactionContext,
+      state: interaction,
+      event,
+    });
+    if (result.kind !== "board") return;
+    setInteraction(result.state);
+    if (result.effect) executeEffect(result.effect);
   }
 
   function handleDragStart(event: DragStartEvent) {
-    const taskId = String(event.active.id);
-    setActiveTaskId(taskId);
-    setOverLane(laneContainingTask(lanes, taskId));
+    transitionInteraction({ type: "drag-start", taskId: String(event.active.id) });
   }
 
   function handleDragOver(event: DragOverEvent) {
-    setOverLane((event.over?.data.current?.lane as PlanningLaneId | undefined) ?? null);
-    setOverTaskId((event.over?.data.current?.taskId as string | undefined) ?? null);
+    transitionInteraction({
+      type: "drag-over",
+      lane: (event.over?.data.current?.lane as PlanningLaneId | undefined) ?? null,
+      taskId: (event.over?.data.current?.taskId as string | undefined) ?? null,
+    });
   }
 
   function handleDragEnd(event: DragEndEvent) {
-    const taskId = String(event.active.id);
-    const destinationLane = (event.over?.data.current?.lane as PlanningLaneId | undefined) ?? null;
-    const destinationTaskId = (event.over?.data.current?.taskId as string | undefined) ?? null;
-    const sourceLane = laneContainingTask(lanes, taskId);
-    const task = tasks.find((candidate) => candidate.id === taskId);
-    resetDragState();
+    transitionInteraction({
+      type: "drop",
+      lane: (event.over?.data.current?.lane as PlanningLaneId | undefined) ?? null,
+      taskId: (event.over?.data.current?.taskId as string | undefined) ?? null,
+    });
+  }
 
-    if (!task || !sourceLane || !destinationLane || sourceLane === "done") return;
-
-    if (sourceLane === destinationLane) {
-      if (!canReorder || !destinationTaskId || destinationTaskId === taskId) return;
-      const lane = lanes.find((candidate) => candidate.id === sourceLane);
-      const guard = lane?.reorder;
-      if (!lane || !guard) return;
-      const previousIndex = lane.tasks.findIndex((candidate) => candidate.id === taskId);
-      const nextIndex = lane.tasks.findIndex((candidate) => candidate.id === destinationTaskId);
-      if (previousIndex < 0 || nextIndex < 0) return;
+  function executeEffect(effect: PlanningInteractionEffect) {
+    if (effect.type === "reorder") {
       reorderTasks.mutate(
-        { guard, lane: sourceLane, taskIds: arrayMove(lane.tasks, previousIndex, nextIndex).map((candidate) => candidate.id) },
+        { guard: effect.guard, lane: effect.lane, taskIds: effect.taskIds },
         { onError: () => toast.error("Could not save task order.") },
       );
       return;
     }
-
-    moveTask(task, destinationLane);
-  }
-
-  function moveTask(task: PlanningTask, destination: PlanningLaneId) {
-    if (destination === "ready" && task.estimateMinutes === null) {
-      setFeedback({ lane: "ready", message: "Add an estimate to make this task Ready." });
-      selectTask(task.id);
+    if (effect.type === "inspect") {
+      setFeedback(effect.feedback);
+      selectTask(effect.taskId);
       return;
     }
 
-    setPendingTaskId(task.id);
+    setPendingTaskId(effect.input.id);
     const onError = (error: unknown) => {
       setPendingTaskId(null);
       toast.error(plannerMutationErrorMessage(error, "Could not move task."));
     };
     const onSuccess = () => setPendingTaskId(null);
 
-    if (destination === "done") {
-      setTaskCompleted.mutate(
-        { id: task.id, completed: true, expectedRevision: task.revision },
-        { onError, onSuccess },
-      );
+    if (effect.type === "set-completed") {
+      setTaskCompleted.mutate(effect.input, { onError, onSuccess });
       return;
     }
-
-    if (destination === "today") {
-      setTaskScheduledDate.mutate(
-        { id: task.id, scheduledDate: today, expectedRevision: task.revision },
-        { onError, onSuccess },
-      );
+    if (effect.type === "set-scheduled-date") {
+      setTaskScheduledDate.mutate(effect.input, { onError, onSuccess });
       return;
     }
-
-    updateTask.mutate(
-      {
-        id: task.id,
-        title: task.title,
-        estimateMinutes: destination === "capture" ? null : task.estimateMinutes,
-        scheduledDate: task.scheduledDate === today ? null : task.scheduledDate,
-        anchorDate: task.anchorDate,
-        expectedRevision: task.revision,
-      },
-      { onError, onSuccess },
-    );
+    updateTask.mutate(effect.input, { onError, onSuccess });
   }
 
   return (
@@ -208,7 +186,7 @@ export function PlanningBoard({ filter, query, snapshot, sort }: PlanningBoardPr
       <h1 className="sr-only">Planning board</h1>
       <DndContext
         collisionDetection={closestCenter}
-        onDragCancel={resetDragState}
+        onDragCancel={() => transitionInteraction({ type: "drag-cancel" })}
         onDragEnd={handleDragEnd}
         onDragOver={handleDragOver}
         onDragStart={handleDragStart}
@@ -221,13 +199,14 @@ export function PlanningBoard({ filter, query, snapshot, sort }: PlanningBoardPr
               activeTask={activeTask}
               canReorder={canReorder}
               capacity={lane.id === "today" ? snapshot.planning.capacity : undefined}
-              capacityPreview={lane.id === "today" ? capacityPreview : null}
+              capacityPreview={lane.id === "today" ? interaction.capacityPreview : null}
               feedback={feedback?.lane === lane.id ? feedback.message : null}
               key={lane.id}
               lane={lane}
               mutationPending={mutationPending}
-              overLane={overLane}
-              overTaskId={overTaskId}
+              overLane={interaction.overLane}
+              overTargetValid={interaction.validOverTarget}
+              overTaskId={interaction.overTaskId}
               pendingTaskId={pendingTaskId}
             />
           ))}
@@ -258,6 +237,7 @@ function PlanningLane({
   lane,
   mutationPending,
   overLane,
+  overTargetValid,
   overTaskId,
   pendingTaskId,
 }: {
@@ -270,6 +250,7 @@ function PlanningLane({
   lane: PlanningBoardLane;
   mutationPending: boolean;
   overLane: PlanningLaneId | null;
+  overTargetValid: boolean;
   overTaskId: string | null;
   pendingTaskId: string | null;
 }) {
@@ -283,7 +264,7 @@ function PlanningLane({
     : 0;
   const previewIsOverCapacity = capacity ? previewCommittedMinutes > capacity.limitMinutes : false;
   const isTargeted = Boolean(activeTask && overLane === id);
-  const isValidTarget = activeTask ? validDropTarget(activeTask, activeLane, id, canReorder) : false;
+  const isValidTarget = isTargeted && overTargetValid;
   const showCollapsedDone = id === "done" && doneCollapsed && !activeTask;
 
   return (
@@ -481,54 +462,6 @@ function PlanningBoardCardContent({ lane, task }: { lane: PlanningLaneId; task: 
       </span>
     </>
   );
-}
-
-function laneContainingTask(lanes: PlanningBoardLane[], taskId: string) {
-  return lanes.find((lane) => lane.tasks.some((task) => task.id === taskId))?.id ?? null;
-}
-
-function validDropTarget(
-  task: PlanningTask,
-  source: PlanningLaneId | null,
-  destination: PlanningLaneId,
-  canReorder: boolean,
-) {
-  if (!source || source === "done") return false;
-  if (source === destination) return canReorder;
-  if (destination === "ready") return task.estimateMinutes !== null;
-  return true;
-}
-
-function previewCapacity(
-  snapshot: PlannerSnapshot,
-  task: PlanningTask,
-  source: PlanningLaneId,
-  destination: PlanningLaneId,
-): CapacityPreview | null {
-  const capacity = snapshot.planning.capacity;
-  const crossingIntoToday = source !== "today" && destination === "today";
-  const crossingOutOfToday = source === "today" && destination !== "today";
-  if (!crossingIntoToday && !crossingOutOfToday) return null;
-  if (task.estimateMinutes === null) {
-    return {
-      committedMinutes: capacity.committedMinutes,
-      message: crossingIntoToday ? "No estimate · known capacity unchanged" : "Removing unsized commitment",
-    };
-  }
-
-  const nextCommitted = Math.max(
-    0,
-    capacity.committedMinutes + (crossingIntoToday ? task.estimateMinutes : -task.estimateMinutes),
-  );
-  return {
-    committedMinutes: nextCommitted,
-    message: `${remainingCapacityLabel(capacity.limitMinutes, capacity.committedMinutes)} → ${remainingCapacityLabel(capacity.limitMinutes, nextCommitted)}`,
-  };
-}
-
-function remainingCapacityLabel(limitMinutes: number, committedMinutes: number) {
-  const remaining = limitMinutes - committedMinutes;
-  return remaining >= 0 ? `${formatMinutes(remaining)} remaining` : `${formatMinutes(Math.abs(remaining))} over`;
 }
 
 function capacityLabel(remainingMinutes: number, overageMinutes: number, isOverCapacity: boolean) {

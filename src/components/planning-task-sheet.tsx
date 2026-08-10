@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sheet";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { plannerMutationErrorMessage } from "@/lib/planner-errors";
+import { planningInteraction } from "@/lib/planning-interaction";
 import {
   useDeleteTask,
   useSetTaskCompleted,
@@ -91,15 +92,17 @@ function PlanningTaskSheetContent({
 
   function applyLane(nextLane: PlanningLaneId) {
     if (task.completedAt || nextLane === "done") return;
+    const result = planningInteraction({
+      kind: "lane-draft",
+      task,
+      destination: nextLane,
+      today: snapshot.today,
+      draft: { estimate, scheduledDate },
+    });
+    if (result.kind !== "lane-draft") return;
     setLane(nextLane);
-    if (nextLane === "capture") {
-      setEstimate("");
-      if (scheduledDate === snapshot.today) setScheduledDate(null);
-    } else if (nextLane === "ready") {
-      if (scheduledDate === snapshot.today) setScheduledDate(null);
-    } else if (nextLane === "today") {
-      setScheduledDate(snapshot.today);
-    }
+    setEstimate(result.draft.estimate);
+    setScheduledDate(result.draft.scheduledDate);
   }
 
   function save(event: React.FormEvent<HTMLFormElement>) {

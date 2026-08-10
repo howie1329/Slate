@@ -1,6 +1,6 @@
 # Plan 035: Deepen Planning Board interactions
 
-> **Status:** ready-for-agent
+> **Status:** Complete
 >
 > **Parent:** Plan 034 — Deepen Planning mutations and canonicalize the projection
 >
@@ -118,3 +118,4 @@ The result preserves current behavior while making the interaction interface the
 
 ## Comments
 
+- Implemented on 2026-08-10. One pure Planning interaction module now owns drag lifecycle state, target validity, capacity previews, exact Lane reorder effects, cross-Lane mutation selection, and Task inspector Lane draft transformations. The Board translates DnD events and executes returned effects through the existing adapters; native Planning contracts and visible interaction behavior are unchanged.
