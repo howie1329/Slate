@@ -2,7 +2,7 @@
 
 > **Status:** Directional roadmap
 >
-> **Updated:** 2026-08-08
+> **Updated:** 2026-08-10
 >
 > This document describes the order in which Slate should earn new capabilities. It is not a fixed release schedule. Each stage should be validated against the product thesis before the next stage expands the model.
 
@@ -201,6 +201,21 @@ The product direction and release slices are defined in [Full-window planning wo
 - Give Plan My Day more room for inspecting proposed additions before acceptance.
 - Add a lightweight Today / Next / Later horizon without introducing a calendar or time-blocking grid.
 - Add a calm Needs Attention surface for current actionable states such as missing estimates, overdue work, and over-capacity plans.
+
+#### Conditional Planning Session candidate
+
+After the 2.0 board and List foundation is usable, real use may justify a temporary **Planning Session** in the full-window workspace. This is a focused conversational planning surface for the messy step before a task is ready: clarifying vague work, challenging an unrealistic plan, and turning the conversation into a small set of concrete Slate proposals.
+
+The candidate is earned only if AI Assist, Plan My Day, and ordinary task editing do not adequately support that kind of ambiguity. It must:
+
+- Remain full-window and optional; the menu-bar popover stays the fast path for the normal daily loop.
+- Use explicit, bounded context such as Today, Ready/Capture, remaining capacity, and one selected task. It must not send the entire planner state by default.
+- Keep one resettable, ephemeral session initially. No conversation library, folders, personas, chat search, or permanent chat history.
+- Return reviewable proposals for independent task creation, title/estimate/date edits, eligible additions to Today, or deliberate returns to Backlog.
+- Apply accepted proposals through the shared stale-safe, atomic change-set boundary. Conversation text, dismissed proposals, and model reasoning do not become planner history.
+- Preserve the existing domain boundary: no subtasks, nested projects, week view, time-blocking grid, autonomous actions, or silent Today changes.
+
+External research is a separate future candidate. It must not turn Planning Session into a general research workspace or make network access a prerequisite for manual planning.
 
 Repeated-deferral insights do not appear in the Needs Attention surface until Stage 4 Calibration has enough history.
 
@@ -428,7 +443,7 @@ The companion does not initially reproduce desktop settings, bulk source managem
 
 ### Goal
 
-Allow local AI clients and coding agents to use Slate as the user’s persistent commitment system without putting chat inside Slate or requiring a cloud account.
+Allow local AI clients and coding agents to use Slate as the user’s persistent commitment system without requiring a general-purpose chat product inside Slate or a cloud account.
 
 MCP is eligible after the Stage 2 history, authorization, expected-state, and shared mutation rules are stable. It may ship before the full-window workspace, Spaces, integrations, sync, or mobile and does not block those releases.
 
@@ -473,6 +488,7 @@ Before expanding the product, answer these questions with real use:
 
 - Do users understand Backlog versus Today without onboarding?
 - Does Plan My Day save effort while preserving trust and control?
+- Does a bounded Planning Session turn ambiguous work into clearer, reviewable commitments without becoming an in-app chat product?
 - Does global quick capture reduce capture friction without causing accidental commitments?
 - Does the full-window workspace reveal recurring friction around unfinished-day review or changed-day recovery?
 - Does the full-window workspace make commitment planning clearer without creating project-management overhead?
@@ -488,6 +504,7 @@ If a feature does not improve one of these outcomes, it should be reduced, postp
 
 - A full project-management system with nested hierarchies and dependency graphs.
 - A calendar or time-blocking replacement.
+- A general-purpose in-app chat or research workspace.
 - An always-on autonomous agent.
 - A social productivity product.
 - A dashboard that turns work, rest, or reduced capacity into a performance score.
