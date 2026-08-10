@@ -36,6 +36,7 @@ These are intentional relationships, not duplicate plans:
 - **031 → 032:** Plan 031 provides the authoritative planning projection that the Stage 3 Planning workspace will reuse. Plan 032 establishes only the full-app shell that will host later 2.0 Planning views.
 - **031 → 033:** Plan 033 deepens Plan 031's native projection into the exhaustive Capture / Ready / Today / Done contract and shared Lane order required before Board and List. It is backend-only and can proceed independently of the Plan 032 shell.
 - **031 + 033 → 034:** Plan 034 closes the remaining write-depth drift and migrates renderer consumers from the duplicated Today/Backlog compatibility shape to one canonical Planning lane projection.
+- **034 → 035:** Plan 035 deepens pointer, keyboard, and Task inspector movement decisions behind one in-process Planning interaction seam after the canonical projection is established.
 
 Do not create a new plan to restate one of these items. Update the owning plan, or add a narrowly scoped child plan with an explicit relationship here.
 
@@ -75,6 +76,7 @@ Do not create a new plan to restate one of these items. Update the owning plan, 
 | [032 Planning workspace shell](032-planning-workspace-shell.md) | Proposed | Ready-for-agent shell-only Stage 3 slice; establishes the full-app composition without Board/List contents or new planning behavior. |
 | [033 authoritative Planning lane projection](033-authoritative-planning-lane-projection.md) | Proposed | Ready-for-agent backend-only Stage 3 slice; establishes exhaustive derived lanes, shared order, migration, and compatibility before UI work. |
 | [034 deepen Planning mutations and canonical projection](034-deepen-planning-mutations-and-canonical-projection.md) | Complete | Planning writes now cross the SQLite-backed Planning workspace seam, and renderer surfaces share one canonical lane projection. |
+| [035 deepen Planning Board interactions](035-deepen-planning-board-interactions.md) | Proposed | Ready-for-agent renderer architecture slice; centralizes Board and Task inspector movement decisions without changing native semantics. |
 
 Plan numbers 007 and 010 are intentionally unused. Do not invent placeholder files to fill those gaps; add a new numbered plan only when a genuinely new, scoped work item is approved.
 
