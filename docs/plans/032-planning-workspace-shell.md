@@ -20,6 +20,80 @@ The menu-bar popover continues to render the existing Daily workspace and compac
 
 The shell has no permanent sidebar in this slice and reserves no visible sidebar space. Its composition should permit a future sidebar to be added without replacing the shell boundary. Settings opens inside the stable shell and is accessible only from the Workspace status bar.
 
+## Shaped Design Brief
+
+### Feature summary and primary action
+
+This slice creates the production-ready frame for Slate's future full-window Planning workspace. It is for one person who has opened Slate on a Mac to think deliberately about the day with more room than the menu-bar popover provides. The shell must make the current Daily workflow immediately usable while making it clear—without a blocking empty state—that additional Planning views have not shipped yet.
+
+The primary user action remains reviewing and adjusting the current Daily plan. The shell should disappear around that work: toolbar actions orient the user, contextual work opens in one inspector, and Settings and quiet global feedback remain available without competing with task content.
+
+### Design direction
+
+- **Color strategy:** Restrained. Use Slate's semantic monochrome surfaces, hairline boundaries, and existing light/dark tokens. Primary contrast communicates action, focus, selection, or capacity state only.
+- **Scene:** An individual knowledge worker opens Slate on a Mac in ordinary office or home ambient light, focused but wary of overcommitting; the surface should feel calm in the system-selected light or dark appearance rather than forcing either theme.
+- **Anchors:** macOS Finder for toolbar discipline and window familiarity, Raycast for compact keyboard-first utility density, and Things for calm task hierarchy. These are behavioral and compositional references, not visual templates to copy.
+- **Selected composition:** Use the approved light-theme direction probe: a thin full-width toolbar, a width-bounded Daily surface in the main canvas, a quiet future-views cue in otherwise open space, an optional docked inspector on the right, and a thin full-width status bar.
+- **Probe refinement:** Make the toolbar and status bar visibly thinner than the probe. Target a `40px` toolbar and `24px` status bar, with `28px` toolbar controls. Do not reproduce the probe's speculative Weekly, Upcoming, notification, synchronization, focus, or metric controls.
+
+### Scope
+
+- **Fidelity:** Production-ready.
+- **Breadth:** The complete full-app shell across Planning, Settings, inspector-open, and responsive window states; the popover is regression scope only.
+- **Interactivity:** Shipped-quality renderer composition and native window behavior, not a static mockup.
+- **Time intent:** Polish until the shell is implementation-ready and can safely host later Board and List work.
+
+### Layout strategy
+
+The shell is one edge-to-edge vertical composition: Planning toolbar, flexible workspace canvas, and Workspace status bar. It has square corners in native full-screen and uses the existing full-app window background in windowed mode.
+
+Within the workspace canvas:
+
+- Host the existing Daily workspace at a comfortable maximum width of `720px`. It may shrink to the available width but must not stretch into long full-screen task rows.
+- At wide widths, center the Daily surface in the primary content region. A quiet future-views cue may occupy otherwise unused canvas space without changing the Daily surface's alignment or becoming a navigation destination.
+- When contextual work is active and the shell is at least `960px` wide, dock a `320px` Workspace inspector to the trailing edge with one hairline boundary. Center the Daily surface within the remaining primary region rather than the entire window.
+- Below `960px`, remove the future-views cue, let the Daily surface use the canvas with `24px` gutters, and overlay the inspector from the trailing edge at `min(360px, calc(100% - 24px))`. The overlay must not permanently resize or crush the Daily content.
+- At the configured `560 × 620` minimum, preserve the Daily workflow, toolbar navigation, inspector dismissal, and Settings access. Do not reserve space for a future sidebar.
+- Keep the canvas flat. The hosted Daily surface may retain its existing containment, but the shell must not wrap it in another card or add decorative elevation.
+
+### Key states
+
+| State | Required presentation and behavior |
+| --- | --- |
+| Planning, idle | Daily content is visible and width-bounded; the inspector is absent; wide windows may show the quiet future-views cue. |
+| Task detail | The Task inspector is the only active inspector mode. It docks wide and overlays narrow. |
+| AI review | AI review is the only active inspector mode and remains visibly reviewable; it never applies changes silently. |
+| Settings | The toolbar and status bar remain stable, Settings replaces the main content, contextual inspector state closes, and a clear Back to Planning action is present. |
+| Loading | Preserve shell geometry and show a bounded skeleton or existing loading treatment in the content region; do not replace the workspace with a centered spinner. |
+| Persistence unavailable | Show the existing actionable local-data recovery treatment above or within the shell without implying data loss or network dependence. |
+| Empty Daily plan | Keep the existing Daily empty-state guidance as the primary content; the future-views cue remains secondary and must not read as the reason the day is empty. |
+| Inspector transition | Move or crossfade only to clarify the dock/overlay state; focus enters meaningful inspector content and returns to its trigger on close. |
+| Native full-screen | Square edge-to-edge shell; no custom traffic lights or drag region. |
+| Windowed | Frameless movable window with macOS-style close, minimize, and full-screen controls at the toolbar's leading edge. |
+| Reduced Motion | Inspector and route state changes use an instant transition or short crossfade with no spatial choreography. |
+
+### Interaction model
+
+- Opening the full app closes the popover, focuses the main window, and enters native macOS full-screen. Leaving full-screen keeps a movable frameless Slate window open.
+- The `40px` Planning toolbar is an orientation and command boundary, not a destination bar. This slice may host existing search/capture and reviewable AI entry points, but it must not expose speculative Planning views.
+- Selecting a task opens Task detail; starting AI review replaces Task detail in the same inspector region. Escape, the inspector close control, or entering Settings dismisses the active inspector.
+- On wide windows, docking the inspector changes available content width without obscuring the Daily surface. On narrow windows, the inspector overlays the canvas and uses a restrained backdrop or boundary sufficient to distinguish layers.
+- The `24px` Workspace status bar provides one Settings entry and a reserved live region for concise persistence or operation feedback. It does not show task counts, capacity, synchronization theater, or a duplicate view selector.
+- Keyboard order follows the visual structure: window controls when present, toolbar, main content, inspector when active, then status bar. Hidden or dismissed regions cannot retain focus.
+
+### Content requirements
+
+- Toolbar title: **Planning**.
+- Future-views cue: **More Planning views are coming soon.** It is supporting copy, not the page heading, a disabled control, or a call to action.
+- Settings return action: **Back to Planning**.
+- Status feedback should be event-driven and concise, such as **Saved locally** or an actionable persistence message. Do not show a permanent synchronization claim when no synchronization exists.
+- Preserve current Daily, task-detail, AI-review, onboarding, and persistence-recovery copy unless this shell requires a spatially shorter label.
+- Use the existing icon family and semantic labels. The future-views cue may use one quiet existing planning/view icon, but no generated illustration is required.
+
+### Implementation references
+
+During implementation, apply Impeccable's product register for familiar component behavior, `layout.md` for the responsive canvas and inspector geometry, `adapt.md` for the `560 × 620` minimum-window behavior, and `animate.md` only for inspector and route state transitions. `DESIGN.md` remains authoritative for tokens and component vocabulary.
+
 ## User Stories
 
 1. As a Slate user, I want Open full app to enter a native macOS full-screen Space, so that the Planning workspace feels distinct from the menu-bar popover.
@@ -32,7 +106,7 @@ The shell has no permanent sidebar in this slice and reserves no visible sidebar
 8. As a Slate user, I want the full app to have a stable Planning toolbar, so that future planning controls have a predictable home.
 9. As a Slate user, I want the Planning toolbar to feel consistent with macOS while remaining visually consistent with Slate, so that it feels native without introducing a second UI system.
 10. As a Slate user, I want the toolbar, content, inspector, and status bar to form one calm composition, so that the full app does not resemble a collection of unrelated panels.
-11. As a Slate user, I want the primary content to use the available width when no inspector is open, so that an inactive feature does not leave empty chrome behind.
+11. As a Slate user, I want the shell canvas to use the available width without stretching the temporary Daily workspace into long task rows, so that the full app feels spacious without weakening scanability.
 12. As a Slate user, I want contextual work to appear in a right-side Workspace inspector on wide windows, so that I can inspect it without losing the surrounding planning context.
 13. As a Slate user, I want the Workspace inspector to overlay rather than crush content at narrow widths, so that the minimum-size window remains usable.
 14. As a Slate user, I want task detail and AI review to share one inspector region, so that transient workflows do not compete for different parts of the shell.
@@ -69,12 +143,12 @@ The shell has no permanent sidebar in this slice and reserves no visible sidebar
 - The Planning workspace shell is a renderer-owned UI composition boundary. It owns the background, Planning toolbar, primary content frame, optional Workspace inspector region, Workspace status bar, and global transient-layer placement. It does not classify tasks, calculate capacity, or define mutation rules.
 - The shell should be expressed as one small presentational composition with explicit content slots or similarly narrow inputs. It must not become a broad controller that owns task, AI, Settings, persistence, and window behavior internally.
 - The full app uses a custom React Planning toolbar designed to feel native. A literal AppKit toolbar and a hybrid native/web toolbar are rejected for this slice.
-- The 2.0 foundation has no permanent sidebar and no reserved empty sidebar rail. The primary content uses the full available width. The shell composition must still permit a future navigation region to be introduced without rewriting hosted content.
-- The toolbar is the eventual home for search and capture, entry into reviewable AI actions, Planning view selection, and current capacity context. This spec establishes the toolbar region and may rehome existing controls without changing their behavior; it does not define their final composition or add new actions.
-- The Workspace status bar replaces the full app's inherited compact utility footer. It remains visually subordinate, contains Settings access only once, and reserves a quiet region for transient operation or persistence feedback. It must not display decorative metrics or task content.
+- The 2.0 foundation has no permanent sidebar and no reserved empty sidebar rail. The shell canvas uses the full available width while the temporary Daily workspace is capped at `720px`. The shell composition must still permit a future navigation region to be introduced without rewriting hosted content.
+- The toolbar is the eventual home for search and capture, entry into reviewable AI actions, Planning view selection, and current capacity context. This spec establishes a `40px` toolbar region and may rehome existing controls without changing their behavior; it does not define their final composition or add new actions.
+- The `24px` Workspace status bar replaces the full app's inherited compact utility footer. It remains visually subordinate, contains Settings access only once, and reserves a quiet region for transient operation or persistence feedback. It must not display decorative metrics or task content.
 - Settings remains a declarative route but renders inside the stable full-app shell. Entering Settings replaces the primary content and closes contextual inspector state. Settings does not open in a separate native window or beside planning content.
 - The Workspace inspector is the shell's single right-side contextual region. Task detail and AI review are mutually exclusive modes of this region. Their existing internal behavior remains authoritative; this slice changes composition and geometry, not task editing or AI review contracts.
-- The inspector is absent when idle. At a wide full-screen width it docks beside primary content. At narrow widths it overlays the content rather than forcing both regions into an unusably small split.
+- The inspector is absent when idle. At shell widths of `960px` or greater it docks beside primary content at `320px`. Below `960px` it overlays the content at `min(360px, calc(100% - 24px))` rather than forcing both regions into an unusably small split.
 - Responsive behavior must be based on available shell width, not an assumption that the main window is always full-screen. The configured 560 by 620 minimum window remains an acceptance boundary.
 - The shell distinguishes the main application window from its actual native full-screen state. Main-window identity alone is insufficient because the user may leave native full-screen while remaining in the same window.
 - In native full-screen, the main app remains frameless, square, and free of custom drag or window controls. In windowed mode, the shell exposes a drag region and standard macOS-style close, minimize, and full-screen controls at the toolbar's leading edge.
@@ -89,10 +163,10 @@ The shell has no permanent sidebar in this slice and reserves no visible sidebar
 ## Testing Decisions
 
 - The single automated seam is the complete presentational Planning workspace shell contract. Render the real shell with representative slot content and assert externally visible semantics rather than internal component state.
-- The shell contract covers: toolbar landmark presence; primary content placement; status-bar presence; Settings placement; inspector absent and present states; mutually exclusive task-detail and AI-review inspector content; and semantic ordering of landmarks.
+- The shell contract covers: toolbar landmark presence; width-bounded primary content placement; future-views cue presence at wide idle widths; status-bar presence; Settings placement; inspector absent and present states; mutually exclusive task-detail and AI-review inspector content; and semantic ordering of landmarks.
 - The shell contract also covers the Settings state at the same seam: the outer shell remains present, planning content is replaced, and contextual inspector content is absent.
 - Prefer the repository's lightweight Node-based test style and existing React dependencies. Do not introduce a broad browser-testing framework or large UI-test dependency solely for this shell.
-- Responsive styling is validated at representative wide full-screen and 560 by 620 minimum-window dimensions. The automated component seam should assert state or class contracts only where those are externally meaningful; it should not snapshot implementation-heavy markup.
+- Responsive styling is validated at representative wide full-screen, `960px` boundary, and `560 × 620` minimum-window dimensions. Acceptance verifies the `40px` toolbar, `24px` status bar, `720px` Daily maximum, docked-to-overlay inspector transition, and removal of the future-views cue when space is constrained. The automated component seam should assert state or class contracts only where those are externally meaningful; it should not snapshot implementation-heavy markup.
 - Native macOS behavior is validated through packaged or development-app acceptance because the repository has no native-window UI harness. Acceptance covers opening from both the menu-bar command and popover button, entering a native full-screen Space, square full-screen corners, leaving full-screen, windowed drag behavior, window controls, hiding on close, and reopening into full-screen.
 - Manual visual acceptance covers light and dark themes, Reduced Motion, visible keyboard focus, inspector docking and overlay behavior, Settings navigation, loading, persistence recovery, onboarding layering, and popover regression at its configured minimum size.
 - `npm run build` is the required renderer build and type-check validation. Native changes require the existing Rust test suite. The repository still has no standard test script, so this spec does not invent or document one as a project command.
@@ -118,4 +192,3 @@ The shell has no permanent sidebar in this slice and reserves no visible sidebar
 - The domain glossary defines Daily workspace, Planning workspace, Planning workspace shell, Full app, Planning toolbar, Workspace status bar, Workspace inspector, Task inspector, and Planning view. Implementation and UI copy should use those terms consistently.
 - The existing decision to derive planning state from task facts remains authoritative. The shell must not introduce a persistent kanban status or a parallel renderer-owned planning model.
 - The popover remains Slate's primary surface and must continue supporting the normal daily loop independently of the full app.
-
