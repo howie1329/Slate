@@ -68,7 +68,7 @@ Do not create a new plan to restate one of these items. Update the owning plan, 
 | [028 unsized Today commitments](028-unsized-today-commitments.md) | Complete | Child implementation slice of 026. |
 | [029 explicit Daily movement actions](029-explicit-daily-movement-actions.md) | Complete | Child implementation slice of 026. |
 | [030 Daily workspace polish](030-daily-workspace-polish-cleanup.md) | Complete | Final polish and cleanup pass for the 026–029 workspace sequence. |
-| [031 planning workspace boundary](031-deepen-planning-workspace-boundary.md) | Proposed | Deepen the shipped Daily workspace behind one authoritative native projection and mutation boundary. |
+| [031 planning workspace boundary](031-deepen-planning-workspace-boundary.md) | Complete | The shipped Daily workspace now uses one authoritative native projection and planning-order mutation boundary. |
 
 Plan numbers 007 and 010 are intentionally unused. Do not invent placeholder files to fill those gaps; add a new numbered plan only when a genuinely new, scoped work item is approved.
 

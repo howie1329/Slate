@@ -4,7 +4,7 @@
 
 ## Status
 
-- **Implementation status:** Proposed
+- **Implementation status:** Complete
 - **Parent:** Plan 026 — Unified Daily workspace
 - **Follows:** Plan 030 — Daily workspace polish and cleanup
 - **Priority:** P1 architecture / domain integrity
@@ -62,23 +62,25 @@ The duplication creates correctness and maintenance risk. A rule change must be 
 
 ### Native planning module
 
-Create one Rust-owned `PlanningWorkspace` backed by the active SQLite connection and an explicit local date:
+Create one Rust-owned `PlanningWorkspace` over facts loaded from the active SQLite connection and an explicit local date. Its mutation operation receives the caller's active transaction so planning-order changes remain atomic with task revisions and Planner Events:
 
 ```rust
-pub(crate) struct PlanningWorkspace<'db> {
-    connection: &'db mut rusqlite::Connection,
-    today: LocalDate,
+pub(crate) struct PlanningWorkspace<'a> {
+    tasks: &'a [Task],
+    order_by_scope: &'a HashMap<String, Vec<String>>,
+    today: &'a str,
+    effective_capacity_minutes: i64,
 }
 
 impl PlanningWorkspace<'_> {
-    pub fn view(&self) -> Result<PlanningView, PlanningError>;
+    pub fn view(&self) -> PlanningView;
 
     pub fn apply(
-        &mut self,
+        transaction: &Transaction<'_>,
         command: PlanningCommand,
-    ) -> Result<PlanningMutationResult, PlanningError>;
+    ) -> Result<(), String>;
 
-    pub fn plan_context(&self) -> Result<AiPlanContext, PlanningError>;
+    pub fn plan_context(&self) -> PlanningContext;
 }
 ```
 
@@ -87,17 +89,17 @@ Keep the public native surface limited to these three operations. Private helper
 `PlanningCommand` owns every accepted operation that can affect planning membership or order:
 
 ```rust
-pub enum PlanningCommand {
-    Create(TaskInput),
-    Update(UpdateTaskInput),
-    SetCompleted(CompletionInput),
-    SetScheduledDate(ScheduledDateInput),
-    Delete(DeleteTaskInput),
-    Reorder {
-        guard: ReorderGuard,
-        task_ids: Vec<String>,
+pub enum PlanningCommand<'a> {
+    CreateTask,
+    DeleteTask { task_id: &'a str },
+    ReconcileTask {
+        task_id: &'a str,
+        previous_scope: &'a str,
+        destination_scope: &'a str,
+        active_before: bool,
+        active_after: bool,
     },
-    AcceptPlan(DailyPlanAcceptanceInput),
+    ReplaceOrder { scope: &'a str, task_ids: &'a [String] },
 }
 ```
 
@@ -283,20 +285,20 @@ Retain migration tests, platform-adapter tests, sidecar protocol and resource-li
 
 ## Acceptance criteria
 
-- [ ] One native module is the sole owner of planning classification, ordering, capacity, scope reconciliation, and AI planning facts.
-- [ ] `PlannerSnapshot` exposes an authoritative `PlanningView` consumed by the Daily workspace.
-- [ ] The renderer no longer constructs or interprets persistence scope keys.
-- [ ] Every scope-affecting mutation passes through `PlanningWorkspace::apply` and remains atomic with revisions, ordering, and Planner Events.
-- [ ] Plan My Day generation and acceptance use the same planning state as the renderer projection.
-- [ ] `useDailyWorkspace(query)` contains presentation behavior only.
-- [ ] Compatibility fields and duplicated helpers are removed after all consumers migrate.
-- [ ] Boundary tests replace redundant shallow tests instead of layering duplicate coverage.
-- [ ] No persistent task status, generic projection DSL, repository trait, or new renderer test framework is introduced.
-- [ ] The compact popover and full window preserve current behavior at their supported sizes.
-- [ ] `npm run build` passes.
-- [ ] `cargo test --manifest-path src-tauri/Cargo.toml` passes.
-- [ ] Route generation output is not hand-edited.
-- [ ] The final diff contains no unrelated dependency, permission, credential, or product-scope changes.
+- [x] One native module is the sole owner of planning classification, ordering, capacity, scope reconciliation, and AI planning facts.
+- [x] `PlannerSnapshot` exposes an authoritative `PlanningView` consumed by the Daily workspace.
+- [x] The renderer no longer constructs or interprets persistence scope keys.
+- [x] Every scope-affecting mutation passes through `PlanningWorkspace::apply` and remains atomic with revisions, ordering, and Planner Events.
+- [x] Plan My Day generation and acceptance use the same planning state as the renderer projection.
+- [x] `useDailyWorkspace(query)` contains presentation behavior only.
+- [x] Compatibility fields and duplicated helpers are removed after all consumers migrate.
+- [x] Boundary tests replace redundant shallow tests instead of layering duplicate coverage.
+- [x] No persistent task status, generic projection DSL, repository trait, or new renderer test framework is introduced.
+- [x] The compact popover and full window preserve current behavior at their supported sizes.
+- [x] `npm run build` passes.
+- [x] `cargo test --manifest-path src-tauri/Cargo.toml` passes.
+- [x] Route generation output is not hand-edited.
+- [x] The final diff contains no unrelated dependency, permission, credential, or product-scope changes.
 
 ## Out of scope
 

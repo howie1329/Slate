@@ -1,10 +1,10 @@
-import type { LocalDate, PlannerSnapshot, Task } from "./planner";
-import {
-  calculateCapacityState,
-  orderCompletedTasks,
-  orderTasks,
-  type CapacityState,
-} from "./task-groups.ts";
+import type {
+  CapacityView,
+  PlanningSection,
+  PlanningTask,
+  PlanningView,
+  WorkspaceBadge,
+} from "./planner";
 
 export type DailyTaskMetadataTone = "muted" | "caution" | "destructive";
 
@@ -14,7 +14,7 @@ export type DailyTaskMetadata = {
 };
 
 export type DailyTaskSection = {
-  tasks: Task[];
+  tasks: PlanningTask[];
   metadataByTaskId: Record<string, DailyTaskMetadata[]>;
 };
 
@@ -25,7 +25,7 @@ export type DailyWorkspaceModel = {
   today: {
     active: DailyTaskSection;
     completed: DailyTaskSection;
-    capacity: CapacityState;
+    capacity: CapacityView;
     totalTaskCount: number;
     unsizedTaskCount: number;
   };
@@ -37,129 +37,66 @@ export type DailyWorkspaceModel = {
   };
 };
 
-const backlogScopes = [
-  "log:needs-estimate",
-  "log:overdue",
-  "log:upcoming",
-  "log:unscheduled",
-] as const;
-
-export function selectDailyWorkspace(planner: PlannerSnapshot, query = ""): DailyWorkspaceModel {
+export function filterDailyWorkspace(
+  planning: PlanningView,
+  query = "",
+): DailyWorkspaceModel {
   const normalizedQuery = query.trim().toLocaleLowerCase();
-  const todayTasks = planner.tasks.filter((task) => task.scheduledDate === planner.today);
-  const todayScope = `today:${planner.today}`;
-  const todayActiveAll = orderTasks(
-    todayTasks.filter((task) => task.completedAt === null),
-    planner.orderByScope,
-    todayScope,
-  );
-  const todayCompletedAll = orderCompletedTasks(
-    todayTasks.filter((task) => task.completedAt !== null),
-  );
-  const backlogActiveAll = backlogScopes.flatMap((scope) =>
-    orderTasks(
-      planner.tasks.filter(
-        (task) =>
-          task.completedAt === null &&
-          task.scheduledDate !== planner.today &&
-          backlogScopeForTask(task, planner.today) === scope,
-      ),
-      planner.orderByScope,
-      scope,
-    ),
-  );
-  const backlogCompletedAll = orderCompletedTasks(
-    planner.tasks.filter(
-      (task) => task.completedAt !== null && task.scheduledDate !== planner.today,
-    ),
-  );
-
-  const todayActive = filterSection(todayActiveAll, normalizedQuery, planner.today, "today");
-  const todayCompleted = filterSection(todayCompletedAll, normalizedQuery, planner.today, "completed");
-  const backlogActive = filterSection(backlogActiveAll, normalizedQuery, planner.today, "backlog");
-  const backlogCompleted = filterSection(backlogCompletedAll, normalizedQuery, planner.today, "completed");
-  const capacity = calculateCapacityState(todayActiveAll, planner.effectiveCapacityMinutes);
-  const unsizedTaskCount = todayActiveAll.filter((task) => task.estimateMinutes === null).length;
+  const todayActive = filterSection(planning.today.active, normalizedQuery);
+  const todayCompleted = filterSection(planning.today.completed, normalizedQuery);
+  const backlogActive = filterSection(planning.backlog.active, normalizedQuery);
+  const backlogCompleted = filterSection(planning.backlog.completed, normalizedQuery);
 
   return {
     query: query.trim(),
     hasQuery: normalizedQuery.length > 0,
     hasMatches:
-      todayActive.tasks.length +
-        todayCompleted.tasks.length +
-        backlogActive.tasks.length +
-        backlogCompleted.tasks.length >
-      0,
+      todayActive.tasks.length
+        + todayCompleted.tasks.length
+        + backlogActive.tasks.length
+        + backlogCompleted.tasks.length
+      > 0,
     today: {
       active: todayActive,
       completed: todayCompleted,
-      capacity,
-      totalTaskCount: todayActiveAll.length + todayCompletedAll.length,
-      unsizedTaskCount,
+      capacity: planning.today.capacity,
+      totalTaskCount: planning.today.totalTaskCount,
+      unsizedTaskCount: planning.today.unsizedTaskCount,
     },
     backlog: {
       active: backlogActive,
       completed: backlogCompleted,
-      totalTaskCount: backlogActiveAll.length + backlogCompletedAll.length,
-      activeTaskCount: backlogActiveAll.length,
+      totalTaskCount: planning.backlog.totalTaskCount,
+      activeTaskCount: planning.backlog.activeTaskCount,
     },
   };
 }
 
 function filterSection(
-  tasks: Task[],
+  section: PlanningSection,
   normalizedQuery: string,
-  today: LocalDate,
-  section: "today" | "backlog" | "completed",
 ): DailyTaskSection {
-  const visibleTasks = normalizedQuery
-    ? tasks.filter((task) => task.title.toLocaleLowerCase().includes(normalizedQuery))
-    : tasks;
+  const tasks = normalizedQuery
+    ? section.tasks.filter((task) => task.title.toLocaleLowerCase().includes(normalizedQuery))
+    : section.tasks;
 
   return {
-    tasks: visibleTasks,
+    tasks,
     metadataByTaskId: Object.fromEntries(
-      visibleTasks.map((task) => [task.id, metadataForTask(task, today, section)]),
+      tasks.map((task) => [task.id, task.badges.map(metadataForBadge)]),
     ),
   };
 }
 
-function metadataForTask(
-  task: Task,
-  today: LocalDate,
-  section: "today" | "backlog" | "completed",
-): DailyTaskMetadata[] {
-  if (section === "completed") {
-    return [];
+function metadataForBadge(badge: WorkspaceBadge): DailyTaskMetadata {
+  switch (badge) {
+    case "needs-estimate":
+      return { label: "Needs estimate", tone: "caution" };
+    case "overdue":
+      return { label: "Overdue", tone: "destructive" };
+    case "upcoming":
+      return { label: "Upcoming" };
+    case "unscheduled":
+      return { label: "Unscheduled" };
   }
-
-  const metadata: DailyTaskMetadata[] = [];
-
-  if (task.estimateMinutes === null) {
-    metadata.push({ label: "Needs estimate", tone: "caution" });
-  }
-
-  if (section === "backlog") {
-    if (task.scheduledDate === null) {
-      metadata.push({ label: "Unscheduled" });
-    } else if (task.scheduledDate < today) {
-      metadata.push({ label: "Overdue", tone: "destructive" });
-    } else if (task.scheduledDate > today) {
-      metadata.push({ label: "Upcoming" });
-    }
-  }
-
-  return metadata;
-}
-
-function backlogScopeForTask(task: Task, today: LocalDate) {
-  if (task.estimateMinutes === null) {
-    return "log:needs-estimate";
-  }
-
-  if (task.scheduledDate === null) {
-    return "log:unscheduled";
-  }
-
-  return task.scheduledDate < today ? "log:overdue" : "log:upcoming";
 }

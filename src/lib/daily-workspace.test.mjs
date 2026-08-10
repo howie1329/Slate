@@ -1,145 +1,94 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { selectDailyWorkspace } from "./daily-workspace.ts";
+import { filterDailyWorkspace } from "./daily-workspace.ts";
 
-const today = "2026-08-08";
-
-function task(id, overrides = {}) {
+function task(id, title, badges = []) {
   return {
     id,
-    title: id,
+    title,
     estimateMinutes: 30,
     scheduledDate: null,
-    createdAt: `${id}-created`,
+    createdAt: `2026-08-09T00:00:0${id}Z`,
     completedAt: null,
     revision: 1,
     anchorDate: null,
-    ...overrides,
+    badges,
   };
 }
 
-function planner(tasks, orderByScope = {}) {
+function section(tasks, reorder = null) {
+  return { tasks, reorder };
+}
+
+function planning() {
   return {
-    tasks,
-    orderByScope,
-    settings: {},
-    aiAvailability: "unconfigured",
-    aiAvailabilityByProvider: {},
-    today,
-    effectiveCapacityMinutes: 120,
+    today: {
+      active: section([
+        task("1", "Write proposal", ["needs-estimate"]),
+        task("2", "Review notes"),
+      ], {
+        scope: "today:2026-08-09",
+        expectedRevisions: [
+          { id: "1", revision: 1 },
+          { id: "2", revision: 1 },
+        ],
+      }),
+      completed: section([task("3", "Send update")]),
+      capacity: {
+        limitMinutes: 120,
+        committedMinutes: 60,
+        remainingMinutes: 60,
+        overageMinutes: 0,
+        isOverCapacity: false,
+        overflowTaskId: null,
+      },
+      totalTaskCount: 3,
+      unsizedTaskCount: 1,
+    },
+    backlog: {
+      active: section([
+        task("4", "Draft outline", ["unscheduled"]),
+        task("5", "Old follow-up", ["overdue"]),
+        task("6", "Future review", ["upcoming"]),
+      ]),
+      completed: section([]),
+      totalTaskCount: 3,
+      activeTaskCount: 3,
+    },
   };
 }
 
-describe("Daily workspace selector", () => {
-  it("keeps scheduled Today work together, including unsized commitments", () => {
-    const model = selectDailyWorkspace(
-      planner([
-        task("sized", { title: "Sized", estimateMinutes: 60, scheduledDate: today }),
-        task("unsized", { title: "Unsized", estimateMinutes: null, scheduledDate: today }),
-        task("backlog", { title: "Backlog" }),
-      ]),
-    );
+describe("Daily workspace presentation adapter", () => {
+  it("filters authoritative sections without changing their order", () => {
+    const model = filterDailyWorkspace(planning(), "review");
 
-    assert.deepEqual(model.today.active.tasks.map(({ id }) => id), ["sized", "unsized"]);
-    assert.equal(model.today.capacity.committedMinutes, 60);
-    assert.equal(model.today.capacity.remainingMinutes, 60);
-    assert.equal(model.today.unsizedTaskCount, 1);
-    assert.deepEqual(model.today.active.metadataByTaskId.unsized, [
+    assert.deepEqual(model.today.active.tasks.map(({ id }) => id), ["2"]);
+    assert.deepEqual(model.backlog.active.tasks.map(({ id }) => id), ["6"]);
+    assert.equal(model.hasQuery, true);
+    assert.equal(model.hasMatches, true);
+  });
+
+  it("maps native semantic badges to renderer copy and tone", () => {
+    const model = filterDailyWorkspace(planning());
+
+    assert.deepEqual(model.today.active.metadataByTaskId["1"], [
       { label: "Needs estimate", tone: "caution" },
     ]);
-  });
-
-  it("flattens backlog metadata while keeping completed Today work at the bottom of Today", () => {
-    const model = selectDailyWorkspace(
-      planner([
-        task("today-active", { scheduledDate: today }),
-        task("today-complete", { scheduledDate: today, completedAt: "2026-08-08T12:00:00Z" }),
-        task("overdue", { scheduledDate: "2026-08-07" }),
-        task("future", { scheduledDate: "2026-08-09" }),
-        task("unscheduled", { scheduledDate: null, estimateMinutes: null }),
-        task("backlog-complete", { scheduledDate: null, completedAt: "2026-08-08T13:00:00Z" }),
-      ]),
-    );
-
-    assert.deepEqual(model.today.active.tasks.map(({ id }) => id), ["today-active"]);
-    assert.deepEqual(model.today.completed.tasks.map(({ id }) => id), ["today-complete"]);
-    assert.deepEqual(model.backlog.active.tasks.map(({ id }) => id), ["unscheduled", "overdue", "future"]);
-    assert.deepEqual(model.backlog.completed.tasks.map(({ id }) => id), ["backlog-complete"]);
-    assert.deepEqual(model.backlog.active.metadataByTaskId.unscheduled.map(({ label }) => label), [
-      "Needs estimate",
-      "Unscheduled",
+    assert.deepEqual(model.backlog.active.metadataByTaskId["4"], [
+      { label: "Unscheduled" },
     ]);
-    assert.deepEqual(model.backlog.active.metadataByTaskId.overdue.map(({ label }) => label), ["Overdue"]);
+    assert.deepEqual(model.backlog.active.metadataByTaskId["5"], [
+      { label: "Overdue", tone: "destructive" },
+    ]);
   });
 
-  it("uses persisted scope order and filters rows without changing capacity", () => {
-    const model = selectDailyWorkspace(
-      planner(
-        [
-          task("first", { title: "First", scheduledDate: today, estimateMinutes: 90 }),
-          task("second", { title: "Second", scheduledDate: today, estimateMinutes: 60 }),
-          task("third", { title: "Third", scheduledDate: today, estimateMinutes: 30 }),
-        ],
-        { [`today:${today}`]: ["third", "first", "second"] },
-      ),
-      "second",
-    );
+  it("preserves authoritative capacity and totals while filtering", () => {
+    const model = filterDailyWorkspace(planning(), "missing");
 
-    assert.deepEqual(model.today.active.tasks.map(({ id }) => id), ["second"]);
-    assert.equal(model.today.capacity.isOverCapacity, true);
-    assert.equal(model.hasMatches, true);
-    assert.equal(model.hasQuery, true);
-
-    const noMatch = selectDailyWorkspace(planner([task("one", { title: "One", scheduledDate: today })]), "missing");
-    assert.equal(noMatch.hasMatches, false);
-    assert.equal(noMatch.today.capacity.committedMinutes, 30);
-  });
-
-  it("reflects commit and return movement after the refreshed snapshot", () => {
-    const captured = task("captured", {
-      title: "Review the launch notes",
-      estimateMinutes: 45,
-    });
-    const unsized = task("unsized", {
-      estimateMinutes: null,
-    });
-
-    const committed = selectDailyWorkspace(
-      planner(
-        [
-          { ...captured, scheduledDate: today },
-          { ...unsized, scheduledDate: today },
-        ],
-        { [`today:${today}`]: ["unsized", "captured"] },
-      ),
-    );
-
-    assert.deepEqual(committed.today.active.tasks.map(({ id }) => id), ["unsized", "captured"]);
-    assert.equal(committed.today.capacity.committedMinutes, 45);
-    assert.equal(committed.today.unsizedTaskCount, 1);
-    assert.equal(committed.today.active.tasks.find(({ id }) => id === "captured").title, captured.title);
-    assert.equal(committed.today.active.tasks.find(({ id }) => id === "captured").estimateMinutes, 45);
-
-    const returned = selectDailyWorkspace(
-      planner(
-        [captured, unsized],
-        {
-          "log:needs-estimate": ["unsized"],
-          "log:unscheduled": ["captured"],
-        },
-      ),
-    );
-
-    assert.deepEqual(returned.today.active.tasks, []);
-    assert.deepEqual(returned.backlog.active.tasks.map(({ id }) => id), ["unsized", "captured"]);
-    assert.equal(returned.backlog.active.tasks.find(({ id }) => id === "captured").title, captured.title);
-    assert.equal(returned.backlog.active.tasks.find(({ id }) => id === "captured").estimateMinutes, 45);
-    assert.deepEqual(
-      returned.backlog.active.metadataByTaskId.unsized,
-      [
-        { label: "Needs estimate", tone: "caution" },
-        { label: "Unscheduled" },
-      ],
-    );
+    assert.equal(model.hasMatches, false);
+    assert.equal(model.today.capacity.remainingMinutes, 60);
+    assert.equal(model.today.totalTaskCount, 3);
+    assert.equal(model.today.unsizedTaskCount, 1);
+    assert.equal(model.backlog.totalTaskCount, 3);
   });
 });

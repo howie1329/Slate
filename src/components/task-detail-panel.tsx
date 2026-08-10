@@ -24,7 +24,7 @@ import {
   useSetTaskScheduledDate,
   useUpdateTask,
 } from "@/lib/planner-query";
-import type { LocalDate, Task } from "@/lib/planner";
+import { planningTasks, type LocalDate, type Task } from "@/lib/planner";
 import { dateFromLocalDate, formatDueDate, localDateFromDate } from "@/lib/local-date";
 import { plannerMutationErrorMessage } from "@/lib/planner-errors";
 import { useTaskSelection, type TaskSelectionTransition } from "@/components/task-selection";
@@ -92,7 +92,9 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
   const deleteTask = useDeleteTask();
   const { clearTaskMutation, recordTaskMutation } = useTaskMotion();
   const { clearSelection } = useTaskSelection();
-  const task = planner.data?.tasks.find((candidate) => candidate.id === taskId);
+  const task = planner.data
+    ? planningTasks(planner.data).find((candidate) => candidate.id === taskId)
+    : undefined;
   const lastTaskRef = useRef<Task | null>(null);
   if (task) {
     lastTaskRef.current = task;

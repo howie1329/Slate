@@ -288,7 +288,8 @@ pub fn accept_daily_plan(
         expected_remaining_minutes: input.expected_remaining_minutes,
     };
     persistence::accept_daily_plan(&state, persistence_input)?;
-    persistence::emit_change(&app, &state)
+    persistence::notify_change(&app, &state);
+    Ok(())
 }
 
 impl From<AiAssistTaskContext> for PlanTaskContext {

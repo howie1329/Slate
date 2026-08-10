@@ -37,3 +37,9 @@ _Avoid_: another commitment state, archive
 **Commitment state**:
 The meaning of a task in the planning workflow, derived from its estimate, scheduled date, and completion state rather than stored as an independent board status.
 _Avoid_: kanban status, workflow column
+
+## Implementation boundary
+
+**Planning projection**:
+The native, SQLite-derived read model that authoritatively classifies and orders Today and Backlog tasks, calculates capacity, supplies reorder guards, and produces Plan My Day facts. Renderer code may filter and present this projection but does not recreate its planning rules.
+_Avoid_: renderer-owned task classification, raw persistence scopes as UI state

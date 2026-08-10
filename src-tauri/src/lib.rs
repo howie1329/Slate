@@ -1,6 +1,7 @@
 mod ai;
 mod credentials;
 mod persistence;
+mod planning_workspace;
 mod quick_capture;
 mod shortcut_controller;
 mod sidecar;

@@ -8,21 +8,21 @@ import { PlannerEmptyState } from "@/components/planner-empty-state";
 import { TaskGroup } from "@/components/task-group";
 import { useTaskMotion, type TaskMotionKind, type TaskMotionTransition } from "@/components/task-motion";
 import { useTaskSelection } from "@/components/task-selection";
-import { selectDailyWorkspace } from "@/lib/daily-workspace";
+import type { DailyWorkspaceModel } from "@/lib/daily-workspace";
 import { plannerMutationErrorMessage } from "@/lib/planner-errors";
-import type { PlannerSnapshot, Task } from "@/lib/planner";
-import { usePlannerState, useReorderTasks, useSetTaskCompleted } from "@/lib/planner-query";
+import { planningTasks, type CapacityView, type PlannerSnapshot, type Task } from "@/lib/planner";
+import { useDailyWorkspace, useSetTaskCompleted } from "@/lib/planner-query";
 import { useWindowMode } from "@/lib/window-mode";
 
 const numberTransformTiming = { duration: 180, easing: "ease-out" };
 const numberOpacityTiming = { duration: 120, easing: "ease-out" };
 
 export function DailyWorkspace() {
-  const planner = usePlannerState();
   const windowMode = useWindowMode();
   const [query, setQuery] = useState("");
+  const { planner, view, isReordering, reorderToday } = useDailyWorkspace(query);
 
-  if (!planner.data) {
+  if (!planner.data || !view) {
     return (
       <div className="flex h-full min-h-0 flex-col">
         <DailyCommandBar onValueChange={setQuery} value={query} windowMode={windowMode} />
@@ -35,6 +35,9 @@ export function DailyWorkspace() {
     <DailyWorkspaceContent
       planner={planner.data}
       query={query}
+      model={view}
+      isReordering={isReordering}
+      reorderToday={reorderToday}
       setQuery={setQuery}
       windowMode={windowMode}
     />
@@ -44,22 +47,22 @@ export function DailyWorkspace() {
 type DailyWorkspaceContentProps = {
   planner: PlannerSnapshot;
   query: string;
+  model: DailyWorkspaceModel;
+  isReordering: boolean;
+  reorderToday: (taskIds: string[], options?: { onError?: (error: unknown) => void }) => void;
   setQuery: (value: string) => void;
   windowMode: ReturnType<typeof useWindowMode>;
 };
 
-function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWorkspaceContentProps) {
-  const model = selectDailyWorkspace(planner, query);
+function DailyWorkspaceContent({ planner, query, model, isReordering, reorderToday, setQuery, windowMode }: DailyWorkspaceContentProps) {
   const setTaskCompleted = useSetTaskCompleted();
-  const reorderTasks = useReorderTasks();
   const { clearTaskMutation, recordTaskMutation, taskMutation } = useTaskMotion();
   const { selectedTaskId, selectTask } = useTaskSelection();
   const [backlogExpanded, setBacklogExpanded] = useState(true);
-  const mutationPending = setTaskCompleted.isPending || reorderTasks.isPending;
-  const todayScope = `today:${planner.today}`;
+  const mutationPending = setTaskCompleted.isPending || isReordering;
 
   function toggleTask(taskId: string, transition: TaskMotionTransition = "instant") {
-    const task = planner.tasks.find((candidate) => candidate.id === taskId);
+    const task = planningTasks(planner).find((candidate) => candidate.id === taskId);
     if (!task) {
       return;
     }
@@ -81,17 +84,7 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
   }
 
   function handleReorderToday(taskIds: string[]) {
-    reorderTasks.mutate(
-      {
-        scope: todayScope,
-        taskIds,
-        expectedRevisions: taskIds.map((id) => {
-          const task = planner.tasks.find((candidate) => candidate.id === id);
-          return { id, revision: task?.revision ?? 0 };
-        }),
-      },
-      { onError: () => toast.error("Could not save task order.") },
-    );
+    reorderToday(taskIds, { onError: () => toast.error("Could not save task order.") });
   }
 
   const todayMetadata = (task: Task) => model.today.active.metadataByTaskId[task.id] ?? [];
@@ -154,17 +147,17 @@ function DailyWorkspaceContent({ planner, query, setQuery, windowMode }: DailyWo
                   ) : null}
                 </div>
                 <div
-                  aria-label={`${model.today.capacity.committedMinutes} of ${planner.effectiveCapacityMinutes} minutes committed`}
+                  aria-label={`${model.today.capacity.committedMinutes} of ${model.today.capacity.limitMinutes} minutes committed`}
                   aria-valuemax={100}
                   aria-valuemin={0}
-                  aria-valuenow={capacityPercentage(model.today.capacity.committedMinutes, planner.effectiveCapacityMinutes)}
+                  aria-valuenow={capacityPercentage(model.today.capacity.committedMinutes, model.today.capacity.limitMinutes)}
                   aria-valuetext={capacityStatus(model.today.capacity)}
                   className="mt-1.5 h-0.5 w-full overflow-hidden rounded-full bg-muted"
                   role="progressbar"
                 >
                   <span
                     className={`block h-full rounded-full transition-[width,background-color] duration-200 motion-reduce:transition-none ${model.today.capacity.isOverCapacity ? "bg-destructive/80" : "bg-primary/70"}`}
-                    style={{ width: `${capacityPercentage(model.today.capacity.committedMinutes, planner.effectiveCapacityMinutes)}%` }}
+                    style={{ width: `${capacityPercentage(model.today.capacity.committedMinutes, model.today.capacity.limitMinutes)}%` }}
                   />
                 </div>
               </section>
@@ -298,7 +291,7 @@ function capacityPercentage(committedMinutes: number, capacityMinutes: number) {
   return capacityMinutes > 0 ? Math.min((committedMinutes / capacityMinutes) * 100, 100) : 0;
 }
 
-function capacityStatus(capacity: ReturnType<typeof selectDailyWorkspace>["today"]["capacity"]) {
+function capacityStatus(capacity: CapacityView) {
   return capacity.isOverCapacity ? `${capacity.overageMinutes} min over capacity` : `${capacity.remainingMinutes} min remaining`;
 }
 

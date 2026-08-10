@@ -36,6 +36,47 @@ export type Task = {
   anchorDate: LocalDate | null;
 };
 
+export type WorkspaceBadge = "needs-estimate" | "unscheduled" | "overdue" | "upcoming";
+
+export type PlanningTask = Task & {
+  badges: WorkspaceBadge[];
+};
+
+export type ReorderGuard = {
+  scope: string;
+  expectedRevisions: TaskRevision[];
+};
+
+export type PlanningSection = {
+  tasks: PlanningTask[];
+  reorder: ReorderGuard | null;
+};
+
+export type CapacityView = {
+  limitMinutes: number;
+  committedMinutes: number;
+  remainingMinutes: number;
+  overageMinutes: number;
+  isOverCapacity: boolean;
+  overflowTaskId: string | null;
+};
+
+export type PlanningView = {
+  today: {
+    active: PlanningSection;
+    completed: PlanningSection;
+    capacity: CapacityView;
+    totalTaskCount: number;
+    unsizedTaskCount: number;
+  };
+  backlog: {
+    active: PlanningSection;
+    completed: PlanningSection;
+    totalTaskCount: number;
+    activeTaskCount: number;
+  };
+};
+
 export type Settings = {
   dailyCapacityMinutes: number;
   planningInstruction: string;
@@ -50,13 +91,11 @@ export type Settings = {
 };
 
 export type PlannerSnapshot = {
-  tasks: Task[];
-  orderByScope: Record<string, string[]>;
+  planning: PlanningView;
   settings: Settings;
   aiAvailability: AiAvailability;
   aiAvailabilityByProvider: Record<AiProvider, AiAvailability>;
   today: LocalDate;
-  effectiveCapacityMinutes: number;
 };
 
 export type AiAssistInput = {
@@ -137,10 +176,18 @@ export type SetTaskScheduledDateInput = {
 };
 export type DeleteTaskInput = { id: string; expectedRevision: number };
 export type ReorderTasksInput = {
-  scope: string;
+  guard: ReorderGuard;
   taskIds: string[];
-  expectedRevisions: TaskRevision[];
 };
+
+export function planningTasks(planner: PlannerSnapshot) {
+  return [
+    ...planner.planning.today.active.tasks,
+    ...planner.planning.today.completed.tasks,
+    ...planner.planning.backlog.active.tasks,
+    ...planner.planning.backlog.completed.tasks,
+  ];
+}
 
 export function isTauriWindow() {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;

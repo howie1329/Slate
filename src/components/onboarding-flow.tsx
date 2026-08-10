@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouteMotion } from "@/components/route-motion";
 import { useTaskSelection } from "@/components/task-selection";
-import type { PlannerSnapshot } from "@/lib/planner";
+import { planningTasks, type PlannerSnapshot } from "@/lib/planner";
 import { buildOnboardingSettingsInput, shouldOfferOnboarding, type OnboardingStep } from "@/lib/onboarding";
 import { focusTaskComposer } from "@/lib/task-composer";
 import { useSaveSettings } from "@/lib/planner-query";
@@ -19,6 +19,7 @@ type OnboardingFlowProps = {
 };
 
 export function OnboardingFlow({ isSettingsPage, pathname, planner, windowMode }: OnboardingFlowProps) {
+  const tasks = useMemo(() => planningTasks(planner), [planner]);
   const navigate = useNavigate();
   const saveSettings = useSaveSettings();
   const { setRouteTransition } = useRouteMotion();
@@ -26,7 +27,7 @@ export function OnboardingFlow({ isSettingsPage, pathname, planner, windowMode }
   const headingRef = useRef<HTMLHeadingElement>(null);
   const baselineTaskIdsRef = useRef<Set<string> | null>(null);
   const completionStartedRef = useRef(false);
-  const [active, setActive] = useState(() => shouldOfferOnboarding(planner.settings.onboardingStatus, planner.tasks.length));
+  const [active, setActive] = useState(() => shouldOfferOnboarding(planner.settings.onboardingStatus, tasks.length));
   const [step, setStep] = useState<OnboardingStep>("welcome");
   const [capacityDraft, setCapacityDraft] = useState(String(planner.settings.dailyCapacityMinutes));
   const [capacityError, setCapacityError] = useState<string | null>(null);
@@ -50,7 +51,7 @@ export function OnboardingFlow({ isSettingsPage, pathname, planner, windowMode }
       return;
     }
 
-    const onboardingTask = planner.tasks
+    const onboardingTask = tasks
       .filter((task) => !baselineTaskIdsRef.current?.has(task.id))
       .sort((first, second) => second.createdAt.localeCompare(first.createdAt))[0];
 
@@ -61,14 +62,14 @@ export function OnboardingFlow({ isSettingsPage, pathname, planner, windowMode }
     setOnboardingTaskId(onboardingTask.id);
     selectTask(onboardingTask.id, "animate");
     setStep("commit");
-  }, [active, planner.tasks, selectTask, step]);
+  }, [active, selectTask, step, tasks]);
 
   useEffect(() => {
     if (!active || step !== "commit" || !onboardingTaskId) {
       return;
     }
 
-    const onboardingTask = planner.tasks.find((task) => task.id === onboardingTaskId);
+    const onboardingTask = tasks.find((task) => task.id === onboardingTaskId);
 
     if (!onboardingTask) {
       setOnboardingTaskId(null);
@@ -101,7 +102,7 @@ export function OnboardingFlow({ isSettingsPage, pathname, planner, windowMode }
         },
       },
     );
-  }, [active, navigate, onboardingTaskId, planner.settings, planner.tasks, planner.today, saveSettings, setRouteTransition, step]);
+  }, [active, navigate, onboardingTaskId, planner.settings, planner.today, saveSettings, setRouteTransition, step, tasks]);
 
   if (!active || isSettingsPage) {
     return null;
@@ -130,7 +131,7 @@ export function OnboardingFlow({ isSettingsPage, pathname, planner, windowMode }
       {
         onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save daily capacity."),
         onSuccess: () => {
-          baselineTaskIdsRef.current = new Set(planner.tasks.map((task) => task.id));
+          baselineTaskIdsRef.current = new Set(tasks.map((task) => task.id));
           setStep("capture");
           setRouteTransition("animate");
           void navigate({ to: "/" });

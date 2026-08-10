@@ -15,6 +15,9 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use uuid::Uuid;
 
 use crate::credentials;
+use crate::planning_workspace::{
+    self, PlanningCommand, PlanningView, PlanningWorkspace, ReorderGuard,
+};
 use crate::shortcut_controller;
 
 const DATABASE_FILE_NAME: &str = "slate.sqlite";
@@ -140,17 +143,17 @@ ALTER TABLE settings ADD COLUMN quick_capture_shortcut TEXT NOT NULL DEFAULT '{D
     )
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Task {
-    id: String,
-    title: String,
-    estimate_minutes: Option<i64>,
-    scheduled_date: Option<String>,
-    created_at: String,
-    completed_at: Option<String>,
-    revision: i64,
-    anchor_date: Option<String>,
+pub(crate) struct Task {
+    pub(crate) id: String,
+    pub(crate) title: String,
+    pub(crate) estimate_minutes: Option<i64>,
+    pub(crate) scheduled_date: Option<String>,
+    pub(crate) created_at: String,
+    pub(crate) completed_at: Option<String>,
+    pub(crate) revision: i64,
+    pub(crate) anchor_date: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -195,13 +198,15 @@ struct WeeklyCapacityMinutes {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlannerSnapshot {
-    tasks: Vec<Task>,
-    order_by_scope: HashMap<String, Vec<String>>,
+    planning: PlanningView,
     settings: Settings,
     ai_availability: String,
     ai_availability_by_provider: HashMap<String, String>,
     today: String,
-    effective_capacity_minutes: i64,
+    #[cfg(test)]
+    tasks: Vec<Task>,
+    #[cfg(test)]
+    order_by_scope: HashMap<String, Vec<String>>,
 }
 
 #[derive(Clone)]
@@ -285,19 +290,23 @@ impl Repository {
         let order_by_scope = self.orders()?;
         let today = local_today();
         let effective_capacity = effective_capacity_minutes(&settings, &today)?;
+        let planning =
+            PlanningWorkspace::new(&tasks, &order_by_scope, &today, effective_capacity).view();
         let ai_availability = ai_availability_by_provider
             .get(&settings.ai_provider)
             .cloned()
             .unwrap_or_else(|| "unconfigured".into());
 
         Ok(PlannerSnapshot {
-            tasks,
-            order_by_scope,
+            planning,
             settings,
             ai_availability,
             ai_availability_by_provider,
-            effective_capacity_minutes: effective_capacity,
             today,
+            #[cfg(test)]
+            tasks,
+            #[cfg(test)]
+            order_by_scope,
         })
     }
 
@@ -317,8 +326,20 @@ impl Repository {
         let tasks = self.tasks()?;
         let order_by_scope = self.orders()?;
         let today = local_today();
-        let today_scope = format!("today:{today}");
-        let all_today_tasks = ordered_ai_context(&tasks, &order_by_scope, &today_scope, &today);
+        let effective_capacity = effective_capacity_minutes(&settings, &today)?;
+        let planning = PlanningWorkspace::new(&tasks, &order_by_scope, &today, effective_capacity);
+        let planning_context = planning.plan_context();
+        let all_today_tasks = planning_context
+            .today_tasks
+            .into_iter()
+            .map(|task| AiAssistTaskContext {
+                id: task.id.clone(),
+                title: ai_context_title(&task.title),
+                estimate_minutes: task.estimate_minutes,
+                scheduled_date: task.scheduled_date.clone(),
+                revision: task.revision,
+            })
+            .collect::<Vec<_>>();
         let today_task_ids = all_today_tasks
             .iter()
             .map(|task| task.id.clone())
@@ -330,23 +351,20 @@ impl Repository {
                 revision: task.revision,
             })
             .collect::<Vec<_>>();
-        let committed_minutes = tasks
-            .iter()
-            .filter(|task| {
-                task.completed_at.is_none()
-                    && active_scope(
-                        task.estimate_minutes,
-                        task.scheduled_date.as_deref(),
-                        &today,
-                    ) == today_scope
-            })
-            .filter_map(|task| task.estimate_minutes)
-            .fold(0_i64, i64::saturating_add);
-        let effective_capacity = effective_capacity_minutes(&settings, &today)?;
-        let remaining_minutes = effective_capacity.saturating_sub(committed_minutes).max(0);
-        let candidates = ["log:unscheduled", "log:overdue"]
+        let remaining_minutes = planning_context.remaining_minutes;
+        let candidates = planning_context
+            .candidates
             .into_iter()
-            .flat_map(|scope| ordered_plan_context(&tasks, &order_by_scope, scope, &today))
+            .map(|candidate| AiPlanTaskContext {
+                id: candidate.task.id.clone(),
+                title: candidate.task.title.clone(),
+                context_title: ai_context_title(&candidate.task.title),
+                estimate_minutes: candidate.estimate_minutes,
+                scheduled_date: candidate.task.scheduled_date.clone(),
+                source_scope: candidate.source_scope.to_string(),
+                backlog_position: candidate.backlog_position,
+                revision: candidate.task.revision,
+            })
             .take(MAX_AI_CONTEXT_TASKS)
             .collect();
 
@@ -478,6 +496,7 @@ impl Repository {
                 ],
             )
             .map_err(database_error)?;
+        PlanningWorkspace::apply(&transaction, PlanningCommand::CreateTask)?;
         let after = task_state(&transaction, &id)?;
         let revision = after.revision;
         let after_json = serde_json::to_value(after).map_err(json_error)?;
@@ -525,12 +544,12 @@ impl Repository {
                 return Err("anchor-limit".into());
             }
         }
-        let previous_scope = active_scope(
+        let previous_scope = planning_workspace::active_scope(
             before.estimate_minutes,
             before.scheduled_date.as_deref(),
             &today,
         );
-        let destination_scope = active_scope(
+        let destination_scope = planning_workspace::active_scope(
             input.estimate_minutes,
             input.scheduled_date.as_deref(),
             &today,
@@ -551,9 +570,16 @@ impl Repository {
                 ],
             )
             .map_err(database_error)?;
-        if before.completed_at.is_none() && previous_scope != destination_scope {
-            move_task_to_scope_start(&transaction, &input.id, &destination_scope)?;
-        }
+        PlanningWorkspace::apply(
+            &transaction,
+            PlanningCommand::ReconcileTask {
+                task_id: &input.id,
+                previous_scope: &previous_scope,
+                destination_scope: &destination_scope,
+                active_before: before.completed_at.is_none(),
+                active_after: before.completed_at.is_none(),
+            },
+        )?;
         let after = task_state(&transaction, &input.id)?;
         let kind = if before.scheduled_date != after.scheduled_date
             && after.scheduled_date.as_deref() == Some(today.as_str())
@@ -589,6 +615,11 @@ impl Repository {
         let transaction = self.connection.transaction().map_err(database_error)?;
         let before = task_state(&transaction, &input.id)?;
         ensure_expected_revision(&before, input.expected_revision)?;
+        let scope = planning_workspace::active_scope(
+            before.estimate_minutes,
+            before.scheduled_date.as_deref(),
+            &local_today(),
+        );
         transaction
             .execute(
                 "UPDATE tasks SET completed_at = ?1, anchor_date = NULL, revision = revision + 1
@@ -604,14 +635,16 @@ impl Repository {
                 ],
             )
             .map_err(database_error)?;
-        if !input.completed {
-            let destination_scope = active_scope(
-                before.estimate_minutes,
-                before.scheduled_date.as_deref(),
-                &local_today(),
-            );
-            move_task_to_scope_start(&transaction, &input.id, &destination_scope)?;
-        }
+        PlanningWorkspace::apply(
+            &transaction,
+            PlanningCommand::ReconcileTask {
+                task_id: &input.id,
+                previous_scope: &scope,
+                destination_scope: &scope,
+                active_before: before.completed_at.is_none(),
+                active_after: !input.completed,
+            },
+        )?;
         let after = task_state(&transaction, &input.id)?;
         let before_json = serde_json::to_value(before).map_err(json_error)?;
         let after_json = serde_json::to_value(after).map_err(json_error)?;
@@ -637,12 +670,12 @@ impl Repository {
         let before = task_state(&transaction, &input.id)?;
         ensure_expected_revision(&before, input.expected_revision)?;
         let today = local_today();
-        let previous_scope = active_scope(
+        let previous_scope = planning_workspace::active_scope(
             before.estimate_minutes,
             before.scheduled_date.as_deref(),
             &today,
         );
-        let destination_scope = active_scope(
+        let destination_scope = planning_workspace::active_scope(
             before.estimate_minutes,
             input.scheduled_date.as_deref(),
             &today,
@@ -654,9 +687,16 @@ impl Repository {
                 params![input.scheduled_date, input.id, input.expected_revision],
             )
             .map_err(database_error)?;
-        if before.completed_at.is_none() && previous_scope != destination_scope {
-            move_task_to_scope_start(&transaction, &input.id, &destination_scope)?;
-        }
+        PlanningWorkspace::apply(
+            &transaction,
+            PlanningCommand::ReconcileTask {
+                task_id: &input.id,
+                previous_scope: &previous_scope,
+                destination_scope: &destination_scope,
+                active_before: before.completed_at.is_none(),
+                active_after: before.completed_at.is_none(),
+            },
+        )?;
         let after = task_state(&transaction, &input.id)?;
         let kind = if after.scheduled_date.is_none() {
             "task-returned-to-backlog"
@@ -692,6 +732,10 @@ impl Repository {
             &Uuid::new_v4().to_string(),
             Some(&before_json),
             None,
+        )?;
+        PlanningWorkspace::apply(
+            &transaction,
+            PlanningCommand::DeleteTask { task_id: &input.id },
         )?;
         transaction
             .execute(
@@ -744,6 +788,10 @@ impl Repository {
             Some(&before_json),
             None,
         )?;
+        PlanningWorkspace::apply(
+            &transaction,
+            PlanningCommand::DeleteTask { task_id: &input.id },
+        )?;
         transaction
             .execute(
                 "DELETE FROM tasks WHERE id = ?1 AND revision = ?2",
@@ -754,27 +802,21 @@ impl Repository {
     }
 
     fn reorder_tasks(&mut self, input: ReorderTasksInput) -> Result<(), String> {
-        validate_scope(&input.scope)?;
+        validate_scope(&input.guard.scope)?;
         ensure_unique_ids(&input.task_ids)?;
         let transaction = self.connection.transaction().map_err(database_error)?;
-        let current_ids = scope_task_ids(&transaction, &input.scope, &local_today())?;
-        let mut current_membership = current_ids.clone();
-        let mut requested_membership = input.task_ids.clone();
-        current_membership.sort();
-        requested_membership.sort();
-        if current_membership != requested_membership {
-            return Err("stale-task-order".into());
-        }
+        let current_ids = planning_workspace::validate_reorder_guard(
+            &transaction,
+            &input.guard,
+            &input.task_ids,
+            &local_today(),
+        )?;
         let expected = input
+            .guard
             .expected_revisions
             .iter()
             .map(|item| (item.id.as_str(), item.revision))
             .collect::<HashMap<_, _>>();
-        if expected.len() != input.expected_revisions.len()
-            || expected.len() != input.task_ids.len()
-        {
-            return Err("stale-task-order".into());
-        }
         let mut before_states = Vec::with_capacity(input.task_ids.len());
         for task_id in &input.task_ids {
             let before = task_state(&transaction, task_id)?;
@@ -786,17 +828,13 @@ impl Repository {
             )?;
             before_states.push(before);
         }
-        transaction
-            .execute("DELETE FROM task_orders WHERE scope = ?1", [&input.scope])
-            .map_err(database_error)?;
-        for (position, task_id) in input.task_ids.iter().enumerate() {
-            transaction
-                .execute(
-                    "INSERT INTO task_orders (scope, task_id, position) VALUES (?1, ?2, ?3)",
-                    params![input.scope, task_id, position as i64],
-                )
-                .map_err(database_error)?;
-        }
+        PlanningWorkspace::apply(
+            &transaction,
+            PlanningCommand::ReplaceOrder {
+                scope: &input.guard.scope,
+                task_ids: &input.task_ids,
+            },
+        )?;
         let operation_id = Uuid::new_v4().to_string();
         for (position, before) in before_states.into_iter().enumerate() {
             transaction
@@ -812,12 +850,12 @@ impl Repository {
                 .unwrap_or(position);
             let before_json = serde_json::json!({
                 "task": serde_json::to_value(&before).map_err(json_error)?,
-                "scope": input.scope.as_str(),
+                "scope": input.guard.scope.as_str(),
                 "position": before_position,
             });
             let after_json = serde_json::json!({
                 "task": serde_json::to_value(&after).map_err(json_error)?,
-                "scope": input.scope.as_str(),
+                "scope": input.guard.scope.as_str(),
                 "position": position,
             });
             insert_event(
@@ -924,7 +962,8 @@ impl Repository {
         let settings = self.settings()?;
         let current_capacity = effective_capacity_minutes(&settings, &today)?;
         let transaction = self.connection.transaction().map_err(database_error)?;
-        let current_today_ids = scope_task_ids(&transaction, &today_scope, &today)?;
+        let current_today_ids =
+            planning_workspace::scope_task_ids(&transaction, &today_scope, &today)?;
         let current_today_revisions = current_today_ids
             .iter()
             .map(|id| {
@@ -1023,12 +1062,11 @@ impl Repository {
         for operation in &change_set.operations {
             let before =
                 task_state(&transaction, &operation.id).map_err(|_| "stale-plan".to_string())?;
-            transaction
-                .execute(
-                    "DELETE FROM task_orders WHERE task_id = ?1",
-                    [&operation.id],
-                )
-                .map_err(database_error)?;
+            let previous_scope = planning_workspace::active_scope(
+                before.estimate_minutes,
+                before.scheduled_date.as_deref(),
+                &today,
+            );
             transaction
                 .execute(
                     "UPDATE tasks SET scheduled_date = ?1, anchor_date = NULL, revision = revision + 1
@@ -1036,6 +1074,16 @@ impl Repository {
                     params![today, operation.id, operation.revision],
                 )
                 .map_err(database_error)?;
+            PlanningWorkspace::apply(
+                &transaction,
+                PlanningCommand::ReconcileTask {
+                    task_id: &operation.id,
+                    previous_scope: &previous_scope,
+                    destination_scope: &today_scope,
+                    active_before: true,
+                    active_after: true,
+                },
+            )?;
             let after =
                 task_state(&transaction, &operation.id).map_err(|_| "stale-plan".to_string())?;
             let before_json = serde_json::to_value(before).map_err(json_error)?;
@@ -1050,21 +1098,18 @@ impl Repository {
                 Some(&after_json),
             )?;
         }
-        transaction
-            .execute("DELETE FROM task_orders WHERE scope = ?1", [&today_scope])
-            .map_err(database_error)?;
-        for (position, task_id) in current_today_ids
+        let next_today_ids = current_today_ids
             .iter()
             .chain(change_set.operations.iter().map(|operation| &operation.id))
-            .enumerate()
-        {
-            transaction
-                .execute(
-                    "INSERT INTO task_orders (scope, task_id, position) VALUES (?1, ?2, ?3)",
-                    params![today_scope, task_id, position as i64],
-                )
-                .map_err(database_error)?;
-        }
+            .cloned()
+            .collect::<Vec<_>>();
+        PlanningWorkspace::apply(
+            &transaction,
+            PlanningCommand::ReplaceOrder {
+                scope: &today_scope,
+                task_ids: &next_today_ids,
+            },
+        )?;
         transaction.commit().map_err(database_error)
     }
 }
@@ -1148,17 +1193,9 @@ pub struct DeleteTaskInput {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TaskRevisionInput {
-    id: String,
-    revision: i64,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ReorderTasksInput {
-    scope: String,
+    guard: ReorderGuard,
     task_ids: Vec<String>,
-    expected_revisions: Vec<TaskRevisionInput>,
 }
 
 #[derive(Deserialize)]
@@ -1258,7 +1295,7 @@ pub fn create_task(
     input: TaskInput,
 ) -> Result<CreatedTask, String> {
     let created = with_repository(&state, |repository| repository.create_task(input))?;
-    emit_change(&app, &state)?;
+    notify_change(&app, &state);
     Ok(created)
 }
 
@@ -1269,7 +1306,8 @@ pub fn undo_quick_capture(
     input: UndoQuickCaptureInput,
 ) -> Result<(), String> {
     with_repository(&state, |repository| repository.undo_quick_capture(input))?;
-    emit_change(&app, &state)
+    notify_change(&app, &state);
+    Ok(())
 }
 
 #[tauri::command]
@@ -1279,7 +1317,8 @@ pub fn update_task(
     input: UpdateTaskInput,
 ) -> Result<(), String> {
     with_repository(&state, |repository| repository.update_task(input))?;
-    emit_change(&app, &state)
+    notify_change(&app, &state);
+    Ok(())
 }
 
 #[tauri::command]
@@ -1289,7 +1328,8 @@ pub fn set_task_completed(
     input: CompletionInput,
 ) -> Result<(), String> {
     with_repository(&state, |repository| repository.set_task_completed(input))?;
-    emit_change(&app, &state)
+    notify_change(&app, &state);
+    Ok(())
 }
 
 #[tauri::command]
@@ -1301,7 +1341,8 @@ pub fn set_task_scheduled_date(
     with_repository(&state, |repository| {
         repository.set_task_scheduled_date(input)
     })?;
-    emit_change(&app, &state)
+    notify_change(&app, &state);
+    Ok(())
 }
 
 #[tauri::command]
@@ -1311,7 +1352,8 @@ pub fn delete_task(
     input: DeleteTaskInput,
 ) -> Result<(), String> {
     with_repository(&state, |repository| repository.delete_task(input))?;
-    emit_change(&app, &state)
+    notify_change(&app, &state);
+    Ok(())
 }
 
 #[tauri::command]
@@ -1321,7 +1363,8 @@ pub fn reorder_tasks(
     input: ReorderTasksInput,
 ) -> Result<(), String> {
     with_repository(&state, |repository| repository.reorder_tasks(input))?;
-    emit_change(&app, &state)
+    notify_change(&app, &state);
+    Ok(())
 }
 
 #[tauri::command]
@@ -1387,7 +1430,7 @@ pub fn save_settings(
         return Err(error);
     }
     let snapshot = planner_snapshot(&state)?;
-    emit_change(&app, &state)?;
+    notify_change(&app, &state);
     Ok(snapshot)
 }
 
@@ -1403,10 +1446,17 @@ pub fn retry_persistence(app: AppHandle, state: State<PersistenceState>) -> Resu
         return Err(error);
     }
 
-    emit_change(&app, &state)
+    notify_change(&app, &state);
+    Ok(())
 }
 
-pub fn emit_change(app: &AppHandle, state: &PersistenceState) -> Result<(), String> {
+pub(crate) fn notify_change(app: &AppHandle, state: &PersistenceState) {
+    if let Err(error) = emit_change(app, state) {
+        eprintln!("planner mutation committed but refresh notification failed: {error}");
+    }
+}
+
+fn emit_change(app: &AppHandle, state: &PersistenceState) -> Result<(), String> {
     let revision = state.revision.fetch_add(1, Ordering::Relaxed) + 1;
     app.emit("planner://changed", PlannerChanged { revision })
         .map_err(|error| format!("Could not notify Slate windows about a planner change: {error}"))
@@ -1669,163 +1719,8 @@ fn normalize_anchor_date(
     Ok(Some(anchor_date.to_string()))
 }
 
-fn scope_task_ids(
-    connection: &rusqlite::Transaction<'_>,
-    scope: &str,
-    today: &str,
-) -> Result<Vec<String>, String> {
-    let mut statement = connection
-        .prepare(
-            "SELECT t.id, t.estimate_minutes, t.scheduled_date, t.completed_at, t.created_at,
-                    COALESCE(o.position, 9223372036854775807)
-             FROM tasks t
-             LEFT JOIN task_orders o ON o.task_id = t.id AND o.scope = ?1
-             ORDER BY COALESCE(o.position, 9223372036854775807) ASC, t.created_at ASC, t.id ASC",
-        )
-        .map_err(database_error)?;
-    let rows = statement
-        .query_map([scope], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, Option<i64>>(1)?,
-                row.get::<_, Option<String>>(2)?,
-                row.get::<_, Option<String>>(3)?,
-            ))
-        })
-        .map_err(database_error)?;
-    let mut ids = Vec::new();
-    for row in rows {
-        let (id, estimate, scheduled_date, completed_at) = row.map_err(database_error)?;
-        if completed_at.is_none()
-            && active_scope(estimate, scheduled_date.as_deref(), today) == scope
-        {
-            ids.push(id);
-        }
-    }
-    Ok(ids)
-}
-
-fn active_scope(
-    estimate_minutes: Option<i64>,
-    scheduled_date: Option<&str>,
-    today: &str,
-) -> String {
-    match scheduled_date {
-        Some(date) if date == today => format!("today:{today}"),
-        _ if estimate_minutes.is_none() => "log:needs-estimate".into(),
-        None => "log:unscheduled".into(),
-        Some(date) if date < today => "log:overdue".into(),
-        Some(_) => "log:upcoming".into(),
-    }
-}
-
-fn ordered_ai_context(
-    tasks: &[Task],
-    order_by_scope: &HashMap<String, Vec<String>>,
-    scope: &str,
-    today: &str,
-) -> Vec<AiAssistTaskContext> {
-    ordered_tasks(tasks, order_by_scope, scope, today)
-        .into_iter()
-        .map(|task| AiAssistTaskContext {
-            id: task.id.clone(),
-            title: ai_context_title(&task.title),
-            estimate_minutes: task.estimate_minutes,
-            scheduled_date: task.scheduled_date.clone(),
-            revision: task.revision,
-        })
-        .collect()
-}
-
-fn ordered_plan_context(
-    tasks: &[Task],
-    order_by_scope: &HashMap<String, Vec<String>>,
-    scope: &str,
-    today: &str,
-) -> Vec<AiPlanTaskContext> {
-    ordered_tasks(tasks, order_by_scope, scope, today)
-        .into_iter()
-        .enumerate()
-        .filter_map(|(position, task)| {
-            Some(AiPlanTaskContext {
-                id: task.id.clone(),
-                title: task.title.clone(),
-                context_title: ai_context_title(&task.title),
-                estimate_minutes: task.estimate_minutes?,
-                scheduled_date: task.scheduled_date.clone(),
-                source_scope: scope.to_string(),
-                backlog_position: position,
-                revision: task.revision,
-            })
-        })
-        .collect()
-}
-
 fn ai_context_title(title: &str) -> String {
     title.chars().take(MAX_AI_CONTEXT_TITLE_CHARS).collect()
-}
-
-fn ordered_tasks<'a>(
-    tasks: &'a [Task],
-    order_by_scope: &HashMap<String, Vec<String>>,
-    scope: &str,
-    today: &str,
-) -> Vec<&'a Task> {
-    let positions = order_by_scope
-        .get(scope)
-        .into_iter()
-        .flat_map(|task_ids| task_ids.iter().enumerate())
-        .map(|(position, task_id)| (task_id.as_str(), position))
-        .collect::<HashMap<_, _>>();
-    let mut scoped_tasks = tasks
-        .iter()
-        .filter(|task| {
-            task.completed_at.is_none()
-                && active_scope(task.estimate_minutes, task.scheduled_date.as_deref(), today)
-                    == scope
-        })
-        .collect::<Vec<_>>();
-
-    scoped_tasks.sort_by(|first, second| {
-        let first_position = positions
-            .get(first.id.as_str())
-            .copied()
-            .unwrap_or(usize::MAX);
-        let second_position = positions
-            .get(second.id.as_str())
-            .copied()
-            .unwrap_or(usize::MAX);
-
-        first_position
-            .cmp(&second_position)
-            .then_with(|| first.created_at.cmp(&second.created_at))
-            .then_with(|| first.id.cmp(&second.id))
-    });
-
-    scoped_tasks
-}
-
-fn move_task_to_scope_start(
-    transaction: &rusqlite::Transaction<'_>,
-    task_id: &str,
-    scope: &str,
-) -> Result<(), String> {
-    transaction
-        .execute("DELETE FROM task_orders WHERE task_id = ?1", [task_id])
-        .map_err(database_error)?;
-    transaction
-        .execute(
-            "UPDATE task_orders SET position = position + 1 WHERE scope = ?1",
-            [scope],
-        )
-        .map_err(database_error)?;
-    transaction
-        .execute(
-            "INSERT INTO task_orders (scope, task_id, position) VALUES (?1, ?2, 0)",
-            params![scope, task_id],
-        )
-        .map_err(database_error)?;
-    Ok(())
 }
 
 fn validate_task_input(input: &TaskInput) -> Result<(), String> {
@@ -2196,10 +2091,10 @@ mod tests {
             .expect("snapshot")
     }
 
-    fn expected_revisions(tasks: &[&Task]) -> Vec<TaskRevisionInput> {
+    fn expected_revisions(tasks: &[&Task]) -> Vec<TaskRevision> {
         tasks
             .iter()
-            .map(|task| TaskRevisionInput {
+            .map(|task| TaskRevision {
                 id: task.id.clone(),
                 revision: task.revision,
             })
@@ -2680,9 +2575,11 @@ mod tests {
         database
             .repository
             .reorder_tasks(ReorderTasksInput {
-                scope: "log:unscheduled".into(),
+                guard: ReorderGuard {
+                    scope: "log:unscheduled".into(),
+                    expected_revisions: expected_revisions(&[&second]),
+                },
                 task_ids: vec![second.id.clone()],
-                expected_revisions: expected_revisions(&[&second]),
             })
             .expect("reorder tasks");
 
@@ -2725,9 +2622,11 @@ mod tests {
         database
             .repository
             .reorder_tasks(ReorderTasksInput {
-                scope: "log:unscheduled".into(),
+                guard: ReorderGuard {
+                    scope: "log:unscheduled".into(),
+                    expected_revisions: expected_revisions(&[&first, &second]),
+                },
                 task_ids: vec![first.id.clone(), second.id.clone()],
-                expected_revisions: expected_revisions(&[&first, &second]),
             })
             .expect("order destination tasks");
         database
@@ -3137,9 +3036,11 @@ mod tests {
         database
             .repository
             .reorder_tasks(ReorderTasksInput {
-                scope: "log:unscheduled".into(),
+                guard: ReorderGuard {
+                    scope: "log:unscheduled".into(),
+                    expected_revisions: expected_revisions(&[&first, &restored]),
+                },
                 task_ids: vec![first.id.clone(), restored.id.clone()],
-                expected_revisions: expected_revisions(&[&first, &restored]),
             })
             .expect("order tasks");
         database
@@ -3173,9 +3074,11 @@ mod tests {
         database
             .repository
             .reorder_tasks(ReorderTasksInput {
-                scope: "log:unscheduled".into(),
+                guard: ReorderGuard {
+                    scope: "log:unscheduled".into(),
+                    expected_revisions: expected_revisions(&[&task]),
+                },
                 task_ids: vec![task.id.clone()],
-                expected_revisions: expected_revisions(&[&task]),
             })
             .expect("create order");
 
@@ -3588,9 +3491,11 @@ mod tests {
         database
             .repository
             .reorder_tasks(ReorderTasksInput {
-                scope: "log:unscheduled".into(),
+                guard: ReorderGuard {
+                    scope: "log:unscheduled".into(),
+                    expected_revisions: expected_revisions(&[&first, &second]),
+                },
                 task_ids: vec![second.id.clone(), first.id.clone()],
-                expected_revisions: expected_revisions(&[&first, &second]),
             })
             .expect("reorder tasks");
 

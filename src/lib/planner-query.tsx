@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
 import {
   QueryClient,
@@ -33,6 +33,7 @@ import {
   type DeleteTaskInput,
   type UndoQuickCaptureInput,
 } from "@/lib/planner";
+import { filterDailyWorkspace } from "@/lib/daily-workspace";
 
 export const plannerStateQueryKey = ["plannerState"] as const;
 
@@ -154,11 +155,25 @@ export function useReorderTasks() {
           return snapshot;
         }
 
+        const tasksById = new Map(
+          snapshot.planning.today.active.tasks.map((task) => [task.id, task]),
+        );
+        const tasks = input.taskIds.flatMap((taskId) => {
+          const task = tasksById.get(taskId);
+          return task ? [task] : [];
+        });
+
         return {
           ...snapshot,
-          orderByScope: {
-            ...snapshot.orderByScope,
-            [input.scope]: input.taskIds,
+          planning: {
+            ...snapshot.planning,
+            today: {
+              ...snapshot.planning.today,
+              active: {
+                ...snapshot.planning.today.active,
+                tasks,
+              },
+            },
           },
         };
       });
@@ -172,6 +187,31 @@ export function useReorderTasks() {
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: plannerStateQueryKey }),
   });
+}
+
+export function useDailyWorkspace(query: string) {
+  const planner = usePlannerState();
+  const reorderTasks = useReorderTasks();
+  const view = useMemo(
+    () => planner.data ? filterDailyWorkspace(planner.data.planning, query) : null,
+    [planner.data, query],
+  );
+
+  return {
+    planner,
+    view,
+    isReordering: reorderTasks.isPending,
+    reorderToday: (
+      taskIds: string[],
+      options?: { onError?: (error: unknown) => void },
+    ) => {
+      const guard = planner.data?.planning.today.active.reorder;
+      if (!guard) {
+        return;
+      }
+      reorderTasks.mutate({ guard, taskIds }, options);
+    },
+  };
 }
 
 export function useSaveSettings() {
