@@ -99,6 +99,13 @@ function SlateShell() {
         }
       }}
     >
+      {windowMode === "full" ? (
+        <div
+          aria-hidden="true"
+          className="h-2 shrink-0"
+          data-tauri-drag-region
+        />
+      ) : null}
       {isSettingsPage ? (
         <RouteFade className="h-full min-h-0" key={pathname} transition={routeTransition}>
           <Outlet />
