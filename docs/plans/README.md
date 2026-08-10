@@ -2,7 +2,7 @@
 
 > **Status:** Canonical plan inventory and ownership map
 >
-> **Updated:** 2026-08-08
+> **Updated:** 2026-08-09
 
 This file is the source of truth for plan status, ownership, and relationships. The numbered plan files remain useful implementation records, but their original checklists and file paths describe the repository state at the time they were written. An unchecked historical acceptance item does not mean the current product is missing that behavior; use the status and current product sources below first.
 
@@ -32,7 +32,7 @@ These are intentional relationships, not duplicate plans:
 - **006 → 011 + 012:** Plan 006 is a historical product behavior reference. Its native HTTP approach is superseded by the packaged sidecar slices in Plans 011 and 012.
 - **021 ↔ 022:** Plan 021 is the onboarding brief; Plan 022 is its implementation plan. Keep both because they answer different questions.
 - **023 → 024 → 025:** Plan 023 owns durable Stage 2 foundations. Plan 024 defines the quick-capture task, draft, event, and Undo contracts. Plan 025 supersedes only Plan 024’s original popover surface with the dedicated capture window and owns the current UI/native surface.
-- **026 → 027, 028, 029 → 030:** Plan 026 is the unified workspace parent. Plans 027–029 are focused implementation slices, and Plan 030 is their final polish/cleanup pass.
+- **026 → 027, 028, 029 → 030 → 031:** Plan 026 is the unified workspace parent. Plans 027–029 are focused implementation slices, Plan 030 is their final polish/cleanup pass, and Plan 031 is the proposed behavior-preserving architecture hardening of the resulting planning boundary.
 
 Do not create a new plan to restate one of these items. Update the owning plan, or add a narrowly scoped child plan with an explicit relationship here.
 
@@ -68,6 +68,7 @@ Do not create a new plan to restate one of these items. Update the owning plan, 
 | [028 unsized Today commitments](028-unsized-today-commitments.md) | Complete | Child implementation slice of 026. |
 | [029 explicit Daily movement actions](029-explicit-daily-movement-actions.md) | Complete | Child implementation slice of 026. |
 | [030 Daily workspace polish](030-daily-workspace-polish-cleanup.md) | Complete | Final polish and cleanup pass for the 026–029 workspace sequence. |
+| [031 planning workspace boundary](031-deepen-planning-workspace-boundary.md) | Proposed | Deepen the shipped Daily workspace behind one authoritative native projection and mutation boundary. |
 
 Plan numbers 007 and 010 are intentionally unused. Do not invent placeholder files to fill those gaps; add a new numbered plan only when a genuinely new, scoped work item is approved.
 
