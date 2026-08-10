@@ -74,7 +74,7 @@ Do not create a new plan to restate one of these items. Update the owning plan, 
 | [031 planning workspace boundary](031-deepen-planning-workspace-boundary.md) | Complete | The shipped Daily workspace now uses one authoritative native projection and planning-order mutation boundary. |
 | [032 Planning workspace shell](032-planning-workspace-shell.md) | Proposed | Ready-for-agent shell-only Stage 3 slice; establishes the full-app composition without Board/List contents or new planning behavior. |
 | [033 authoritative Planning lane projection](033-authoritative-planning-lane-projection.md) | Proposed | Ready-for-agent backend-only Stage 3 slice; establishes exhaustive derived lanes, shared order, migration, and compatibility before UI work. |
-| [034 deepen Planning mutations and canonical projection](034-deepen-planning-mutations-and-canonical-projection.md) | Proposed | Ready-for-agent architecture slice; centralizes Planning writes and removes the duplicated renderer compatibility projection. |
+| [034 deepen Planning mutations and canonical projection](034-deepen-planning-mutations-and-canonical-projection.md) | Complete | Planning writes now cross the SQLite-backed Planning workspace seam, and renderer surfaces share one canonical lane projection. |
 
 Plan numbers 007 and 010 are intentionally unused. Do not invent placeholder files to fill those gaps; add a new numbered plan only when a genuinely new, scoped work item is approved.
 

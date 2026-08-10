@@ -34,6 +34,7 @@ import {
   type UndoQuickCaptureInput,
 } from "@/lib/planner";
 import { filterDailyWorkspace } from "@/lib/daily-workspace";
+import { reorderPlanningLane, type OrderedPlanningLane } from "@/lib/planning-cache";
 
 export const plannerStateQueryKey = ["plannerState"] as const;
 
@@ -144,39 +145,15 @@ export function useReorderTasks() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: reorderTasks,
-    onMutate: async (input: ReorderTasksInput) => {
+    mutationFn: ({ lane: _lane, ...input }: ReorderTasksInput & { lane: OrderedPlanningLane }) => reorderTasks(input),
+    onMutate: async (input: ReorderTasksInput & { lane: OrderedPlanningLane }) => {
       await queryClient.cancelQueries({ queryKey: plannerStateQueryKey });
 
       const previousSnapshot = queryClient.getQueryData<PlannerSnapshot>(plannerStateQueryKey);
 
-      queryClient.setQueryData<PlannerSnapshot>(plannerStateQueryKey, (snapshot) => {
-        if (!snapshot) {
-          return snapshot;
-        }
-
-        const tasksById = new Map(
-          snapshot.planning.today.active.tasks.map((task) => [task.id, task]),
-        );
-        const tasks = input.taskIds.flatMap((taskId) => {
-          const task = tasksById.get(taskId);
-          return task ? [task] : [];
-        });
-
-        return {
-          ...snapshot,
-          planning: {
-            ...snapshot.planning,
-            today: {
-              ...snapshot.planning.today,
-              active: {
-                ...snapshot.planning.today.active,
-                tasks,
-              },
-            },
-          },
-        };
-      });
+      queryClient.setQueryData<PlannerSnapshot>(plannerStateQueryKey, (snapshot) => (
+        snapshot ? reorderPlanningLane(snapshot, input.lane, input.taskIds) : snapshot
+      ));
 
       return { previousSnapshot };
     },
@@ -193,7 +170,7 @@ export function useDailyWorkspace(query: string) {
   const planner = usePlannerState();
   const reorderTasks = useReorderTasks();
   const view = useMemo(
-    () => planner.data ? filterDailyWorkspace(planner.data.planning, query) : null,
+    () => planner.data ? filterDailyWorkspace(planner.data.planning, planner.data.today, query) : null,
     [planner.data, query],
   );
 
@@ -205,11 +182,11 @@ export function useDailyWorkspace(query: string) {
       taskIds: string[],
       options?: { onError?: (error: unknown) => void },
     ) => {
-      const guard = planner.data?.planning.today.active.reorder;
+      const guard = planner.data?.planning.lanes.today.reorder;
       if (!guard) {
         return;
       }
-      reorderTasks.mutate({ guard, taskIds }, options);
+      reorderTasks.mutate({ guard, lane: "today", taskIds }, options);
     },
   };
 }

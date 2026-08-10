@@ -26,23 +26,31 @@ import {
   useSetTaskCompleted,
   useUpdateTask,
 } from "@/lib/planner-query";
-import { planningTasks, type LocalDate, type PlannerSnapshot, type PlanningTask } from "@/lib/planner";
-import { PLANNING_LANES, taskPlanningLane, type PlanningLaneId } from "@/lib/planning-board";
+import { planningTaskEntry, type LocalDate, type PlannerSnapshot, type PlanningTask } from "@/lib/planner";
+import { PLANNING_LANES, type PlanningLaneId } from "@/lib/planning-board";
 
 export function PlanningTaskSheet({ snapshot }: { snapshot: PlannerSnapshot }) {
   const { clearSelection, selectedTaskId } = useTaskSelection();
-  const task = selectedTaskId
-    ? planningTasks(snapshot).find((candidate) => candidate.id === selectedTaskId)
+  const entry = selectedTaskId
+    ? planningTaskEntry(snapshot, selectedTaskId)
     : undefined;
 
   return (
-    <Sheet open={Boolean(selectedTaskId && task)} onOpenChange={(open) => !open && clearSelection()}>
-      {task ? <PlanningTaskSheetContent key={task.id} snapshot={snapshot} task={task} /> : null}
+    <Sheet open={Boolean(selectedTaskId && entry)} onOpenChange={(open) => !open && clearSelection()}>
+      {entry ? <PlanningTaskSheetContent initialLane={entry.lane} key={entry.task.id} snapshot={snapshot} task={entry.task} /> : null}
     </Sheet>
   );
 }
 
-function PlanningTaskSheetContent({ snapshot, task }: { snapshot: PlannerSnapshot; task: PlanningTask }) {
+function PlanningTaskSheetContent({
+  initialLane,
+  snapshot,
+  task,
+}: {
+  initialLane: PlanningLaneId;
+  snapshot: PlannerSnapshot;
+  task: PlanningTask;
+}) {
   const { clearSelection } = useTaskSelection();
   const updateTask = useUpdateTask();
   const completeTask = useSetTaskCompleted();
@@ -50,11 +58,10 @@ function PlanningTaskSheetContent({ snapshot, task }: { snapshot: PlannerSnapsho
   const [title, setTitle] = useState(task.title);
   const [estimate, setEstimate] = useState(task.estimateMinutes?.toString() ?? "");
   const [scheduledDate, setScheduledDate] = useState<LocalDate | null>(task.scheduledDate);
-  const [lane, setLane] = useState<PlanningLaneId>(taskPlanningLane(task, snapshot.today));
+  const [lane, setLane] = useState<PlanningLaneId>(initialLane);
   const [deleteArmed, setDeleteArmed] = useState(false);
   const [isStale, setIsStale] = useState(false);
   const revisionRef = useRef(task.revision);
-  const initialLane = taskPlanningLane(task, snapshot.today);
   const parsedEstimate = useMemo(() => {
     const value = estimate.trim();
     if (!value) return null;
@@ -79,8 +86,8 @@ function PlanningTaskSheetContent({ snapshot, task }: { snapshot: PlannerSnapsho
     setTitle(task.title);
     setEstimate(task.estimateMinutes?.toString() ?? "");
     setScheduledDate(task.scheduledDate);
-    setLane(taskPlanningLane(task, snapshot.today));
-  }, [isDirty, snapshot.today, task]);
+    setLane(initialLane);
+  }, [initialLane, isDirty, task]);
 
   function applyLane(nextLane: PlanningLaneId) {
     if (task.completedAt || nextLane === "done") return;
@@ -165,7 +172,7 @@ function PlanningTaskSheetContent({ snapshot, task }: { snapshot: PlannerSnapsho
     setTitle(task.title);
     setEstimate(task.estimateMinutes?.toString() ?? "");
     setScheduledDate(task.scheduledDate);
-    setLane(taskPlanningLane(task, snapshot.today));
+    setLane(initialLane);
     setIsStale(false);
   }
 

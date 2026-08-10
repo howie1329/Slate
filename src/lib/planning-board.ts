@@ -1,8 +1,7 @@
-import type { PlannerSnapshot, PlanningSection, PlanningTask } from "@/lib/planner";
+import { PLANNING_LANES, type PlannerSnapshot, type PlanningLaneId, type PlanningSection, type PlanningTask } from "./planner.ts";
 
-export const PLANNING_LANES = ["capture", "ready", "today", "done"] as const;
-
-export type PlanningLaneId = (typeof PLANNING_LANES)[number];
+export { PLANNING_LANES };
+export type { PlanningLaneId };
 export type PlanningBoardFilter = "all" | "attention" | "scheduled" | "unscheduled";
 export type PlanningBoardSort = "planning" | "title" | "estimate" | "newest";
 
@@ -12,12 +11,6 @@ export type PlanningBoardLane = {
   reorder: PlanningSection["reorder"];
   tasks: PlanningTask[];
 };
-
-export function taskPlanningLane(task: PlanningTask, today: string): PlanningLaneId {
-  if (task.completedAt) return "done";
-  if (task.scheduledDate === today) return "today";
-  return task.estimateMinutes === null ? "capture" : "ready";
-}
 
 export function planningBoardLanes(
   snapshot: PlannerSnapshot,

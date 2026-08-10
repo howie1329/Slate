@@ -151,7 +151,7 @@ export function PlanningBoard({ filter, query, snapshot, sort }: PlanningBoardPr
       const nextIndex = lane.tasks.findIndex((candidate) => candidate.id === destinationTaskId);
       if (previousIndex < 0 || nextIndex < 0) return;
       reorderTasks.mutate(
-        { guard, taskIds: arrayMove(lane.tasks, previousIndex, nextIndex).map((candidate) => candidate.id) },
+        { guard, lane: sourceLane, taskIds: arrayMove(lane.tasks, previousIndex, nextIndex).map((candidate) => candidate.id) },
         { onError: () => toast.error("Could not save task order.") },
       );
       return;
@@ -220,7 +220,7 @@ export function PlanningBoard({ filter, query, snapshot, sort }: PlanningBoardPr
               activeLane={activeLane}
               activeTask={activeTask}
               canReorder={canReorder}
-              capacity={lane.id === "today" ? snapshot.planning.today.capacity : undefined}
+              capacity={lane.id === "today" ? snapshot.planning.capacity : undefined}
               capacityPreview={lane.id === "today" ? capacityPreview : null}
               feedback={feedback?.lane === lane.id ? feedback.message : null}
               key={lane.id}
@@ -264,7 +264,7 @@ function PlanningLane({
   activeLane: PlanningLaneId | null;
   activeTask: PlanningTask | null;
   canReorder: boolean;
-  capacity?: PlannerSnapshot["planning"]["today"]["capacity"];
+  capacity?: PlannerSnapshot["planning"]["capacity"];
   capacityPreview: CapacityPreview | null;
   feedback: string | null;
   lane: PlanningBoardLane;
@@ -505,7 +505,7 @@ function previewCapacity(
   source: PlanningLaneId,
   destination: PlanningLaneId,
 ): CapacityPreview | null {
-  const capacity = snapshot.planning.today.capacity;
+  const capacity = snapshot.planning.capacity;
   const crossingIntoToday = source !== "today" && destination === "today";
   const crossingOutOfToday = source === "today" && destination !== "today";
   if (!crossingIntoToday && !crossingOutOfToday) return null;

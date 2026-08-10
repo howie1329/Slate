@@ -37,6 +37,8 @@ export type Task = {
 };
 
 export type WorkspaceBadge = "needs-estimate" | "unscheduled" | "overdue" | "upcoming";
+export const PLANNING_LANES = ["capture", "ready", "today", "done"] as const;
+export type PlanningLaneId = (typeof PLANNING_LANES)[number];
 
 export type PlanningTask = Task & {
   badges: WorkspaceBadge[];
@@ -78,19 +80,7 @@ export type CapacityView = {
 
 export type PlanningView = {
   lanes: PlanningLanes;
-  today: {
-    active: PlanningSection;
-    completed: PlanningSection;
-    capacity: CapacityView;
-    totalTaskCount: number;
-    unsizedTaskCount: number;
-  };
-  backlog: {
-    active: PlanningSection;
-    completed: PlanningSection;
-    totalTaskCount: number;
-    activeTaskCount: number;
-  };
+  capacity: CapacityView;
 };
 
 export type Settings = {
@@ -197,12 +187,15 @@ export type ReorderTasksInput = {
 };
 
 export function planningTasks(planner: PlannerSnapshot) {
-  return [
-    ...planner.planning.lanes.capture.tasks,
-    ...planner.planning.lanes.ready.tasks,
-    ...planner.planning.lanes.today.tasks,
-    ...planner.planning.lanes.done.tasks,
-  ];
+  return PLANNING_LANES.flatMap((lane) => planner.planning.lanes[lane].tasks);
+}
+
+export function planningTaskEntry(planner: PlannerSnapshot, taskId: string) {
+  for (const lane of PLANNING_LANES) {
+    const task = planner.planning.lanes[lane].tasks.find((candidate) => candidate.id === taskId);
+    if (task) return { lane, task };
+  }
+  return undefined;
 }
 
 export function isTauriWindow() {

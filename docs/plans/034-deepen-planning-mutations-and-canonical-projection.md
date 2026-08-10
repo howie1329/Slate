@@ -1,6 +1,6 @@
 # Plan 034: Deepen Planning mutations and canonicalize the projection
 
-> **Status:** ready-for-agent
+> **Status:** Complete
 >
 > **Parents:** Plan 031 — Planning workspace boundary; Plan 033 — Authoritative Planning lane projection
 >
@@ -119,3 +119,4 @@ This work preserves the current user-visible workflow. It improves consistency a
 
 ## Comments
 
+- Implemented on 2026-08-10. The native Planning workspace module now owns semantic Lane reconciliation, reorder validation and revision updates, Today acceptance facts, and task Planner Event insertion through a real SQLite seam. The renderer consumes one exhaustive lane projection, derives the Daily presentation locally, and reconciles optimistic ordering against the explicit target Lane.
