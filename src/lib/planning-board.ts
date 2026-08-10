@@ -1,4 +1,4 @@
-import type { PlannerSnapshot, PlanningTask } from "@/lib/planner";
+import type { PlannerSnapshot, PlanningSection, PlanningTask } from "@/lib/planner";
 
 export const PLANNING_LANES = ["capture", "ready", "today", "done"] as const;
 
@@ -9,6 +9,7 @@ export type PlanningBoardSort = "planning" | "title" | "estimate" | "newest";
 export type PlanningBoardLane = {
   id: PlanningLaneId;
   label: string;
+  reorder: PlanningSection["reorder"];
   tasks: PlanningTask[];
 };
 
@@ -26,10 +27,10 @@ export function planningBoardLanes(
 ): PlanningBoardLane[] {
   const lanes = snapshot.planning.lanes;
   const source: PlanningBoardLane[] = [
-    { id: "capture", label: "Capture", tasks: lanes.capture.tasks },
-    { id: "ready", label: "Ready", tasks: lanes.ready.tasks },
-    { id: "today", label: "Today", tasks: lanes.today.tasks },
-    { id: "done", label: "Done", tasks: lanes.done.tasks },
+    { id: "capture", label: "Capture", reorder: lanes.capture.reorder, tasks: lanes.capture.tasks },
+    { id: "ready", label: "Ready", reorder: lanes.ready.reorder, tasks: lanes.ready.tasks },
+    { id: "today", label: "Today", reorder: lanes.today.reorder, tasks: lanes.today.tasks },
+    { id: "done", label: "Done", reorder: lanes.done.reorder, tasks: lanes.done.tasks },
   ];
 
   const normalizedQuery = query.trim().toLocaleLowerCase();

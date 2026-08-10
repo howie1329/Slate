@@ -125,7 +125,6 @@ function PlanningTaskSheetContent({ snapshot, task }: { snapshot: PlannerSnapsho
       {
         onSuccess: () => {
           clearSelection();
-          toast.success("Task updated.");
         },
         onError: (error) => toast.error(plannerMutationErrorMessage(error, "Could not update task.")),
       },
@@ -139,7 +138,6 @@ function PlanningTaskSheetContent({ snapshot, task }: { snapshot: PlannerSnapsho
       {
         onSuccess: () => {
           clearSelection();
-          toast.success(task.completedAt ? "Task reopened." : "Task completed.");
         },
         onError: (error) => toast.error(plannerMutationErrorMessage(error, "Could not update completion.")),
       },
@@ -156,7 +154,6 @@ function PlanningTaskSheetContent({ snapshot, task }: { snapshot: PlannerSnapsho
       {
         onSuccess: () => {
           clearSelection();
-          toast.success("Task deleted.");
         },
         onError: (error) => toast.error(plannerMutationErrorMessage(error, "Could not delete task.")),
       },

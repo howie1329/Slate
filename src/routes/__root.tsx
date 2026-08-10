@@ -155,13 +155,13 @@ function SlateShell() {
         <PlanningWorkspaceShell
           contentKind={contentKind}
           globalLayer={onboarding}
-          onOpenSettings={handleOpenSettings}
-          statusMessage={isReconnecting ? "Reconnecting to local data…" : reconnectFailed ? "Local data is still unavailable." : contentKind === "planning" && planner.data ? "Saved locally" : undefined}
+          statusMessage={isReconnecting ? "Reconnecting to local data…" : reconnectFailed ? "Local data is still unavailable." : undefined}
           toolbar={contentKind === "planning" ? (
             <PlanningToolbar
               date={planner.data?.today}
               filter={planningFilter}
               onFilterChange={setPlanningFilter}
+              onOpenSettings={handleOpenSettings}
               onQueryChange={setPlanningQuery}
               onSortChange={setPlanningSort}
               query={planningQuery}

@@ -4,6 +4,7 @@ import {
   ArrowUp01Icon,
   Calendar01Icon,
   Search01Icon,
+  Settings01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ type PlanningToolbarProps = {
   date?: LocalDate;
   filter?: PlanningBoardFilter;
   onFilterChange?: (filter: PlanningBoardFilter) => void;
+  onOpenSettings?: () => void;
   onQueryChange?: (query: string) => void;
   onSortChange?: (sort: PlanningBoardSort) => void;
   query?: string;
@@ -42,6 +44,7 @@ export function PlanningToolbar({
   date,
   filter = "all",
   onFilterChange,
+  onOpenSettings,
   onQueryChange,
   onSortChange,
   query = "",
@@ -75,13 +78,13 @@ export function PlanningToolbar({
   return (
     <div className="flex h-full min-w-0 items-center gap-1 px-2" {...(isFullscreen === false ? { "data-tauri-drag-region": "" } : {})}>
       {isFullscreen === false ? <WindowControls onToggleFullscreen={handleToggleFullscreen} /> : null}
-      <time className="ml-1 flex min-w-0 items-center gap-1.5 text-menu text-muted-foreground" dateTime={date}>
+      <time className="ml-1 flex min-w-0 items-center gap-1.5 text-section-secondary text-muted-foreground" dateTime={date}>
         <HugeiconsIcon aria-hidden="true" icon={Calendar01Icon} size={14} strokeWidth={1.7} />
         <span className="truncate">{date ? formatToolbarDate(date) : "Loading…"}</span>
       </time>
 
       <DropdownMenu>
-        <DropdownMenuTrigger render={<Button className="ml-2 h-6 min-w-20 justify-between px-2 text-menu font-normal" size="xs" type="button" variant="outline" />}>
+        <DropdownMenuTrigger render={<Button className="ml-2 h-6 min-w-20 justify-between px-2 text-section-secondary font-normal" size="xs" type="button" variant="outline" />}>
           Board
           <HugeiconsIcon aria-hidden="true" icon={ArrowDown01Icon} size={11} strokeWidth={1.8} />
         </DropdownMenuTrigger>
@@ -95,7 +98,7 @@ export function PlanningToolbar({
       <div className="min-w-2 flex-1" />
 
       <DropdownMenu>
-        <DropdownMenuTrigger render={<Button className="h-6 px-2 text-menu font-normal" size="xs" type="button" variant={filter === "all" ? "ghost" : "secondary"} />}>
+        <DropdownMenuTrigger render={<Button className="h-6 px-2 text-section-secondary font-normal text-muted-foreground hover:text-foreground" size="xs" type="button" variant={filter === "all" ? "ghost" : "secondary"} />}>
           Filter
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-44">
@@ -110,7 +113,7 @@ export function PlanningToolbar({
       </DropdownMenu>
 
       <DropdownMenu>
-        <DropdownMenuTrigger render={<Button className="h-6 px-2 text-menu font-normal" size="xs" type="button" variant={sort === "planning" ? "ghost" : "secondary"} />}>
+        <DropdownMenuTrigger render={<Button className="h-6 px-2 text-section-secondary font-normal text-muted-foreground hover:text-foreground" size="xs" type="button" variant={sort === "planning" ? "ghost" : "secondary"} />}>
           <HugeiconsIcon aria-hidden="true" icon={ArrowUp01Icon} size={12} strokeWidth={1.7} />
           Sort
         </DropdownMenuTrigger>
@@ -130,7 +133,7 @@ export function PlanningToolbar({
           <HugeiconsIcon aria-hidden="true" className="pointer-events-none absolute left-2 top-1.5 text-muted-foreground" icon={Search01Icon} size={13} strokeWidth={1.7} />
           <Input
             aria-label="Search tasks"
-            className="h-6 rounded-md pl-7 pr-2 text-menu"
+            className="h-6 rounded-md pl-7 pr-2 text-section-secondary"
             onBlur={() => !query && setSearchOpen(false)}
             onChange={(event) => onQueryChange?.(event.target.value)}
             onKeyDown={(event) => {
@@ -158,6 +161,12 @@ export function PlanningToolbar({
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Planning</DropdownMenuLabel>
           <DropdownMenuSeparator />
+          {onOpenSettings ? (
+            <DropdownMenuItem onClick={onOpenSettings}>
+              <HugeiconsIcon aria-hidden="true" icon={Settings01Icon} size={13} strokeWidth={1.7} />
+              Settings
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem disabled>Export board</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

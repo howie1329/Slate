@@ -104,15 +104,17 @@ export function PlanningWorkspaceFrame({
           )
         : null,
     ),
-    createElement(
-      "footer",
-      {
-        "aria-label": "Workspace status",
-        className: "planning-workspace-status shrink-0 border-t border-border bg-muted/40",
-        "data-planning-shell-region": "status",
-      },
-      statusBar,
-    ),
+    statusBar
+      ? createElement(
+          "footer",
+          {
+            "aria-label": "Workspace status",
+            className: "planning-workspace-status shrink-0 border-t border-border bg-muted/40",
+            "data-planning-shell-region": "status",
+          },
+          statusBar,
+        )
+      : null,
     globalLayer,
   );
 }
