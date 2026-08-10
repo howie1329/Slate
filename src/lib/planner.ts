@@ -198,10 +198,10 @@ export type ReorderTasksInput = {
 
 export function planningTasks(planner: PlannerSnapshot) {
   return [
-    ...planner.planning.today.active.tasks,
-    ...planner.planning.today.completed.tasks,
-    ...planner.planning.backlog.active.tasks,
-    ...planner.planning.backlog.completed.tasks,
+    ...planner.planning.lanes.capture.tasks,
+    ...planner.planning.lanes.ready.tasks,
+    ...planner.planning.lanes.today.tasks,
+    ...planner.planning.lanes.done.tasks,
   ];
 }
 
