@@ -368,8 +368,7 @@ fn configure_macos_main_window<R: Runtime>(window: &WebviewWindow<R>) -> tauri::
         let content_layer: tauri_nspanel::objc2::rc::Retained<
             tauri_nspanel::objc2_foundation::NSObject,
         > = tauri_nspanel::objc2::msg_send![&*content_view, layer];
-        let _: () =
-            tauri_nspanel::objc2::msg_send![&*content_layer, setCornerRadius: SHELL_CORNER_RADIUS];
+        let _: () = tauri_nspanel::objc2::msg_send![&*content_layer, setCornerRadius: 0.0_f64];
         let _: () = tauri_nspanel::objc2::msg_send![&*content_layer, setMasksToBounds: true];
     }
 
