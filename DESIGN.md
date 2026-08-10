@@ -195,7 +195,7 @@ The palette is a neutral monochrome desktop canvas with black-and-white primary 
 - **Label** (600, `0.6875rem`, `0.875rem`): Section labels, capacity metadata, and small status text. Use uppercase only when it improves recognition, never as repeated scaffolding.
 - **Supporting** (400, `0.75rem`, `1rem`): Secondary descriptions and recoverable messages.
 - **Estimate** (400, `0.625rem`, `0.75rem`): Quiet right-aligned duration text in task rows.
-- **Metadata** (400, `0.5rem`, `0.625rem`): Compact task state, counts, and utility labels that support scanning without competing with the task title.
+- **Metadata** (400, `0.625rem`, `0.75rem`): Compact task state, counts, and utility labels that support scanning without competing with the task title.
 - **Daily section** (500, `0.8125rem`, `0.875rem`): Quiet Today label that establishes structure without competing with task content.
 - **Daily subsection** (500, `0.75rem`, `0.875rem`): Smaller Backlog label that keeps the secondary list subordinate to Today.
 - **Task** (400, `0.75rem`, `0.875rem`): Regular-weight task titles sized for the compact popover.
