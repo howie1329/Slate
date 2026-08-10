@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { useAiReview } from "@/components/ai-review";
 import { OnboardingFlow } from "@/components/onboarding-flow";
 import { PlanningBoard } from "@/components/planning-board";
+import { PlanningTaskInspector } from "@/components/planning-task-inspector";
 import { PlanningToolbar } from "@/components/planning-toolbar";
 import { PlanningWorkspaceShell } from "@/components/planning-workspace-shell";
 import { QuickCaptureWindow } from "@/components/quick-capture-window";
@@ -12,7 +13,7 @@ import { RouteMotionProvider, useRouteMotion, type RouteMotionTransition } from 
 import { TaskMotionProvider } from "@/components/task-motion";
 import { TaskSelectionProvider, useTaskSelection } from "@/components/task-selection";
 import { Button } from "@/components/ui/button";
-import { retryPersistence } from "@/lib/planner";
+import { planningTaskEntry, retryPersistence } from "@/lib/planner";
 import type { PlanningBoardFilter, PlanningBoardSort } from "@/lib/planning-board";
 import { hidePopover, useWindowMode } from "@/lib/window-mode";
 import { usePlannerState } from "@/lib/planner-query";
@@ -106,6 +107,9 @@ function SlateShell() {
       sort={planningSort}
     />
   ) : routeContent;
+  const planningInspectorEntry = contentKind === "planning" && planner.data && selectedTaskId
+    ? planningTaskEntry(planner.data, selectedTaskId)
+    : undefined;
   const onboarding = planner.data && windowMode === "popover" ? (
     <OnboardingFlow
       isSettingsPage={isSettingsPage}
@@ -123,7 +127,7 @@ function SlateShell() {
       data-window-mode={windowMode}
       onPointerDownCapture={(event) => {
         const target = event.target instanceof Element ? event.target : null;
-        const isInsideInspector = target?.closest("[data-contextual-inspector], [data-task-sheet]");
+        const isInsideInspector = target?.closest("[data-contextual-inspector]");
         const isInsideReview = target?.closest("[data-ai-review], [data-ai-review-calendar]");
         const isInsideOnboarding = target?.closest("[data-onboarding]");
 
@@ -132,6 +136,7 @@ function SlateShell() {
         }
         if (
           selectedTaskId
+          && windowMode !== "full"
           && !isInsideInspector
           && !isInsideOnboarding
           && !target?.closest("[data-task-detail], [data-task-row], [data-task-calendar]")
@@ -155,6 +160,14 @@ function SlateShell() {
         <PlanningWorkspaceShell
           contentKind={contentKind}
           globalLayer={onboarding}
+          inspector={planningInspectorEntry && planner.data ? (
+            <PlanningTaskInspector
+              initialLane={planningInspectorEntry.lane}
+              key={planningInspectorEntry.task.id}
+              snapshot={planner.data}
+              task={planningInspectorEntry.task}
+            />
+          ) : null}
           statusMessage={isReconnecting ? "Reconnecting to local data…" : reconnectFailed ? "Local data is still unavailable." : undefined}
           toolbar={contentKind === "planning" ? (
             <PlanningToolbar

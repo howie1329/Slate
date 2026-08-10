@@ -31,7 +31,6 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { toast } from "sonner";
 import { useTaskSelection } from "@/components/task-selection";
-import { PlanningTaskSheet } from "@/components/planning-task-sheet";
 import { plannerMutationErrorMessage } from "@/lib/planner-errors";
 import {
   planningBoardLanes,
@@ -222,7 +221,6 @@ export function PlanningBoard({ filter, query, snapshot, sort }: PlanningBoardPr
       <span aria-live="polite" className="sr-only" role="status">
         {feedback?.message ?? (pendingTaskId ? "Moving task." : "")}
       </span>
-      <PlanningTaskSheet snapshot={snapshot} />
     </section>
   );
 }
@@ -421,6 +419,7 @@ function PlanningBoardCard({
           !pending && lane !== "done" && "cursor-grab active:cursor-grabbing",
         )}
         data-task-row
+        data-task-id={task.id}
         disabled={pending}
         onClick={() => selectTask(task.id)}
         type="button"
