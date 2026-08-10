@@ -40,6 +40,22 @@ _Avoid_: separate task-detail window, bottom task-detail panel
 An interchangeable presentation of the same Planning workspace. Board and List are local views rather than separate destinations or planning systems.
 _Avoid_: top-level workspace, separate board route, separate list route
 
+**Planning lane**:
+One of the four exhaustive commitment groupings in the Planning workspace: Capture, Ready, Today, or Done. Every non-deleted task belongs to exactly one lane; filtering or collapsing changes visibility, not lane membership.
+_Avoid_: stored status, optional category, filter result
+
+**Lane order**:
+The user-controlled order of active work within Capture, Ready, or Today, shared by every Planning view. Date context does not create hidden ordering groups inside a lane.
+_Avoid_: automatic urgency sort, view-specific order, date-group order
+
+**Capture lane**:
+Active work outside Today that does not yet have an estimate, regardless of when it was captured or the date attached to it. It is a readiness state, not a history of recent capture actions.
+_Avoid_: recent captures, inbox, unsized Today commitments
+
+**Ready lane**:
+Active estimated work outside Today. It includes unscheduled, overdue, and future-dated work, with date meaning carried as task context rather than additional lanes.
+_Avoid_: automatic Today candidate, upcoming lane, overdue lane
+
 ## Commitment language
 
 **Today**:
@@ -59,8 +75,12 @@ A newly typed task from the Daily workspace that is saved to the persisted Backl
 _Avoid_: capture as commitment, automatic Today placement
 
 **Done**:
-Completed work shown as quiet history in the Daily workspace. Done is not a planning destination for incomplete work.
+Completed work shown as quiet history, ordered with the most recently completed work first. In the Planning workspace it is an exhaustive lane for completed tasks and is visually secondary by default; it is never a planning destination for incomplete work.
 _Avoid_: another commitment state, archive
+
+**Reopen**:
+The return of completed work to active planning while retaining its estimate and scheduled date. Its active Planning lane is rederived from those current facts rather than remembered separately.
+_Avoid_: restore previous lane, reset task, duplicate task
 
 **Commitment state**:
 The meaning of a task in the planning workflow, derived from its estimate, scheduled date, and completion state rather than stored as an independent board status.
