@@ -9,8 +9,36 @@ The compact menu-bar popover's unified surface for everyday capture, commitment,
 _Avoid_: Unified workspace as an unqualified product name, planning workspace
 
 **Planning workspace**:
-The future full-window surface for shaping and reviewing a larger pool of work. It complements the Daily workspace and does not replace the popover for ordinary daily planning.
+The distinct full-app surface for shaping and reviewing a larger pool of work. It complements the Daily workspace and does not replace the popover for ordinary daily planning.
 _Avoid_: Daily workspace, board as the product name
+
+**Planning workspace shell**:
+The full-app composition that frames the Planning workspace: its background, toolbar, navigation, content frame, and global transient layers. It hosts planning views and shared task interactions without defining a separate planning model.
+_Avoid_: shell as a synonym for every Planning workspace feature, native window frame
+
+**Full app**:
+Slate's dedicated macOS application window. Opening it enters a frameless native full-screen Space; leaving full-screen keeps the window open and movable rather than forcing a return to full-screen.
+_Avoid_: enlarged popover, maximized window
+
+**Planning toolbar**:
+The persistent top control surface of the Planning workspace shell. It provides search and capture, entry into reviewable AI actions, Planning view selection, and current capacity context without becoming a permanent navigation sidebar.
+_Avoid_: native macOS toolbar, second command row
+
+**Workspace status bar**:
+The compact bottom edge of the Planning workspace shell, redefined from the Daily workspace utility footer. It is the sole home for Settings access and holds quiet global status or utility actions rather than task content.
+_Avoid_: unchanged popover footer, task-detail tray
+
+**Workspace inspector**:
+The right-side contextual region of the Planning workspace shell. It shows either task detail or a reviewable AI action without losing the surrounding Planning workspace context.
+_Avoid_: modal, bottom review tray, simultaneous task and AI panels
+
+**Task inspector**:
+The task-detail mode of the Workspace inspector, used to view and edit the selected task.
+_Avoid_: separate task-detail window, bottom task-detail panel
+
+**Planning view**:
+An interchangeable presentation of the same Planning workspace. Board and List are local views rather than separate destinations or planning systems.
+_Avoid_: top-level workspace, separate board route, separate list route
 
 ## Commitment language
 
