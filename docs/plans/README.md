@@ -2,7 +2,7 @@
 
 > **Status:** Canonical plan inventory and ownership map
 >
-> **Updated:** 2026-08-09
+> **Updated:** 2026-08-10
 
 This file is the source of truth for plan status, ownership, and relationships. The numbered plan files remain useful implementation records, but their original checklists and file paths describe the repository state at the time they were written. An unchecked historical acceptance item does not mean the current product is missing that behavior; use the status and current product sources below first.
 
@@ -35,6 +35,7 @@ These are intentional relationships, not duplicate plans:
 - **026 → 027, 028, 029 → 030 → 031:** Plan 026 is the unified workspace parent. Plans 027–029 are focused implementation slices, Plan 030 is their final polish/cleanup pass, and Plan 031 is the proposed behavior-preserving architecture hardening of the resulting planning boundary.
 - **031 → 032:** Plan 031 provides the authoritative planning projection that the Stage 3 Planning workspace will reuse. Plan 032 establishes only the full-app shell that will host later 2.0 Planning views.
 - **031 → 033:** Plan 033 deepens Plan 031's native projection into the exhaustive Capture / Ready / Today / Done contract and shared Lane order required before Board and List. It is backend-only and can proceed independently of the Plan 032 shell.
+- **031 + 033 → 034:** Plan 034 closes the remaining write-depth drift and migrates renderer consumers from the duplicated Today/Backlog compatibility shape to one canonical Planning lane projection.
 
 Do not create a new plan to restate one of these items. Update the owning plan, or add a narrowly scoped child plan with an explicit relationship here.
 
@@ -73,6 +74,7 @@ Do not create a new plan to restate one of these items. Update the owning plan, 
 | [031 planning workspace boundary](031-deepen-planning-workspace-boundary.md) | Complete | The shipped Daily workspace now uses one authoritative native projection and planning-order mutation boundary. |
 | [032 Planning workspace shell](032-planning-workspace-shell.md) | Proposed | Ready-for-agent shell-only Stage 3 slice; establishes the full-app composition without Board/List contents or new planning behavior. |
 | [033 authoritative Planning lane projection](033-authoritative-planning-lane-projection.md) | Proposed | Ready-for-agent backend-only Stage 3 slice; establishes exhaustive derived lanes, shared order, migration, and compatibility before UI work. |
+| [034 deepen Planning mutations and canonical projection](034-deepen-planning-mutations-and-canonical-projection.md) | Proposed | Ready-for-agent architecture slice; centralizes Planning writes and removes the duplicated renderer compatibility projection. |
 
 Plan numbers 007 and 010 are intentionally unused. Do not invent placeholder files to fill those gaps; add a new numbered plan only when a genuinely new, scoped work item is approved.
 
