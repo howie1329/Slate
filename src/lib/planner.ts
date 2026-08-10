@@ -52,6 +52,21 @@ export type PlanningSection = {
   reorder: ReorderGuard | null;
 };
 
+export type PlanningLaneCounts = {
+  capture: number;
+  ready: number;
+  today: number;
+  done: number;
+};
+
+export type PlanningLanes = {
+  capture: PlanningSection;
+  ready: PlanningSection;
+  today: PlanningSection;
+  done: PlanningSection;
+  counts: PlanningLaneCounts;
+};
+
 export type CapacityView = {
   limitMinutes: number;
   committedMinutes: number;
@@ -62,6 +77,7 @@ export type CapacityView = {
 };
 
 export type PlanningView = {
+  lanes: PlanningLanes;
   today: {
     active: PlanningSection;
     completed: PlanningSection;

@@ -276,7 +276,7 @@ impl Repository {
         connection
             .execute_batch("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;")
             .map_err(database_error)?;
-        apply_migrations(&connection)?;
+        apply_migrations(&mut connection)?;
         backfill_history_boundaries(&mut connection)?;
         Ok(Self { connection })
     }
@@ -285,13 +285,21 @@ impl Repository {
         &self,
         ai_availability_by_provider: HashMap<String, String>,
     ) -> Result<PlannerSnapshot, String> {
+        let today = local_today();
+        self.snapshot_at(&today, ai_availability_by_provider)
+    }
+
+    fn snapshot_at(
+        &self,
+        today: &str,
+        ai_availability_by_provider: HashMap<String, String>,
+    ) -> Result<PlannerSnapshot, String> {
         let settings = self.settings()?;
         let tasks = self.tasks()?;
         let order_by_scope = self.orders()?;
-        let today = local_today();
-        let effective_capacity = effective_capacity_minutes(&settings, &today)?;
+        let effective_capacity = effective_capacity_minutes(&settings, today)?;
         let planning =
-            PlanningWorkspace::new(&tasks, &order_by_scope, &today, effective_capacity).view();
+            PlanningWorkspace::new(&tasks, &order_by_scope, today, effective_capacity).view();
         let ai_availability = ai_availability_by_provider
             .get(&settings.ai_provider)
             .cloned()
@@ -302,7 +310,7 @@ impl Repository {
             settings,
             ai_availability,
             ai_availability_by_provider,
-            today,
+            today: today.to_string(),
             #[cfg(test)]
             tasks,
             #[cfg(test)]
@@ -802,7 +810,7 @@ impl Repository {
     }
 
     fn reorder_tasks(&mut self, input: ReorderTasksInput) -> Result<(), String> {
-        validate_scope(&input.guard.scope)?;
+        planning_workspace::validate_reorder_scope(&input.guard.scope)?;
         ensure_unique_ids(&input.task_ids)?;
         let transaction = self.connection.transaction().map_err(database_error)?;
         let current_ids = planning_workspace::validate_reorder_guard(
@@ -1482,7 +1490,7 @@ fn credential_availability_by_provider() -> HashMap<String, String> {
         .collect()
 }
 
-fn apply_migrations(connection: &Connection) -> Result<(), String> {
+fn apply_migrations(connection: &mut Connection) -> Result<(), String> {
     let version: i64 = connection
         .query_row("PRAGMA user_version", [], |row| row.get(0))
         .map_err(database_error)?;
@@ -1523,6 +1531,101 @@ fn apply_migrations(connection: &Connection) -> Result<(), String> {
             .map_err(database_error)?;
     }
 
+    if version < 5 {
+        migrate_lane_orders(connection)?;
+    }
+
+    Ok(())
+}
+
+fn migrate_lane_orders(connection: &mut Connection) -> Result<(), String> {
+    let transaction = connection.transaction().map_err(database_error)?;
+    let mut existing_capture = ordered_task_ids(&transaction, planning_workspace::CAPTURE_SCOPE)?
+        .into_iter()
+        .collect::<std::collections::HashSet<_>>();
+    let mut existing_ready = ordered_task_ids(&transaction, planning_workspace::READY_SCOPE)?
+        .into_iter()
+        .collect::<std::collections::HashSet<_>>();
+
+    append_legacy_order(
+        &transaction,
+        planning_workspace::CAPTURE_SCOPE,
+        &[planning_workspace::NEEDS_ESTIMATE_SCOPE],
+        &mut existing_capture,
+    )?;
+    append_legacy_order(
+        &transaction,
+        planning_workspace::READY_SCOPE,
+        &[
+            planning_workspace::OVERDUE_SCOPE,
+            planning_workspace::UPCOMING_SCOPE,
+            planning_workspace::UNSCHEDULED_SCOPE,
+        ],
+        &mut existing_ready,
+    )?;
+
+    for scope in [
+        planning_workspace::NEEDS_ESTIMATE_SCOPE,
+        planning_workspace::OVERDUE_SCOPE,
+        planning_workspace::UPCOMING_SCOPE,
+        planning_workspace::UNSCHEDULED_SCOPE,
+    ] {
+        transaction
+            .execute("DELETE FROM task_orders WHERE scope = ?1", [scope])
+            .map_err(database_error)?;
+    }
+    transaction
+        .execute_batch("PRAGMA user_version = 5;")
+        .map_err(database_error)?;
+    transaction.commit().map_err(database_error)
+}
+
+fn ordered_task_ids(
+    transaction: &rusqlite::Transaction<'_>,
+    scope: &str,
+) -> Result<Vec<String>, String> {
+    let mut statement = transaction
+        .prepare(
+            "SELECT task_id FROM task_orders
+             WHERE scope = ?1 ORDER BY position ASC, task_id ASC",
+        )
+        .map_err(database_error)?;
+    let ids = statement
+        .query_map([scope], |row| row.get::<_, String>(0))
+        .map_err(database_error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(database_error)?;
+    Ok(ids)
+}
+
+fn append_legacy_order(
+    transaction: &rusqlite::Transaction<'_>,
+    destination_scope: &str,
+    source_scopes: &[&str],
+    existing_ids: &mut std::collections::HashSet<String>,
+) -> Result<(), String> {
+    let next_position = transaction
+        .query_row(
+            "SELECT COALESCE(MAX(position) + 1, 0) FROM task_orders WHERE scope = ?1",
+            [destination_scope],
+            |row| row.get::<_, i64>(0),
+        )
+        .map_err(database_error)?;
+    let mut position = next_position;
+    for source_scope in source_scopes {
+        for task_id in ordered_task_ids(transaction, source_scope)? {
+            if !existing_ids.insert(task_id.clone()) {
+                continue;
+            }
+            transaction
+                .execute(
+                    "INSERT INTO task_orders (scope, task_id, position) VALUES (?1, ?2, ?3)",
+                    params![destination_scope, task_id, position],
+                )
+                .map_err(database_error)?;
+            position += 1;
+        }
+    }
     Ok(())
 }
 
@@ -1764,21 +1867,6 @@ fn validate_scheduled_date(date: Option<&str>) -> Result<(), String> {
     match NaiveDate::parse_from_str(date, "%Y-%m-%d") {
         Ok(parsed) if parsed.format("%Y-%m-%d").to_string() == date => Ok(()),
         _ => Err("Scheduled date must use YYYY-MM-DD.".into()),
-    }
-}
-
-fn validate_scope(scope: &str) -> Result<(), String> {
-    if scope == "log:needs-estimate"
-        || scope == "log:unscheduled"
-        || scope == "log:upcoming"
-        || scope == "log:overdue"
-        || scope
-            .strip_prefix("today:")
-            .is_some_and(|date| validate_scheduled_date(Some(date)).is_ok())
-    {
-        Ok(())
-    } else {
-        Err("Task ordering scope is invalid.".into())
     }
 }
 
@@ -2184,6 +2272,140 @@ mod tests {
     }
 
     #[test]
+    fn migrates_legacy_backlog_orders_into_canonical_lanes_without_events() {
+        let directory =
+            std::env::temp_dir().join(format!("slate-persistence-test-{}", Uuid::new_v4()));
+        fs::create_dir_all(&directory).expect("create temporary test directory");
+        let path = directory.join(DATABASE_FILE_NAME);
+        let mut connection = Connection::open(&path).expect("open v4 database");
+        connection
+            .execute_batch(&format!(
+                "{}{}{}{} PRAGMA user_version = 4;",
+                migration_1(),
+                migration_2(),
+                migration_3(),
+                migration_4(),
+            ))
+            .expect("create v4 database");
+
+        let tasks = [
+            ("capture-a", None, None),
+            ("capture-b", None, Some("2026-08-08")),
+            ("overdue-a", Some(30), Some("2026-08-08")),
+            ("overdue-b", Some(30), Some("2026-08-07")),
+            ("upcoming", Some(30), Some("2026-08-10")),
+            ("unscheduled", Some(30), None),
+        ];
+        for (position, (id, estimate, scheduled_date)) in tasks.into_iter().enumerate() {
+            connection
+                .execute(
+                    "INSERT INTO tasks
+                     (id, title, estimate_minutes, scheduled_date, created_at, completed_at, revision, anchor_date)
+                     VALUES (?1, ?2, ?3, ?4, ?5, NULL, 1, NULL)",
+                    rusqlite::params![
+                        id,
+                        id,
+                        estimate,
+                        scheduled_date,
+                        format!("2026-08-09T00:00:0{position}Z"),
+                    ],
+                )
+                .expect("insert legacy task");
+        }
+        let insert_order = |scope: &str, task_ids: &[&str]| {
+            for (position, task_id) in task_ids.iter().enumerate() {
+                connection
+                    .execute(
+                        "INSERT INTO task_orders (scope, task_id, position) VALUES (?1, ?2, ?3)",
+                        rusqlite::params![scope, task_id, position as i64],
+                    )
+                    .expect("insert legacy order");
+            }
+        };
+        insert_order(
+            planning_workspace::NEEDS_ESTIMATE_SCOPE,
+            &["capture-b", "capture-a"],
+        );
+        insert_order(
+            planning_workspace::OVERDUE_SCOPE,
+            &["overdue-b", "overdue-a"],
+        );
+        insert_order(planning_workspace::UPCOMING_SCOPE, &["upcoming"]);
+        insert_order(planning_workspace::UNSCHEDULED_SCOPE, &["unscheduled"]);
+
+        migrate_lane_orders(&mut connection).expect("migrate lane orders");
+        assert_eq!(
+            connection
+                .query_row("PRAGMA user_version", [], |row| row.get::<_, i64>(0))
+                .expect("schema version"),
+            5
+        );
+        assert_eq!(
+            connection
+                .query_row("SELECT COUNT(*) FROM planner_events", [], |row| {
+                    row.get::<_, i64>(0)
+                })
+                .expect("event count"),
+            0
+        );
+        assert_eq!(
+            connection
+                .query_row(
+                    "SELECT COUNT(*) FROM task_orders WHERE scope IN (?1, ?2, ?3, ?4)",
+                    rusqlite::params![
+                        planning_workspace::NEEDS_ESTIMATE_SCOPE,
+                        planning_workspace::OVERDUE_SCOPE,
+                        planning_workspace::UPCOMING_SCOPE,
+                        planning_workspace::UNSCHEDULED_SCOPE,
+                    ],
+                    |row| row.get::<_, i64>(0),
+                )
+                .expect("legacy order count"),
+            0
+        );
+
+        migrate_lane_orders(&mut connection).expect("rerun lane order migration");
+        let read_order = |scope: &str| {
+            let mut statement = connection
+                .prepare(
+                    "SELECT task_id FROM task_orders
+                     WHERE scope = ?1 ORDER BY position ASC, task_id ASC",
+                )
+                .expect("prepare migrated order");
+            statement
+                .query_map([scope], |row| row.get::<_, String>(0))
+                .expect("query migrated order")
+                .collect::<Result<Vec<_>, _>>()
+                .expect("collect migrated order")
+        };
+        assert_eq!(
+            read_order(planning_workspace::CAPTURE_SCOPE),
+            vec!["capture-b", "capture-a"]
+        );
+        assert_eq!(
+            read_order(planning_workspace::READY_SCOPE),
+            vec!["overdue-b", "overdue-a", "upcoming", "unscheduled"]
+        );
+        drop(connection);
+
+        let reopened = Repository::open(path.clone()).expect("reopen migrated database");
+        assert_eq!(
+            reopened
+                .orders()
+                .expect("reopened orders")
+                .get(planning_workspace::READY_SCOPE),
+            Some(&vec![
+                "overdue-b".into(),
+                "overdue-a".into(),
+                "upcoming".into(),
+                "unscheduled".into(),
+            ])
+        );
+        drop(reopened);
+        fs::remove_dir_all(directory).expect("remove temporary test directory");
+    }
+
+    #[test]
     fn persists_onboarding_status_after_reopen() {
         let directory =
             std::env::temp_dir().join(format!("slate-persistence-test-{}", Uuid::new_v4()));
@@ -2576,7 +2798,7 @@ mod tests {
             .repository
             .reorder_tasks(ReorderTasksInput {
                 guard: ReorderGuard {
-                    scope: "log:unscheduled".into(),
+                    scope: planning_workspace::READY_SCOPE.into(),
                     expected_revisions: expected_revisions(&[&second]),
                 },
                 task_ids: vec![second.id.clone()],
@@ -2592,7 +2814,7 @@ mod tests {
             .completed_at
             .is_some());
         assert_eq!(
-            snapshot.order_by_scope.get("log:unscheduled"),
+            snapshot.order_by_scope.get(planning_workspace::READY_SCOPE),
             Some(&vec![second.id]),
         );
     }
@@ -2623,7 +2845,7 @@ mod tests {
             .repository
             .reorder_tasks(ReorderTasksInput {
                 guard: ReorderGuard {
-                    scope: "log:unscheduled".into(),
+                    scope: planning_workspace::READY_SCOPE.into(),
                     expected_revisions: expected_revisions(&[&first, &second]),
                 },
                 task_ids: vec![first.id.clone(), second.id.clone()],
@@ -2643,7 +2865,7 @@ mod tests {
 
         let snapshot = test_snapshot(&database.repository);
         assert_eq!(
-            snapshot.order_by_scope.get("log:unscheduled"),
+            snapshot.order_by_scope.get(planning_workspace::READY_SCOPE),
             Some(&vec![moved.id, first.id, second.id]),
         );
     }
@@ -2698,7 +2920,7 @@ mod tests {
         assert_eq!(stored_task.scheduled_date, None);
         let snapshot = test_snapshot(&database.repository);
         assert_eq!(
-            snapshot.order_by_scope.get("log:unscheduled"),
+            snapshot.order_by_scope.get(planning_workspace::READY_SCOPE),
             Some(&vec![task.id]),
         );
         assert!(!snapshot
@@ -2836,7 +3058,9 @@ mod tests {
 
         let returned = test_snapshot(&database.repository);
         assert_eq!(
-            returned.order_by_scope.get("log:needs-estimate"),
+            returned
+                .order_by_scope
+                .get(planning_workspace::CAPTURE_SCOPE),
             Some(&vec![created.id.clone()]),
         );
         assert!(!returned
@@ -2871,7 +3095,9 @@ mod tests {
         assert_eq!(reopened_task.estimate_minutes, None);
         assert_eq!(reopened_task.scheduled_date, None);
         assert_eq!(
-            reopened_snapshot.order_by_scope.get("log:needs-estimate"),
+            reopened_snapshot
+                .order_by_scope
+                .get(planning_workspace::CAPTURE_SCOPE),
             Some(&vec![created.id]),
         );
     }
@@ -2978,11 +3204,13 @@ mod tests {
         assert_eq!(returned_unsized.estimate_minutes, None);
         assert_eq!(returned_unsized.scheduled_date, None);
         assert_eq!(
-            returned.order_by_scope.get("log:unscheduled"),
+            returned.order_by_scope.get(planning_workspace::READY_SCOPE),
             Some(&vec![sized.id.clone()]),
         );
         assert_eq!(
-            returned.order_by_scope.get("log:needs-estimate"),
+            returned
+                .order_by_scope
+                .get(planning_workspace::CAPTURE_SCOPE),
             Some(&vec![unsized_task.id.clone()]),
         );
 
@@ -3037,7 +3265,7 @@ mod tests {
             .repository
             .reorder_tasks(ReorderTasksInput {
                 guard: ReorderGuard {
-                    scope: "log:unscheduled".into(),
+                    scope: planning_workspace::READY_SCOPE.into(),
                     expected_revisions: expected_revisions(&[&first, &restored]),
                 },
                 task_ids: vec![first.id.clone(), restored.id.clone()],
@@ -3062,7 +3290,7 @@ mod tests {
 
         let snapshot = test_snapshot(&database.repository);
         assert_eq!(
-            snapshot.order_by_scope.get("log:unscheduled"),
+            snapshot.order_by_scope.get(planning_workspace::READY_SCOPE),
             Some(&vec![restored.id, first.id]),
         );
     }
@@ -3075,7 +3303,7 @@ mod tests {
             .repository
             .reorder_tasks(ReorderTasksInput {
                 guard: ReorderGuard {
-                    scope: "log:unscheduled".into(),
+                    scope: planning_workspace::READY_SCOPE.into(),
                     expected_revisions: expected_revisions(&[&task]),
                 },
                 task_ids: vec![task.id.clone()],
@@ -3492,7 +3720,7 @@ mod tests {
             .repository
             .reorder_tasks(ReorderTasksInput {
                 guard: ReorderGuard {
-                    scope: "log:unscheduled".into(),
+                    scope: planning_workspace::READY_SCOPE.into(),
                     expected_revisions: expected_revisions(&[&first, &second]),
                 },
                 task_ids: vec![second.id.clone(), first.id.clone()],
