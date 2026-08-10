@@ -4,6 +4,7 @@
 
 ## Status
 
+- **Implementation status:** Implemented in the current tree. The remaining Anchor/recovery surface is conditional 2.3 work, not an unfinished Stage 2 requirement.
 - **Scope update:** The Stage 2 foundation remains useful for Plan My Day, full-window movement, and later Calibration. The unfinished-day review and changed-day recovery experiences originally associated with Stage 2 are now conditional 2.3 full-window candidates and do not block the 2.0–2.2 workspace sequence.
 - **Anchor decision:** Anchor support is provisional groundwork for the conditional 2.3 recovery candidate. Plan My Day does not need Anchor data because existing Today commitments are already fixed; if 2.3 is not earned, remove the active Anchor surface and persistence state through a forward migration instead of leaving dormant behavior.
 - **Priority:** P1 after Slate 1.0 validation

@@ -2,7 +2,7 @@
 
 > **Status:** Directional Stage 2 foundation contract and conditional 2.3 full-window review definition
 >
-> **Updated:** 2026-07-28
+> **Updated:** 2026-08-08
 
 The 1.1 implementation begins with the focused global quick-capture slice described below. The unfinished-day and changed-day review concepts originally described as 1.2 and 1.3 are moved to a conditional 2.3 full-window slot; they are not requirements for the menu-bar popover.
 
@@ -30,7 +30,7 @@ A configurable global shortcut opens a compact capture surface over the user’s
 The first release:
 
 - Accepts a title and saves immediately to Backlog.
-- Presents a two-line command bar at 520 × 100 with a 360 × 100 minimum: title/Add on the first row, destination/status and bounded recovery actions on the second.
+- Presents a two-line command bar at 520 × 72 with a 360 × 72 minimum: title/Add on the first row and destination/status on the second.
 - Does not require an estimate, date, AI provider, or network connection.
 - Uses a dedicated compact capture window with focus-loss dismissal behavior.
 - Confirms the destination and offers a short undo opportunity.

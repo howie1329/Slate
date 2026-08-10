@@ -21,13 +21,13 @@ The capacity rail remains a CSS width/color transition. It is a planning signal,
 
 ## Current implementation points
 
-The shared Slate shell owns both header metrics in `src/routes/__root.tsx`:
+The Daily workspace owns both visible metrics in `src/components/daily-workspace.tsx`:
 
-- `HeaderSummary` calculates Today’s remaining or over-capacity value with `calculateCapacityState`.
-- `HeaderSummary` calculates Backlog’s active non-Today task count with `scopeForTask`.
-- `TodayCapacityProgress` renders the existing capacity rail.
+- `selectDailyWorkspace` calculates Today’s remaining or over-capacity value with `calculateCapacityState`.
+- `selectDailyWorkspace` calculates the flat Backlog task count from the derived workspace sections.
+- `DailyWorkspace` renders the existing capacity rail and Number Flow values.
 
-Number Flow should replace only the visible numeric text inside `HeaderSummary`. Planner calculations, mutation handling, persistence, routes, and native commands remain unchanged.
+Number Flow owns only the visible numeric text inside the Daily workspace header. Planner calculations, mutation handling, persistence, routes, and native commands remain unchanged.
 
 ## Proposed behavior
 

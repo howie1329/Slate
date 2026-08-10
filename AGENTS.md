@@ -27,6 +27,7 @@ Read the relevant companion guidance before making changes:
 - `src-tauri/assets/`: canonical native app-icon source assets.
 - `src-tauri/icons/slate/`: generated macOS bundle icons referenced by `tauri.conf.json`.
 - `src-tauri/src/`: native persistence, credentials, window, and tray behavior.
+- `src-tauri/src/planning_workspace.rs`: authoritative Today/Backlog projection, capacity, ordering, reorder guards, and AI planning facts.
 - `src-tauri/tauri.conf.json`: native window and bundle configuration.
 - `docs/`: product documentation and implementation plans.
 

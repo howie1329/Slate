@@ -181,7 +181,7 @@ export function QuickCaptureWindow() {
   return (
     <main
       aria-label="Quick capture"
-      className="flex h-dvh min-h-0 flex-col justify-center overflow-hidden rounded-[14px] bg-background px-3 py-3 text-foreground ring-1 ring-border/70"
+      className="flex h-dvh min-h-0 flex-col justify-center overflow-hidden rounded-[14px] bg-background px-3 py-1.5 text-foreground ring-1 ring-border/70"
       data-window-mode="quick-capture"
       onKeyDown={(event) => {
         if (event.key === "Escape" && !event.defaultPrevented) {
@@ -190,37 +190,41 @@ export function QuickCaptureWindow() {
         }
       }}
     >
-      <form className="flex min-h-10 items-center gap-2" onSubmit={handleSubmit}>
+      <form className="flex h-7 min-w-0 items-center" onSubmit={handleSubmit}>
         <label className="sr-only" htmlFor="quick-capture-title">
           Quick capture title
         </label>
-        <Input
-          ref={inputRef}
-          aria-describedby="quick-capture-status"
-          aria-invalid={Boolean(error)}
-          className="h-10 flex-1 text-menu"
-          disabled={createTask.isPending || undoQuickCapture.isPending}
-          id="quick-capture-title"
-          onChange={(event) => handleTitleChange(event.target.value)}
-          placeholder="Capture a thought"
-          value={title}
-        />
-        <Button
-          className="h-10 px-3 text-menu"
-          disabled={!title.trim() || createTask.isPending || undoQuickCapture.isPending}
-          type="submit"
-        >
-          {createTask.isPending ? (
-            <HugeiconsIcon className="animate-spin motion-reduce:animate-none" icon={Loading03Icon} strokeWidth={1.8} />
-          ) : (
-            "Add"
-          )}
-        </Button>
+        <div className="flex h-7 min-w-0 flex-1 items-center rounded-md border border-input bg-transparent transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30">
+          <Input
+            ref={inputRef}
+            aria-describedby="quick-capture-status"
+            aria-invalid={Boolean(error)}
+            className="h-6 min-w-0 flex-1 rounded-md border-0 bg-transparent px-2.5 py-1 text-composer shadow-none focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
+            disabled={createTask.isPending || undoQuickCapture.isPending}
+            id="quick-capture-title"
+            onChange={(event) => handleTitleChange(event.target.value)}
+            placeholder="Capture a thought"
+            value={title}
+          />
+          <span aria-hidden="true" className="h-4 w-px shrink-0 bg-border" />
+          <Button
+            className="h-6 min-w-10 rounded-md px-2 text-composer font-medium text-foreground"
+            disabled={!title.trim() || createTask.isPending || undoQuickCapture.isPending}
+            type="submit"
+            variant="ghost"
+          >
+            {createTask.isPending ? (
+              <HugeiconsIcon aria-hidden="true" className="animate-spin motion-reduce:animate-none" icon={Loading03Icon} size={12} strokeWidth={1.8} />
+            ) : (
+              "Add"
+            )}
+          </Button>
+        </div>
       </form>
 
       <div
         aria-live="polite"
-        className="flex min-h-5 items-center justify-between gap-2 pt-2 text-menu-label"
+        className={`flex min-h-3 items-center justify-between gap-2 pt-0.5 ${error ? "text-capacity" : "text-metadata"}`}
         id="quick-capture-status"
         role={error ? "alert" : "status"}
       >
@@ -232,10 +236,10 @@ export function QuickCaptureWindow() {
           <span className="min-w-0 truncate text-muted-foreground">Adding to Backlog…</span>
         ) : confirmation ? (
           <span className="flex min-w-0 items-center gap-1 text-primary">
-            <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-primary" />
+            <span aria-hidden="true" className="size-1 shrink-0 rounded-full bg-primary" />
             <span className="min-w-0 truncate">Added to Backlog</span>
             <Button
-              className="h-5 shrink-0 px-1 text-menu-label text-primary"
+              className="h-5 shrink-0 px-1 text-metadata text-primary"
               disabled={undoQuickCapture.isPending}
               onClick={handleUndo}
               type="button"
@@ -249,7 +253,7 @@ export function QuickCaptureWindow() {
         )}
         {title.trim() && !createTask.isPending && !undoQuickCapture.isPending ? (
           <Button
-            className="h-5 shrink-0 px-1 text-menu-label text-muted-foreground"
+            className="h-5 shrink-0 px-1 text-metadata text-muted-foreground"
             onClick={handleDiscard}
             type="button"
             variant="ghost"

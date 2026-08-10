@@ -13,8 +13,28 @@ import {
 } from "./settings-draft.ts";
 
 const snapshot = {
-  tasks: [],
-  orderByScope: {},
+  planning: {
+    today: {
+      active: { tasks: [], reorder: { scope: "today:2026-07-23", expectedRevisions: [] } },
+      completed: { tasks: [], reorder: null },
+      capacity: {
+        limitMinutes: 240,
+        committedMinutes: 0,
+        remainingMinutes: 240,
+        overageMinutes: 0,
+        isOverCapacity: false,
+        overflowTaskId: null,
+      },
+      totalTaskCount: 0,
+      unsizedTaskCount: 0,
+    },
+    backlog: {
+      active: { tasks: [], reorder: null },
+      completed: { tasks: [], reorder: null },
+      totalTaskCount: 0,
+      activeTaskCount: 0,
+    },
+  },
   settings: {
     dailyCapacityMinutes: 240,
     planningInstruction: "",
@@ -41,7 +61,6 @@ const snapshot = {
     openrouter: "configured",
   },
   today: "2026-07-23",
-  effectiveCapacityMinutes: 240,
 };
 
 describe("Settings draft", () => {

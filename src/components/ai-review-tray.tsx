@@ -11,6 +11,7 @@ import {
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { useCreateTask } from "@/lib/planner-query";
+import { plannerMutationErrorMessage } from "@/lib/planner-errors";
 import { dateFromLocalDate, formatDueDate, localDateFromDate } from "@/lib/local-date";
 import type { AiAssistProposal, AiPlanProposal, LocalDate } from "@/lib/planner";
 import { useTaskMotion } from "@/components/task-motion";
@@ -176,7 +177,7 @@ function PlanStaleState({ onDismiss, onRedo }: { onDismiss: () => void; onRedo: 
 
 function AssistResult({ onDismiss, onRedo, proposal }: { onDismiss: () => void; onRedo: () => void; proposal: AiAssistProposal }) {
   const createTask = useCreateTask();
-  const { recordTaskMutation } = useTaskMotion();
+  const { clearTaskMutation, recordTaskMutation } = useTaskMotion();
   const [title, setTitle] = useState(proposal.title);
   const [estimate, setEstimate] = useState(String(proposal.estimateMinutes));
   const [scheduledDate, setScheduledDate] = useState<LocalDate | null>(proposal.scheduledDate);
@@ -204,7 +205,7 @@ function AssistResult({ onDismiss, onRedo, proposal }: { onDismiss: () => void; 
     }
 
     setValidationError(null);
-    recordTaskMutation({ kind: "create", transition: "animate" });
+    const mutationVersion = recordTaskMutation({ kind: "create", transition: "animate" });
     createTask.mutate(
       { title: nextTitle, estimateMinutes: nextEstimate, scheduledDate, source: "ai-assist" },
       {
@@ -213,7 +214,8 @@ function AssistResult({ onDismiss, onRedo, proposal }: { onDismiss: () => void; 
           toast.success("Task saved.");
         },
         onError: (error) => {
-          toast.error(error instanceof Error ? error.message : "Could not save task.");
+          clearTaskMutation(mutationVersion);
+          toast.error(plannerMutationErrorMessage(error, "Could not save task."));
         },
       },
     );
