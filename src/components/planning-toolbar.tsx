@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowDown01Icon,
+  ArrowLeft01Icon,
   ArrowUp01Icon,
   Calendar01Icon,
   Search01Icon,
@@ -170,6 +171,68 @@ export function PlanningToolbar({
           <DropdownMenuItem disabled>Export board</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+    </div>
+  );
+}
+
+type SettingsToolbarProps = {
+  date?: LocalDate;
+  onBackToBoard: () => void;
+};
+
+export function SettingsToolbar({ date, onBackToBoard }: SettingsToolbarProps) {
+  const isFullscreen = useMainWindowFullscreen();
+  const titleRef = useRef<HTMLSpanElement>(null);
+
+  async function handleToggleFullscreen() {
+    await toggleMainWindowFullscreen();
+    window.requestAnimationFrame(() => titleRef.current?.focus());
+  }
+
+  return (
+    <div
+      className="flex h-full min-w-0 items-center gap-1 px-2"
+      {...(isFullscreen === false ? { "data-tauri-drag-region": "" } : {})}
+    >
+      {isFullscreen === false ? <WindowControls onToggleFullscreen={handleToggleFullscreen} /> : null}
+      <time className="ml-1 flex min-w-0 items-center gap-1.5 text-section-secondary text-muted-foreground" dateTime={date}>
+        <HugeiconsIcon aria-hidden="true" icon={Calendar01Icon} size={14} strokeWidth={1.7} />
+        <span className="truncate">{date ? formatToolbarDate(date) : "Loading…"}</span>
+      </time>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button className="ml-2 h-6 min-w-20 justify-between px-2 text-section-secondary font-normal" size="xs" type="button" variant="outline" />}>
+          <span className="outline-none" ref={titleRef} tabIndex={-1}>Settings</span>
+          <HugeiconsIcon aria-hidden="true" icon={ArrowDown01Icon} size={11} strokeWidth={1.8} />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-32">
+          <DropdownMenuItem onClick={onBackToBoard}>Board</DropdownMenuItem>
+          <DropdownMenuItem disabled>Settings</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Button
+        className="ml-2 h-6 px-2 text-section-secondary font-normal text-muted-foreground hover:text-foreground"
+        onClick={onBackToBoard}
+        size="xs"
+        type="button"
+        variant="ghost"
+      >
+        <HugeiconsIcon aria-hidden="true" icon={ArrowLeft01Icon} size={12} strokeWidth={1.8} />
+        Back to board
+      </Button>
+
+      <div className="min-w-2 flex-1" />
+
+      <div aria-hidden="true" className="flex items-center gap-1 opacity-40 max-[700px]:hidden">
+        <span className="px-2 text-section-secondary text-muted-foreground">Filter</span>
+        <span className="inline-flex items-center gap-1 px-2 text-section-secondary text-muted-foreground">
+          <HugeiconsIcon icon={ArrowUp01Icon} size={12} strokeWidth={1.7} />
+          Sort
+        </span>
+        <HugeiconsIcon className="mx-1 text-muted-foreground" icon={Search01Icon} size={13} strokeWidth={1.7} />
+        <span className="px-1 text-base leading-none text-muted-foreground">•••</span>
+      </div>
     </div>
   );
 }

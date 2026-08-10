@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { useAiReview } from "@/components/ai-review";
 import { OnboardingFlow } from "@/components/onboarding-flow";
 import { PlanningBoard } from "@/components/planning-board";
-import { PlanningToolbar } from "@/components/planning-toolbar";
+import { PlanningToolbar, SettingsToolbar } from "@/components/planning-toolbar";
 import { PlanningWorkspaceShell } from "@/components/planning-workspace-shell";
 import { QuickCaptureWindow } from "@/components/quick-capture-window";
 import { WorkspaceFooter } from "@/components/workspace-footer";
@@ -82,6 +82,11 @@ function SlateShell() {
   function handleOpenSettings() {
     setRouteTransition("animate");
     void navigate({ to: "/settings" });
+  }
+
+  function handleBackToBoard() {
+    setRouteTransition("animate");
+    void navigate({ to: "/" });
   }
 
   const recovery = (
@@ -166,6 +171,11 @@ function SlateShell() {
               onSortChange={setPlanningSort}
               query={planningQuery}
               sort={planningSort}
+            />
+          ) : contentKind === "settings" ? (
+            <SettingsToolbar
+              date={planner.data?.today}
+              onBackToBoard={handleBackToBoard}
             />
           ) : undefined}
         >
