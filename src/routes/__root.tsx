@@ -173,6 +173,7 @@ function SlateShell() {
               task={planningInspectorEntry.task}
             />
           ) : null}
+          onOpenSettings={handleOpenSettings}
           statusMessage={isReconnecting ? "Reconnecting to local data…" : reconnectFailed ? "Local data is still unavailable." : undefined}
           toolbar={contentKind === "planning" ? (
             <PlanningToolbar
