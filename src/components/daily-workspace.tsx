@@ -165,7 +165,7 @@ function DailyWorkspaceContent({ planner, query, model, isReordering, reorderTod
                   hideLabel
                   label="Today tasks"
                   metadataForTask={todayMetadata}
-                  onReorderTasks={model.hasQuery ? undefined : handleReorderToday}
+                  onReorderTasks={windowMode === "popover" || model.hasQuery ? undefined : handleReorderToday}
                   onSelectTask={selectTask}
                   onToggleTask={toggleTask}
                   overflowTaskId={model.today.capacity.overflowTaskId}
