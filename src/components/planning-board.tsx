@@ -158,7 +158,7 @@ export function PlanningBoard({ filter, query, snapshot, sort }: PlanningBoardPr
     }
     if (effect.type === "inspect") {
       setFeedback(effect.feedback);
-      selectTask(effect.taskId);
+      selectTask(effect.taskId, "animate", effect.feedback.lane);
       return;
     }
 

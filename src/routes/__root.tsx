@@ -45,7 +45,7 @@ function SlateShell() {
     select: (state) => state.location.pathname === "/settings",
   });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const { clearSelection, selectedTaskId } = useTaskSelection();
+  const { clearSelection, selectedTaskDraftLane, selectedTaskId } = useTaskSelection();
   const { dismiss: dismissAiReview, state: aiReviewState } = useAiReview();
   const { routeTransition, setRouteTransition } = useRouteMotion();
 
@@ -141,7 +141,6 @@ function SlateShell() {
         }
         if (
           selectedTaskId
-          && windowMode !== "full"
           && !isInsideInspector
           && !isInsideOnboarding
           && !target?.closest("[data-task-detail], [data-task-row], [data-task-calendar]")
@@ -167,8 +166,9 @@ function SlateShell() {
           globalLayer={onboarding}
           inspector={planningInspectorEntry && planner.data ? (
             <PlanningTaskInspector
+              draftLane={selectedTaskDraftLane}
               initialLane={planningInspectorEntry.lane}
-              key={planningInspectorEntry.task.id}
+              key={`${planningInspectorEntry.task.id}:${selectedTaskDraftLane ?? "persisted"}`}
               snapshot={planner.data}
               task={planningInspectorEntry.task}
             />
@@ -199,7 +199,7 @@ function SlateShell() {
         <main className="flex h-full min-h-0 flex-col overflow-hidden">
           {planner.isError ? recovery : isSettingsPage ? routeContent : (
             <>
-              <div className="slate-workspace relative min-h-0 flex-1">
+              <div className="slate-workspace relative min-h-0 flex-1 overflow-hidden">
                 <RouteFade className="absolute inset-0" key={pathname} transition={routeTransition}>
                   <Outlet />
                 </RouteFade>

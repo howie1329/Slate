@@ -40,12 +40,14 @@ import type { LocalDate, PlannerSnapshot, PlanningTask } from "@/lib/planner";
 import { PLANNING_LANES, type PlanningLaneId } from "@/lib/planning-board";
 
 type PlanningTaskInspectorProps = {
+  draftLane?: PlanningLaneId | null;
   initialLane: PlanningLaneId;
   snapshot: PlannerSnapshot;
   task: PlanningTask;
 };
 
 export function PlanningTaskInspector({
+  draftLane,
   initialLane,
   snapshot,
   task,
@@ -57,9 +59,15 @@ export function PlanningTaskInspector({
   const [title, setTitle] = useState(task.title);
   const [estimate, setEstimate] = useState(task.estimateMinutes?.toString() ?? "");
   const [scheduledDate, setScheduledDate] = useState<LocalDate | null>(task.scheduledDate);
-  const [lane, setLane] = useState<PlanningLaneId>(initialLane);
+  const [lane, setLane] = useState<PlanningLaneId>(draftLane ?? initialLane);
   const [deleteArmed, setDeleteArmed] = useState(false);
   const [isStale, setIsStale] = useState(false);
+  const baselineRef = useRef({
+    estimate: task.estimateMinutes?.toString() ?? "",
+    lane: initialLane,
+    scheduledDate: task.scheduledDate,
+    title: task.title,
+  });
   const revisionRef = useRef(task.revision);
   const parsedEstimate = useMemo(() => {
     const value = estimate.trim();
@@ -71,10 +79,10 @@ export function PlanningTaskInspector({
   const titleInvalid = trimmedTitle.length === 0;
   const estimateInvalid = parsedEstimate === undefined || (lane === "ready" && parsedEstimate === null);
   const isDirty =
-    title !== task.title
-    || estimate.trim() !== (task.estimateMinutes?.toString() ?? "")
-    || scheduledDate !== task.scheduledDate
-    || lane !== initialLane;
+    title !== baselineRef.current.title
+    || estimate.trim() !== baselineRef.current.estimate
+    || scheduledDate !== baselineRef.current.scheduledDate
+    || lane !== baselineRef.current.lane;
   const isPending = updateTask.isPending || completeTask.isPending || deleteTask.isPending;
   const controlsDisabled = isPending || isStale;
 
@@ -86,6 +94,12 @@ export function PlanningTaskInspector({
     }
 
     revisionRef.current = task.revision;
+    baselineRef.current = {
+      estimate: task.estimateMinutes?.toString() ?? "",
+      lane: initialLane,
+      scheduledDate: task.scheduledDate,
+      title: task.title,
+    };
     setTitle(task.title);
     setEstimate(task.estimateMinutes?.toString() ?? "");
     setScheduledDate(task.scheduledDate);
@@ -186,6 +200,12 @@ export function PlanningTaskInspector({
 
   function reviewLatest() {
     revisionRef.current = task.revision;
+    baselineRef.current = {
+      estimate: task.estimateMinutes?.toString() ?? "",
+      lane: initialLane,
+      scheduledDate: task.scheduledDate,
+      title: task.title,
+    };
     setTitle(task.title);
     setEstimate(task.estimateMinutes?.toString() ?? "");
     setScheduledDate(task.scheduledDate);

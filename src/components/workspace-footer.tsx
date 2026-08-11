@@ -36,27 +36,27 @@ export function WorkspaceFooter({ windowMode }: WorkspaceFooterProps) {
         {windowMode === "popover" ? (
           <Button
             aria-label="Open full app"
-            className="h-6 gap-1.5 rounded-md px-1.5 text-footer font-normal text-muted-foreground"
+            className="size-6 rounded-md text-muted-foreground"
             onClick={() => void openFullApp()}
+            size="icon-xs"
             title="Open full app"
             type="button"
             variant="ghost"
           >
             <HugeiconsIcon aria-hidden="true" icon={ArrowUpRight01Icon} size={12} strokeWidth={1.8} />
-            <span>Open full app</span>
           </Button>
         ) : null}
 
         <Button
           aria-label="Open settings"
-          className="h-6 gap-1.5 rounded-md px-1.5 text-footer font-normal text-muted-foreground"
+          className="size-6 rounded-md text-muted-foreground"
           onClick={handleOpenSettings}
+          size="icon-xs"
           title="Open settings"
           type="button"
           variant="ghost"
         >
           <HugeiconsIcon aria-hidden="true" icon={Settings01Icon} size={12} strokeWidth={1.8} />
-          <span>Settings</span>
         </Button>
       </div>
 

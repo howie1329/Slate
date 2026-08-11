@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
@@ -103,13 +104,15 @@ export function PlanningToolbar({
           Filter
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-44">
-          <DropdownMenuLabel>Show</DropdownMenuLabel>
-          <DropdownMenuRadioGroup onValueChange={(value) => onFilterChange?.(value as PlanningBoardFilter)} value={filter}>
-            <DropdownMenuRadioItem value="all">All tasks</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="attention">Needs attention</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="scheduled">Scheduled</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="unscheduled">Unscheduled</DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Show</DropdownMenuLabel>
+            <DropdownMenuRadioGroup onValueChange={(value) => onFilterChange?.(value as PlanningBoardFilter)} value={filter}>
+              <DropdownMenuRadioItem value="all">All tasks</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="attention">Needs attention</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="scheduled">Scheduled</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="unscheduled">Unscheduled</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -119,13 +122,15 @@ export function PlanningToolbar({
           Sort
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-44">
-          <DropdownMenuLabel>Order within lanes</DropdownMenuLabel>
-          <DropdownMenuRadioGroup onValueChange={(value) => onSortChange?.(value as PlanningBoardSort)} value={sort}>
-            <DropdownMenuRadioItem value="planning">Planning order</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="newest">Newest first</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="title">Title</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="estimate">Estimate</DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Order within lanes</DropdownMenuLabel>
+            <DropdownMenuRadioGroup onValueChange={(value) => onSortChange?.(value as PlanningBoardSort)} value={sort}>
+              <DropdownMenuRadioItem value="planning">Planning order</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="newest">Newest first</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="title">Title</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="estimate">Estimate</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -160,15 +165,17 @@ export function PlanningToolbar({
           <span aria-hidden="true">•••</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Planning</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {onOpenSettings ? (
-            <DropdownMenuItem onClick={onOpenSettings}>
-              <HugeiconsIcon aria-hidden="true" icon={Settings01Icon} size={13} strokeWidth={1.7} />
-              Settings
-            </DropdownMenuItem>
-          ) : null}
-          <DropdownMenuItem disabled>Export board</DropdownMenuItem>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Planning</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {onOpenSettings ? (
+              <DropdownMenuItem onClick={onOpenSettings}>
+                <HugeiconsIcon aria-hidden="true" icon={Settings01Icon} size={13} strokeWidth={1.7} />
+                Settings
+              </DropdownMenuItem>
+            ) : null}
+            <DropdownMenuItem disabled>Export board</DropdownMenuItem>
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
