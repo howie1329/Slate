@@ -348,7 +348,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
                   aria-invalid={validationError === "title"}
                   aria-label="Task title"
                   autoFocus
-                  className="h-8 border-transparent bg-transparent px-2 text-menu font-semibold text-[var(--task-detail-foreground)] shadow-none placeholder:text-[var(--task-detail-muted)] focus-visible:bg-[var(--task-detail-field)]"
+                  className="h-8 border-transparent bg-transparent px-2 text-menu font-semibold text-[var(--task-detail-foreground)] capitalize shadow-none placeholder:normal-case placeholder:text-[var(--task-detail-muted)] focus-visible:bg-[var(--task-detail-field)]"
                   disabled={controlsDisabled}
                   onBlur={() => setEditingField(null)}
                   onChange={(event) => {
@@ -368,7 +368,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
                   aria-describedby={validationError === "title" ? "task-detail-validation" : undefined}
                   aria-invalid={validationError === "title"}
                   aria-label="Edit task title"
-                  className="flex h-8 w-full min-w-0 items-center truncate rounded-md px-2 text-left text-menu font-semibold outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none"
+                  className="flex h-8 w-full min-w-0 items-center truncate rounded-md px-2 text-left text-menu font-semibold capitalize outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none"
                   disabled={controlsDisabled}
                   onClick={() => setEditingField("title")}
                   type="button"
@@ -427,7 +427,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
                 <div className="flex min-h-14 items-center gap-2 px-4">
                   <HugeiconsIcon aria-hidden="true" className="shrink-0 text-[var(--task-detail-muted)]" icon={Clock01Icon} size={16} strokeWidth={1.7} />
                   <div className="min-w-0 flex-1">
-                    <span className="block text-menu-label font-semibold text-[var(--task-detail-muted)]">Estimate</span>
+                    <span className="block text-menu-label font-semibold capitalize text-[var(--task-detail-muted)]">Estimate</span>
                     <Input
                       aria-describedby={validationError === "estimate" ? "task-detail-validation" : undefined}
                       aria-invalid={validationError === "estimate"}
@@ -466,7 +466,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
                 >
                   <HugeiconsIcon aria-hidden="true" className="shrink-0 text-[var(--task-detail-muted)]" icon={Clock01Icon} size={16} strokeWidth={1.7} />
                   <span className="min-w-0">
-                    <span className="block text-menu-label font-semibold text-[var(--task-detail-muted)]">Estimate</span>
+                    <span className="block text-menu-label font-semibold capitalize text-[var(--task-detail-muted)]">Estimate</span>
                     <span className="block truncate text-menu font-normal tabular-nums">
                       {estimate.trim() ? `${estimate.trim()}m` : "Set time"}
                     </span>
@@ -489,7 +489,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
               >
                 <HugeiconsIcon aria-hidden="true" className="shrink-0 text-[var(--task-detail-muted)]" icon={Calendar01Icon} size={16} strokeWidth={1.7} />
                 <span className="min-w-0">
-                  <span className="block text-menu-label font-semibold text-[var(--task-detail-muted)]">Date</span>
+                  <span className="block text-menu-label font-semibold capitalize text-[var(--task-detail-muted)]">Date</span>
                   <span className="block truncate text-menu font-normal">{formatDueDate(scheduledDate)}</span>
                 </span>
               </PopoverTrigger>
@@ -628,7 +628,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
                 <Input
                   aria-label="Task title"
                   autoFocus
-                  className="h-8 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] placeholder:text-[var(--task-detail-muted)] focus-visible:border-ring"
+                  className="h-8 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] capitalize placeholder:normal-case placeholder:text-[var(--task-detail-muted)] focus-visible:border-ring"
                   disabled={controlsDisabled}
                   onBlur={() => setEditingField(null)}
                   onChange={(event) => setTitle(event.target.value)}
@@ -643,7 +643,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
               ) : (
                 <button
                   aria-label="Edit task title"
-                  className="flex h-8 w-full items-center truncate rounded-md px-2 text-left text-menu font-medium outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none"
+                  className="flex h-8 w-full items-center truncate rounded-md px-2 text-left text-menu font-medium capitalize outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none"
                   disabled={controlsDisabled}
                   onClick={() => setEditingField("title")}
                   type="button"

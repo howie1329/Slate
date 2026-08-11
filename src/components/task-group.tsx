@@ -198,7 +198,7 @@ export function TaskGroup({
       }}
     >
       {activeLabel ? (
-        <li aria-hidden="true" className="px-1 pb-1 pt-3 text-xs text-muted-foreground" key="active-label">
+        <li aria-hidden="true" className="px-1 pb-1 pt-3 text-xs font-medium capitalize text-muted-foreground" key="active-label">
           {activeLabel}
         </li>
       ) : null}
@@ -231,7 +231,7 @@ export function TaskGroup({
         );
       })}
       {completedLabel ? (
-        <li aria-hidden="true" className="border-t border-border px-1 pb-1 pt-3 text-xs text-muted-foreground" key="completed-label">
+        <li aria-hidden="true" className="border-t border-border px-1 pb-1 pt-3 text-xs font-medium capitalize text-muted-foreground" key="completed-label">
           {completedLabel}
         </li>
       ) : completedTasks.length > 0 ? <li aria-hidden="true" className="h-px bg-border" /> : null}
@@ -256,7 +256,7 @@ export function TaskGroup({
   return (
     <section aria-label={label} className={cn("mt-5", className)}>
       {!hideLabel ? (
-        <h2 className="m-0 border-b border-border pb-2 text-menu-label font-semibold text-muted-foreground">
+        <h2 className="m-0 border-b border-border pb-2 text-menu-label font-semibold capitalize text-muted-foreground">
           {label}
         </h2>
       ) : null}

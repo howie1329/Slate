@@ -108,7 +108,7 @@ export function DailyCommandBar({ onValueChange, value, windowMode }: DailyComma
           </label>
           <Input
             aria-label="Search or add a task"
-            className="h-8 rounded-md border-transparent bg-transparent pl-7 pr-2 text-composer shadow-none hover:border-input focus-visible:border-ring focus-visible:ring-2 dark:bg-transparent"
+            className="h-8 rounded-md border-transparent bg-transparent pl-7 pr-2 text-composer capitalize shadow-none placeholder:normal-case hover:border-input focus-visible:border-ring focus-visible:ring-2 dark:bg-transparent"
             disabled={createTask.isPending}
             id={taskComposerInputId}
             onChange={(event) => onValueChange(event.target.value)}

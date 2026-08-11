@@ -17,6 +17,9 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -60,6 +63,19 @@ export function PlanningToolbar({
     window.requestAnimationFrame(() => titleRef.current?.focus());
   }
 
+  function handleSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Escape" || !query) return;
+
+    event.stopPropagation();
+    onQueryChange?.("");
+    window.requestAnimationFrame(() => {
+      const selectedTask = document.querySelector<HTMLElement>('[data-task-row][aria-pressed="true"]');
+      const firstTask = document.querySelector<HTMLElement>("[data-task-row]");
+      const board = document.querySelector<HTMLElement>("[data-planning-board]");
+      (selectedTask ?? firstTask ?? board)?.focus();
+    });
+  }
+
   if (!isBoardToolbar) {
     return (
       <div className="grid h-full grid-cols-[minmax(5rem,1fr)_auto_minmax(5rem,1fr)] items-center px-2" {...(isFullscreen === false ? { "data-tauri-drag-region": "" } : {})}>
@@ -71,98 +87,119 @@ export function PlanningToolbar({
   }
 
   return (
-    <div className="relative flex h-full min-w-0 items-center gap-1 px-2" {...(isFullscreen === false ? { "data-tauri-drag-region": "" } : {})}>
-      {isFullscreen === false ? <WindowControls onToggleFullscreen={handleToggleFullscreen} /> : null}
-      <time className="ml-1 flex min-w-0 items-center gap-1.5 text-section-secondary text-muted-foreground" dateTime={date}>
-        <HugeiconsIcon aria-hidden="true" icon={Calendar01Icon} size={14} strokeWidth={1.7} />
-        <span className="truncate">{date ? formatToolbarDate(date) : "Loading…"}</span>
-      </time>
+    <div
+      className="grid h-full min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-2"
+      {...(isFullscreen === false ? { "data-tauri-drag-region": "" } : {})}
+    >
+      <div className="flex min-w-0 items-center gap-1 justify-self-start">
+        {isFullscreen === false ? <WindowControls onToggleFullscreen={handleToggleFullscreen} /> : null}
+        <time className="flex min-w-0 items-center gap-1.5 text-section-secondary text-muted-foreground max-[639px]:hidden" dateTime={date}>
+          <HugeiconsIcon aria-hidden="true" className="shrink-0" icon={Calendar01Icon} size={14} strokeWidth={1.7} />
+          <span className="truncate max-[759px]:hidden">{date ? formatToolbarDate(date) : "Loading…"}</span>
+          <span className="truncate min-[760px]:hidden">{date ? formatToolbarDateCompact(date) : "Loading…"}</span>
+        </time>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger render={<Button className="ml-2 h-6 min-w-20 justify-between px-2 text-section-secondary font-normal" size="xs" type="button" variant="outline" />}>
-          Board
-          <HugeiconsIcon aria-hidden="true" icon={ArrowDown01Icon} size={11} strokeWidth={1.8} />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-32">
-          <DropdownMenuItem disabled>Week <span className="ml-auto text-metadata text-muted-foreground">Soon</span></DropdownMenuItem>
-          <DropdownMenuItem disabled>List <span className="ml-auto text-metadata text-muted-foreground">Soon</span></DropdownMenuItem>
-          <DropdownMenuItem>Board</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button className="ml-1 h-6 min-w-20 justify-between px-2 text-section-secondary font-normal" size="xs" type="button" variant="outline" />}>
+            Board
+            <HugeiconsIcon aria-hidden="true" icon={ArrowDown01Icon} size={11} strokeWidth={1.8} />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-32">
+            <DropdownMenuItem disabled>Week <span className="ml-auto text-metadata text-muted-foreground">Soon</span></DropdownMenuItem>
+            <DropdownMenuItem disabled>List <span className="ml-auto text-metadata text-muted-foreground">Soon</span></DropdownMenuItem>
+            <DropdownMenuItem>Board</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
-      <div className="absolute left-1/2 w-48 -translate-x-1/2">
+      <div className="w-56 min-[900px]:w-[17.5rem]">
         <Input
           aria-label="Search tasks"
-          className="h-6 rounded-md px-2 text-section-secondary"
+          className="h-6 rounded-md px-2 text-composer"
           onChange={(event) => onQueryChange?.(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape" && query) {
-              event.stopPropagation();
-              onQueryChange?.("");
-            }
-          }}
+          onKeyDown={handleSearchKeyDown}
           placeholder="Search tasks…"
           value={query}
         />
       </div>
 
-      <div className="ml-auto flex items-center gap-1">
+      <div className="flex items-center gap-1 justify-self-end">
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button className="h-6 px-2 text-section-secondary font-normal text-muted-foreground hover:text-foreground" size="xs" type="button" variant={filter === "all" ? "ghost" : "secondary"} />}>
+            Filter
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-44">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Show</DropdownMenuLabel>
+              <DropdownMenuRadioGroup onValueChange={(value) => onFilterChange?.(value as PlanningBoardFilter)} value={filter}>
+                <DropdownMenuRadioItem value="all">All tasks</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="attention">Needs attention</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="scheduled">Scheduled</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="unscheduled">Unscheduled</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger render={<Button className="h-6 px-2 text-section-secondary font-normal text-muted-foreground hover:text-foreground" size="xs" type="button" variant={filter === "all" ? "ghost" : "secondary"} />}>
-          Filter
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-44">
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>Show</DropdownMenuLabel>
-            <DropdownMenuRadioGroup onValueChange={(value) => onFilterChange?.(value as PlanningBoardFilter)} value={filter}>
-              <DropdownMenuRadioItem value="all">All tasks</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="attention">Needs attention</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="scheduled">Scheduled</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="unscheduled">Unscheduled</DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button className="h-6 px-2 text-section-secondary font-normal text-muted-foreground hover:text-foreground max-[719px]:hidden" size="xs" type="button" variant={sort === "planning" ? "ghost" : "secondary"} />}>
+            <HugeiconsIcon aria-hidden="true" icon={ArrowUp01Icon} size={12} strokeWidth={1.7} />
+            Sort
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-44">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Order within lanes</DropdownMenuLabel>
+              <SortOptions onSortChange={onSortChange} sort={sort} />
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger render={<Button className="h-6 px-2 text-section-secondary font-normal text-muted-foreground hover:text-foreground" size="xs" type="button" variant={sort === "planning" ? "ghost" : "secondary"} />}>
-          <HugeiconsIcon aria-hidden="true" icon={ArrowUp01Icon} size={12} strokeWidth={1.7} />
-          Sort
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-44">
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>Order within lanes</DropdownMenuLabel>
-            <DropdownMenuRadioGroup onValueChange={(value) => onSortChange?.(value as PlanningBoardSort)} value={sort}>
-              <DropdownMenuRadioItem value="planning">Planning order</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="newest">Newest first</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="title">Title</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="estimate">Estimate</DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger render={<Button aria-label="More planning options" className="h-6 w-6 text-base leading-none" size="icon-xs" title="More planning options" type="button" variant="ghost" />}>
-          <span aria-hidden="true">•••</span>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>Planning</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {onOpenSettings ? (
-              <DropdownMenuItem onClick={onOpenSettings}>
-                <HugeiconsIcon aria-hidden="true" icon={Settings01Icon} size={13} strokeWidth={1.7} />
-                Settings
-              </DropdownMenuItem>
-            ) : null}
-            <DropdownMenuItem disabled>Export board</DropdownMenuItem>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button aria-label="More planning options" className="h-6 w-6 text-base leading-none" size="icon-xs" title="More planning options" type="button" variant="ghost" />}>
+            <span aria-hidden="true">•••</span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Planning</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="min-[720px]:hidden">
+                  <HugeiconsIcon aria-hidden="true" icon={ArrowUp01Icon} size={13} strokeWidth={1.7} />
+                  Sort
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="min-w-44">
+                  <SortOptions onSortChange={onSortChange} sort={sort} />
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              {onOpenSettings ? (
+                <DropdownMenuItem onClick={onOpenSettings}>
+                  <HugeiconsIcon aria-hidden="true" icon={Settings01Icon} size={13} strokeWidth={1.7} />
+                  Settings
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem disabled>Export board</DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
+  );
+}
+
+function SortOptions({
+  onSortChange,
+  sort,
+}: {
+  onSortChange?: (sort: PlanningBoardSort) => void;
+  sort: PlanningBoardSort;
+}) {
+  return (
+    <DropdownMenuRadioGroup onValueChange={(value) => onSortChange?.(value as PlanningBoardSort)} value={sort}>
+      <DropdownMenuRadioItem value="planning">Planning order</DropdownMenuRadioItem>
+      <DropdownMenuRadioItem value="newest">Newest first</DropdownMenuRadioItem>
+      <DropdownMenuRadioItem value="title">Title</DropdownMenuRadioItem>
+      <DropdownMenuRadioItem value="estimate">Estimate</DropdownMenuRadioItem>
+    </DropdownMenuRadioGroup>
   );
 }
 
@@ -232,6 +269,13 @@ function formatToolbarDate(value: LocalDate) {
     day: "numeric",
     month: "short",
     weekday: "short",
+  });
+}
+
+function formatToolbarDateCompact(value: LocalDate) {
+  return dateFromLocalDate(value).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
   });
 }
 

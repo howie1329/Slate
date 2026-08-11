@@ -235,7 +235,7 @@ export function PlanningTaskInspector({
       onSubmit={save}
     >
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
-        <span className="text-section-secondary font-medium">Task details</span>
+        <span className="text-section-secondary font-medium capitalize">Task details</span>
         <span className="ml-auto text-estimate text-muted-foreground">{laneLabel(lane)}</span>
         <Tooltip>
           <TooltipTrigger
@@ -268,7 +268,7 @@ export function PlanningTaskInspector({
           <Textarea
             aria-invalid={titleInvalid}
             autoFocus
-            className="min-h-10 resize-none border-transparent px-0 py-0 text-lg font-semibold leading-6 shadow-none focus-visible:border-transparent focus-visible:ring-0"
+            className="min-h-10 resize-none border-transparent px-0 py-0 text-lg font-semibold leading-6 capitalize shadow-none focus-visible:border-transparent focus-visible:ring-0"
             disabled={controlsDisabled}
             id="planning-task-title"
             maxLength={500}
@@ -283,7 +283,7 @@ export function PlanningTaskInspector({
         </div>
 
         <section aria-labelledby="planning-task-properties" className="mt-6 border-t border-border pt-4">
-          <h2 className="m-0 text-section-secondary font-semibold" id="planning-task-properties">Planning</h2>
+          <h2 className="m-0 text-section-secondary font-semibold capitalize" id="planning-task-properties">Planning</h2>
           <div className="mt-4 flex flex-col gap-3">
             <PropertyRow label="Estimate" labelFor="planning-task-estimate">
               <div className="flex min-w-0 flex-col gap-1">
@@ -449,9 +449,9 @@ function PropertyRow({
   return (
     <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-start gap-3">
       {labelFor ? (
-        <label className="pt-2 text-xs text-muted-foreground" htmlFor={labelFor}>{label}</label>
+        <label className="pt-2 text-xs font-medium capitalize text-muted-foreground" htmlFor={labelFor}>{label}</label>
       ) : (
-        <span className="pt-2 text-xs text-muted-foreground">{label}</span>
+        <span className="pt-2 text-xs font-medium capitalize text-muted-foreground">{label}</span>
       )}
       <div className="min-w-0">{children}</div>
     </div>

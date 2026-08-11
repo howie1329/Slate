@@ -115,7 +115,7 @@ function DailyWorkspaceContent({ planner, query, model, isReordering, reorderTod
               <section aria-labelledby="daily-today-heading" className="sticky top-0 z-1 -mx-4 bg-background px-4 pb-2 pt-3 sm:-mx-6 sm:px-6">
                 <div className="flex min-w-0 items-center gap-2">
                   <HugeiconsIcon aria-hidden="true" className="shrink-0 text-foreground" icon={Sun01Icon} size={16} strokeWidth={1.8} />
-                  <h1 className="m-0 font-heading text-menu font-semibold" id="daily-today-heading">
+                  <h1 className="m-0 font-heading text-menu font-semibold capitalize" id="daily-today-heading">
                     Today
                   </h1>
                   <span
@@ -199,7 +199,7 @@ function DailyWorkspaceContent({ planner, query, model, isReordering, reorderTod
                 >
                   <HugeiconsIcon aria-hidden="true" className="shrink-0 text-muted-foreground" icon={InboxIcon} size={16} strokeWidth={1.8} />
                   <span className="flex min-w-0 items-center gap-2">
-                    <span className="font-heading text-menu font-semibold" id="daily-backlog-heading">Backlog</span>
+                    <span className="font-heading text-menu font-semibold capitalize" id="daily-backlog-heading">Backlog</span>
                     <span aria-label={`${model.backlog.totalTaskCount} ${model.backlog.totalTaskCount === 1 ? "task" : "tasks"} in backlog`} className="inline-flex min-w-5 items-center justify-center rounded-md bg-muted px-1.5 py-0.5 text-estimate tabular-nums text-muted-foreground" role="status">
                       <NumberFlow
                         aria-hidden="true"

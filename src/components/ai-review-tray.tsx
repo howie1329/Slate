@@ -251,7 +251,7 @@ function AssistResult({ onDismiss, onRedo, proposal }: { onDismiss: () => void; 
       </label>
       <Input
         autoFocus
-        className="mt-2 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] placeholder:text-[var(--task-detail-muted)]"
+        className="mt-2 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] capitalize placeholder:normal-case placeholder:text-[var(--task-detail-muted)]"
         disabled={disabled}
         id="ai-assist-title"
         onChange={(event) => setTitle(event.target.value)}

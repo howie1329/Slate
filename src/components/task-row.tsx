@@ -201,7 +201,7 @@ function TaskRowContent({
             <span className="min-w-0 flex-1">
               <span
                 className={cn(
-                  "block truncate text-task font-normal",
+                  "block truncate text-task font-normal capitalize",
                   isCompleted
                     ? cn("font-normal line-through", isSelected ? "text-foreground/70" : "text-muted-foreground")
                     : "text-foreground",

@@ -181,7 +181,12 @@ export function PlanningBoard({ filter, query, snapshot, sort }: PlanningBoardPr
   }
 
   return (
-    <section aria-label="Planning board" className="h-full min-h-0 overflow-x-auto overflow-y-hidden bg-background">
+    <section
+      aria-label="Planning board"
+      className="h-full min-h-0 overflow-x-auto overflow-y-hidden bg-background outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      data-planning-board
+      tabIndex={-1}
+    >
       <h1 className="sr-only">Planning board</h1>
       <DndContext
         collisionDetection={closestCenter}
@@ -441,7 +446,7 @@ function PlanningBoardCardContent({ lane, task }: { lane: PlanningLaneId; task: 
         ) : lane === "today" ? (
           <HugeiconsIcon aria-hidden="true" className="mt-px shrink-0 text-muted-foreground" icon={Clock01Icon} size={12} strokeWidth={1.6} />
         ) : null}
-        <span className={cn("min-w-0 flex-1 truncate text-[13px] font-normal leading-4 text-foreground", lane === "done" && "text-muted-foreground line-through")}>
+        <span className={cn("min-w-0 flex-1 truncate text-[13px] font-normal leading-4 text-foreground capitalize", lane === "done" && "text-muted-foreground line-through")}>
           {task.title}
         </span>
         {task.estimateMinutes !== null ? (
