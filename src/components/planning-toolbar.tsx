@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import {
   ArrowDown01Icon,
   ArrowLeft01Icon,
   ArrowUp01Icon,
   Calendar01Icon,
-  Search01Icon,
   Settings01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -53,14 +52,8 @@ export function PlanningToolbar({
   sort = "planning",
 }: PlanningToolbarProps) {
   const isFullscreen = useMainWindowFullscreen();
-  const [searchOpen, setSearchOpen] = useState(false);
-  const searchRef = useRef<HTMLInputElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const isBoardToolbar = Boolean(onQueryChange && onFilterChange && onSortChange);
-
-  useEffect(() => {
-    if (searchOpen) searchRef.current?.focus();
-  }, [searchOpen]);
 
   async function handleToggleFullscreen() {
     await toggleMainWindowFullscreen();
@@ -78,7 +71,7 @@ export function PlanningToolbar({
   }
 
   return (
-    <div className="flex h-full min-w-0 items-center gap-1 px-2" {...(isFullscreen === false ? { "data-tauri-drag-region": "" } : {})}>
+    <div className="relative flex h-full min-w-0 items-center gap-1 px-2" {...(isFullscreen === false ? { "data-tauri-drag-region": "" } : {})}>
       {isFullscreen === false ? <WindowControls onToggleFullscreen={handleToggleFullscreen} /> : null}
       <time className="ml-1 flex min-w-0 items-center gap-1.5 text-section-secondary text-muted-foreground" dateTime={date}>
         <HugeiconsIcon aria-hidden="true" icon={Calendar01Icon} size={14} strokeWidth={1.7} />
@@ -97,7 +90,23 @@ export function PlanningToolbar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <div className="min-w-2 flex-1" />
+      <div className="absolute left-1/2 w-48 -translate-x-1/2">
+        <Input
+          aria-label="Search tasks"
+          className="h-6 rounded-md px-2 text-section-secondary"
+          onChange={(event) => onQueryChange?.(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && query) {
+              event.stopPropagation();
+              onQueryChange?.("");
+            }
+          }}
+          placeholder="Search tasks…"
+          value={query}
+        />
+      </div>
+
+      <div className="ml-auto flex items-center gap-1">
 
       <DropdownMenu>
         <DropdownMenuTrigger render={<Button className="h-6 px-2 text-section-secondary font-normal text-muted-foreground hover:text-foreground" size="xs" type="button" variant={filter === "all" ? "ghost" : "secondary"} />}>
@@ -134,32 +143,6 @@ export function PlanningToolbar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {searchOpen ? (
-        <div className="relative w-40 shrink-0">
-          <HugeiconsIcon aria-hidden="true" className="pointer-events-none absolute left-2 top-1.5 text-muted-foreground" icon={Search01Icon} size={13} strokeWidth={1.7} />
-          <Input
-            aria-label="Search tasks"
-            className="h-6 rounded-md pl-7 pr-2 text-section-secondary"
-            onBlur={() => !query && setSearchOpen(false)}
-            onChange={(event) => onQueryChange?.(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                event.stopPropagation();
-                onQueryChange?.("");
-                setSearchOpen(false);
-              }
-            }}
-            placeholder="Search tasks…"
-            ref={searchRef}
-            value={query}
-          />
-        </div>
-      ) : (
-        <Button aria-label="Search tasks" className="h-6 w-6" onClick={() => setSearchOpen(true)} size="icon-xs" title="Search tasks" type="button" variant="ghost">
-          <HugeiconsIcon icon={Search01Icon} strokeWidth={1.7} />
-        </Button>
-      )}
-
       <DropdownMenu>
         <DropdownMenuTrigger render={<Button aria-label="More planning options" className="h-6 w-6 text-base leading-none" size="icon-xs" title="More planning options" type="button" variant="ghost" />}>
           <span aria-hidden="true">•••</span>
@@ -178,6 +161,7 @@ export function PlanningToolbar({
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
+      </div>
     </div>
   );
 }
@@ -237,7 +221,6 @@ export function SettingsToolbar({ date, onBackToBoard }: SettingsToolbarProps) {
           <HugeiconsIcon icon={ArrowUp01Icon} size={12} strokeWidth={1.7} />
           Sort
         </span>
-        <HugeiconsIcon className="mx-1 text-muted-foreground" icon={Search01Icon} size={13} strokeWidth={1.7} />
         <span className="px-1 text-base leading-none text-muted-foreground">•••</span>
       </div>
     </div>
