@@ -39,6 +39,7 @@ These are intentional relationships, not duplicate plans:
 - **034 → 035:** Plan 035 deepens pointer, keyboard, and Task inspector movement decisions behind one in-process Planning interaction seam after the canonical projection is established.
 - **034 → 036:** Plan 036 adds a desktop-only Planning-toolbar Task finder over the canonical Planning projection without changing Board state or native task semantics.
 - **036 → 037:** Plan 037 extends the Task finder with explicit normal manual creation while reusing the existing creation, Planning projection, Planner Event, and Task inspector boundaries.
+- **037 → 038:** Plan 038 adds visible finder filters, optional creation details, direct keyboard creation, bounded task quick actions, instructional states, and shortcut guidance without changing Slate's native task model.
 
 Do not create a new plan to restate one of these items. Update the owning plan, or add a narrowly scoped child plan with an explicit relationship here.
 
@@ -81,6 +82,7 @@ Do not create a new plan to restate one of these items. Update the owning plan, 
 | [035 deepen Planning Board interactions](035-deepen-planning-board-interactions.md) | Complete | Board and Task inspector movement decisions now share one tested in-process Planning interaction seam without changing native semantics. |
 | [036 Planning toolbar task finder MVP](036-footer-task-finder.md) | Complete | Desktop-only expanding Task finder in the Planning toolbar opens canonical tasks without changing Board state or native semantics. |
 | [037 create tasks from the Task finder](037-create-from-task-finder.md) | Complete | Explicit create option turns a non-empty finder query into a normal manual Capture task and opens its Task inspector. |
+| [038 Task finder filters, creation, and actions](038-task-finder-filters-creation-and-actions.md) | Proposed | Ready-for-agent expansion of the desktop finder with visible filters, enriched capture, direct creation, quick actions, empty states, and keyboard guidance. |
 
 Plan numbers 007 and 010 are intentionally unused. Do not invent placeholder files to fill those gaps; add a new numbered plan only when a genuinely new, scoped work item is approved.
 
