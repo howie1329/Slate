@@ -119,6 +119,13 @@ describe("task finder projection", () => {
     assert.deepEqual(taskFinderResults(snapshot(), "  "), []);
   });
 
+  it("can project every task when filters are active without a title", () => {
+    assert.deepEqual(
+      taskFinderResults(snapshot(), "", true).map(({ id }) => id),
+      ["capture", "ready-a", "ready-b", "ready-c", "today", "done"],
+    );
+  });
+
   it("marks every matching title segment without changing its text", () => {
     assert.deepEqual(taskFinderTitleParts("Prepare launch meeting notes", "notes launch"), [
       { text: "Prepare ", matched: false },

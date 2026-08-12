@@ -73,14 +73,28 @@ export function taskFinderEmptyState(
   visibleResultCount: number,
   filters: TaskFinderFilters,
 ): TaskFinderEmptyState {
-  if (!query.trim()) return "instructions";
+  if (!query.trim()) {
+    if (!hasTaskFinderFilters(filters)) return "instructions";
+    return visibleResultCount > 0 ? null : "filtered-no-match";
+  }
   if (visibleResultCount > 0) return null;
   return titleResultCount > 0 && hasTaskFinderFilters(filters) ? "filtered-no-match" : "no-match";
 }
 
-export function taskFinderOptions(results: TaskFinderResult[], query: string): TaskFinderOption[] {
+export function taskFinderOptions(
+  results: TaskFinderResult[],
+  query: string,
+  includeFilteredResults = false,
+): TaskFinderOption[] {
   const title = query.trim();
-  if (!title) return [];
+  if (!title) {
+    if (!includeFilteredResults) return [];
+    return results.map((result): TaskFinderOption => ({
+      key: `task:${result.id}`,
+      kind: "task",
+      result,
+    }));
+  }
 
   return [
     ...results.map((result): TaskFinderOption => ({

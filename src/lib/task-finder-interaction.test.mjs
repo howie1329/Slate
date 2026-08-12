@@ -56,6 +56,8 @@ describe("task finder interaction", () => {
       "filtered-no-match",
     );
     assert.equal(taskFinderEmptyState("launch", 2, 1, filters), null);
+    assert.equal(taskFinderEmptyState("", 2, 1, { ...filters, lane: "today" }), null);
+    assert.equal(taskFinderEmptyState("", 2, 0, { ...filters, lane: "today" }), "filtered-no-match");
   });
 
   it("keeps task matches first and appends an explicit create option", () => {
@@ -77,6 +79,13 @@ describe("task finder interaction", () => {
       { key: "create", kind: "create", title: "New task" },
     ]);
     assert.deepEqual(taskFinderOptions([], "   "), []);
+  });
+
+  it("shows filtered results without requiring a title", () => {
+    assert.deepEqual(
+      taskFinderOptions([result("one", "Release notes")], "", true).map((option) => [option.kind, option.key]),
+      [["task", "task:one"]],
+    );
   });
 
   it("clamps keyboard navigation across task and create options", () => {

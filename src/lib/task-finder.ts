@@ -27,14 +27,18 @@ export function taskFinderQueryTokens(query: string) {
   return query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
 }
 
-export function taskFinderResults(snapshot: PlannerSnapshot, query: string): TaskFinderResult[] {
+export function taskFinderResults(
+  snapshot: PlannerSnapshot,
+  query: string,
+  includeAllWhenEmpty = false,
+): TaskFinderResult[] {
   const tokens = taskFinderQueryTokens(query);
-  if (tokens.length === 0) return [];
+  if (tokens.length === 0 && !includeAllWhenEmpty) return [];
 
   return PLANNING_LANES.flatMap((lane) => (
     snapshot.planning.lanes[lane].tasks.flatMap((task) => {
       const normalizedTitle = task.title.toLocaleLowerCase();
-      if (!tokens.every((token) => normalizedTitle.includes(token))) return [];
+      if (tokens.length > 0 && !tokens.every((token) => normalizedTitle.includes(token))) return [];
 
       return [{
         id: task.id,

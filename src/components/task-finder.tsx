@@ -10,16 +10,22 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import {
+  ArrowDown01Icon,
+  ArrowUpRight01Icon,
+  CalendarAdd01Icon,
   Cancel01Icon,
+  InboxIcon,
   Loading03Icon,
+  MoreVerticalIcon,
   Search01Icon,
   TaskAdd01Icon,
+  TaskDone01Icon,
+  Undo02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { toast } from "sonner";
 import { useTaskSelection } from "@/components/task-selection";
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -86,18 +92,26 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [filters, setFilters] = useState<TaskFinderFilters>(emptyTaskFinderFilters);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [creationDraft, setCreationDraft] = useState<TaskFinderCreationDraft>(emptyTaskFinderCreationDraft);
   const [creationError, setCreationError] = useState<string | null>(null);
   const [activeOptionKey, setActiveOptionKey] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [popupPosition, setPopupPosition] = useState<PopupPosition | null>(null);
-  const titleResults = useMemo(() => taskFinderResults(snapshot, query), [query, snapshot]);
+  const filtersActive = hasTaskFinderFilters(filters);
+  const titleResults = useMemo(
+    () => taskFinderResults(snapshot, query, filtersActive),
+    [filtersActive, query, snapshot],
+  );
   const results = useMemo(
     () => filterTaskFinderResults(titleResults, filters),
     [filters, titleResults],
   );
-  const options = useMemo(() => taskFinderOptions(results, query), [query, results]);
+  const options = useMemo(
+    () => taskFinderOptions(results, query, filtersActive),
+    [filtersActive, query, results],
+  );
   const emptyState = taskFinderEmptyState(
     query,
     titleResults.length,
@@ -213,6 +227,7 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
   function resetFinderState() {
     setQuery("");
     setFilters(emptyTaskFinderFilters());
+    setFiltersExpanded(false);
     setCreationDraft(emptyTaskFinderCreationDraft());
     dateBeforeTodayRef.current = null;
     setCreationError(null);
@@ -375,7 +390,7 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
     <div
       className={cn(
         "relative h-6 min-w-0 transition-[width] duration-200 ease-out motion-reduce:transition-none",
-        isOpen ? "w-[clamp(14rem,38vw,28rem)]" : "w-56",
+        isOpen ? "w-[min(28rem,calc(100vw-2rem))]" : "w-56",
       )}
       data-task-finder
     >
@@ -428,7 +443,7 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
           <HugeiconsIcon aria-hidden="true" icon={Cancel01Icon} strokeWidth={1.8} />
         </Button>
       ) : (
-        <kbd className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 font-sans text-[9px] text-muted-foreground">⌘F</kbd>
+        <kbd className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 font-mono text-metadata text-muted-foreground">⌘F</kbd>
       )}
 
       {isOpen && popupPosition && typeof document !== "undefined"
@@ -442,6 +457,7 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
               creationError={creationError}
               emptyState={emptyState}
               filters={filters}
+              filtersExpanded={filtersExpanded}
               mutationPending={mutationPending}
               onAction={runTaskAction}
               onClearFilters={() => {
@@ -452,6 +468,7 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
               onOpenTask={openTask}
               onSelectCreate={() => setActiveOptionKey("create")}
               onToggleAttentionFilter={updateAttentionFilter}
+              onToggleFilters={() => setFiltersExpanded((expanded) => !expanded)}
               onToggleLaneFilter={updateLaneFilter}
               onToggleToday={toggleToday}
               onUpdateCreationDraft={updateCreationDraft}
@@ -480,6 +497,7 @@ function TaskFinderPopup({
   creationError,
   emptyState,
   filters,
+  filtersExpanded,
   inputRef,
   mutationPending,
   onAction,
@@ -488,6 +506,7 @@ function TaskFinderPopup({
   onOpenTask,
   onSelectCreate,
   onToggleAttentionFilter,
+  onToggleFilters,
   onToggleLaneFilter,
   onToggleToday,
   onUpdateCreationDraft,
@@ -506,6 +525,7 @@ function TaskFinderPopup({
   creationError: string | null;
   emptyState: TaskFinderEmptyState;
   filters: TaskFinderFilters;
+  filtersExpanded: boolean;
   inputRef: RefObject<HTMLInputElement | null>;
   mutationPending: boolean;
   onAction: (action: TaskFinderActionId) => void;
@@ -514,6 +534,7 @@ function TaskFinderPopup({
   onOpenTask: (result: TaskFinderResult) => void;
   onSelectCreate: () => void;
   onToggleAttentionFilter: (filter: "overdue" | "needsEstimate") => void;
+  onToggleFilters: () => void;
   onToggleLaneFilter: (lane: PlanningLaneId) => void;
   onToggleToday: () => void;
   onUpdateCreationDraft: (patch: Partial<TaskFinderCreationDraft>) => void;
@@ -530,6 +551,8 @@ function TaskFinderPopup({
     width: popupPosition.width,
   };
   const createActive = activeOptionKey === "create";
+  const taskOptions = options.filter((option) => option.kind === "task");
+  const createOption = options.find((option) => option.kind === "create");
 
   return (
     <div
@@ -538,80 +561,58 @@ function TaskFinderPopup({
       ref={popupRef}
       style={style}
     >
-      <div className="flex h-7 shrink-0 items-center justify-between border-b border-border px-2.5 text-metadata text-muted-foreground">
-        <span>Find or create</span>
-        <span aria-live="polite" role="status">
-          {resultCount} {resultCount === 1 ? "task" : "tasks"}
-        </span>
-      </div>
-
       <TaskFinderFilters
         disabled={mutationPending}
+        expanded={filtersExpanded}
         filters={filters}
         onClear={onClearFilters}
+        onToggleExpanded={onToggleFilters}
         onToggleAttention={onToggleAttentionFilter}
         onToggleLane={onToggleLaneFilter}
+        resultCount={resultCount}
       />
 
       {emptyState === "instructions" ? (
-        <Empty className="min-h-0 gap-1 px-3 py-5">
-          <EmptyHeader className="gap-1">
-            <EmptyTitle className="text-menu">Find or create a task</EmptyTitle>
-            <EmptyDescription className="text-section-secondary">
-              Type a title, or use filters to narrow existing work.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <p className="flex h-8 shrink-0 items-center px-2.5 text-supporting text-muted-foreground">
+          Type to find an existing task or create a new one.
+        </p>
       ) : (
         <div
           aria-label="Task finder results"
-          className="min-h-0 flex-1 overflow-y-auto p-1"
+          className="min-h-0 flex-1 overflow-y-auto"
           id="task-finder-results"
           role="listbox"
         >
           {emptyState ? (
-            <Empty className="gap-1 px-2.5 py-3" role="presentation">
-              <EmptyHeader className="gap-1">
-                <EmptyTitle className="text-menu">
-                  {emptyState === "filtered-no-match" ? "No tasks match these filters" : "No matching tasks"}
-                </EmptyTitle>
-                <EmptyDescription className="text-metadata">
-                  You can still create the task below.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
+            <p className="flex h-8 items-center px-2.5 text-supporting text-muted-foreground" role="presentation">
+              {emptyState === "filtered-no-match" ? "No tasks match these filters" : "No matching tasks"}
+            </p>
           ) : null}
-          {options.map((option) => option.kind === "task" ? (
+          {taskOptions.map((option) => option.kind === "task" ? (
             <TaskFinderResultOption
               active={option.key === activeOptionKey}
+              actionButtonRefs={actionButtonRefs}
+              actions={option.key === activeOptionKey ? actions : []}
               disabled={mutationPending}
               key={option.key}
+              inputRef={inputRef}
+              onAction={onAction}
               onOpenTask={onOpenTask}
               optionKey={option.key}
+              pendingAction={pendingAction}
               query={query}
               result={option.result}
             />
-          ) : (
-            <TaskFinderCreateOption
-              active={option.key === activeOptionKey}
-              creating={pendingAction === "create"}
-              key={option.key}
-              onSelect={onSelectCreate}
-              title={option.title}
-            />
-          ))}
+          ) : null)}
         </div>
       )}
 
-      {activeTask ? (
-        <TaskFinderActionStrip
-          actionButtonRefs={actionButtonRefs}
-          actions={actions}
-          disabled={mutationPending}
-          inputRef={inputRef}
-          onAction={onAction}
-          pendingAction={pendingAction}
-          taskTitle={activeTask.title}
+      {createOption?.kind === "create" ? (
+        <TaskFinderCreateOption
+          active={createActive}
+          creating={pendingAction === "create"}
+          onSelect={onSelectCreate}
+          title={createOption.title}
         />
       ) : null}
 
@@ -635,69 +636,104 @@ function TaskFinderPopup({
 
 function TaskFinderFilters({
   disabled,
+  expanded,
   filters,
   onClear,
+  onToggleExpanded,
   onToggleAttention,
   onToggleLane,
+  resultCount,
 }: {
   disabled: boolean;
+  expanded: boolean;
   filters: TaskFinderFilters;
   onClear: () => void;
+  onToggleExpanded: () => void;
   onToggleAttention: (filter: "overdue" | "needsEstimate") => void;
   onToggleLane: (lane: PlanningLaneId) => void;
+  resultCount: number;
 }) {
   const attentionValues = [
     ...(filters.overdue ? ["overdue"] : []),
     ...(filters.needsEstimate ? ["needsEstimate"] : []),
   ];
+  const activeFilters = [
+    ...(filters.lane ? [laneLabels[filters.lane]] : []),
+    ...(filters.overdue ? ["Overdue"] : []),
+    ...(filters.needsEstimate ? ["Needs estimate"] : []),
+  ];
 
   return (
-    <div aria-label="Task filters" className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border px-2 py-1.5">
-      <ToggleGroup
-        aria-label="Planning lane filter"
-        disabled={disabled}
-        onValueChange={(values) => {
-          const nextLane = values[values.length - 1] as PlanningLaneId | undefined;
-          if (nextLane && nextLane !== filters.lane) onToggleLane(nextLane);
-          else if (!nextLane && filters.lane) onToggleLane(filters.lane);
-        }}
-        size="sm"
-        spacing={1}
-        value={filters.lane ? [filters.lane] : []}
-        variant="outline"
-      >
-        {filterLanes.map((lane) => (
-          <ToggleGroupItem key={lane} value={lane}>{laneLabels[lane]}</ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-      <ToggleGroup
-        aria-label="Attention filters"
-        disabled={disabled}
-        onValueChange={(values) => {
-          const overdue = values.includes("overdue");
-          const needsEstimate = values.includes("needsEstimate");
-          if (overdue !== filters.overdue) onToggleAttention("overdue");
-          if (needsEstimate !== filters.needsEstimate) onToggleAttention("needsEstimate");
-        }}
-        size="sm"
-        spacing={1}
-        value={attentionValues}
-        variant="outline"
-      >
-        <ToggleGroupItem value="overdue">Overdue</ToggleGroupItem>
-        <ToggleGroupItem value="needsEstimate">Needs estimate</ToggleGroupItem>
-      </ToggleGroup>
-      {hasTaskFinderFilters(filters) ? (
+    <div aria-label="Task filters" className="shrink-0 border-b border-border">
+      <div className="flex h-8 items-center gap-1 px-2">
         <Button
-          className="ml-auto"
+          aria-expanded={expanded}
+          className="h-6 px-1.5 text-label font-semibold"
           disabled={disabled}
-          onClick={onClear}
+          onClick={onToggleExpanded}
           size="xs"
           type="button"
           variant="ghost"
         >
-          Clear
+          Filters
+          <HugeiconsIcon
+            aria-hidden="true"
+            className={cn("transition-transform duration-150 motion-reduce:transition-none", expanded ? "rotate-180" : null)}
+            icon={ArrowDown01Icon}
+            size={10}
+            strokeWidth={1.8}
+          />
         </Button>
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+          {activeFilters.length > 0 ? activeFilters.map((label) => (
+            <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-label font-semibold" key={label}>{label}</span>
+          )) : <span className="truncate text-metadata text-muted-foreground">All tasks</span>}
+        </div>
+        {activeFilters.length > 0 ? (
+          <Button className="h-6 px-1.5 text-label font-semibold" disabled={disabled} onClick={onClear} size="xs" type="button" variant="ghost">Clear</Button>
+        ) : null}
+        <span aria-live="polite" className="shrink-0 text-metadata tabular-nums text-muted-foreground" role="status">
+          {resultCount} {resultCount === 1 ? "result" : "results"}
+        </span>
+      </div>
+
+      {expanded ? (
+        <div className="flex flex-wrap items-center gap-1 border-t border-border px-2 py-1.5">
+          <ToggleGroup
+            aria-label="Planning lane filter"
+            disabled={disabled}
+            onValueChange={(values) => {
+              const nextLane = values[values.length - 1] as PlanningLaneId | undefined;
+              if (nextLane && nextLane !== filters.lane) onToggleLane(nextLane);
+              else if (!nextLane && filters.lane) onToggleLane(filters.lane);
+            }}
+            size="sm"
+            spacing={1}
+            value={filters.lane ? [filters.lane] : []}
+            variant="outline"
+          >
+            {filterLanes.map((lane) => (
+              <ToggleGroupItem className="h-6 min-w-0 px-2 text-label font-semibold" key={lane} value={lane}>{laneLabels[lane]}</ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          <ToggleGroup
+            aria-label="Attention filters"
+            disabled={disabled}
+            onValueChange={(values) => {
+              const overdue = values.includes("overdue");
+              const needsEstimate = values.includes("needsEstimate");
+              if (overdue !== filters.overdue) onToggleAttention("overdue");
+              if (needsEstimate !== filters.needsEstimate) onToggleAttention("needsEstimate");
+            }}
+            size="sm"
+            spacing={1}
+            value={attentionValues}
+            variant="outline"
+          >
+            <ToggleGroupItem className="h-6 min-w-0 px-2 text-label font-semibold" value="overdue">Overdue</ToggleGroupItem>
+            <ToggleGroupItem className="h-6 min-w-0 px-2 text-label font-semibold" value="needsEstimate">Needs estimate</ToggleGroupItem>
+          </ToggleGroup>
+        </div>
       ) : null}
     </div>
   );
@@ -705,16 +741,26 @@ function TaskFinderFilters({
 
 function TaskFinderResultOption({
   active,
+  actionButtonRefs,
+  actions,
   disabled,
+  inputRef,
+  onAction,
   onOpenTask,
   optionKey,
+  pendingAction,
   query,
   result,
 }: {
   active: boolean;
+  actionButtonRefs: RefObject<Array<HTMLButtonElement | null>>;
+  actions: TaskFinderAction[];
   disabled: boolean;
+  inputRef: RefObject<HTMLInputElement | null>;
+  onAction: (action: TaskFinderActionId) => void;
   onOpenTask: (result: TaskFinderResult) => void;
   optionKey: string;
+  pendingAction: string | null;
   query: string;
   result: TaskFinderResult;
 }) {
@@ -722,34 +768,49 @@ function TaskFinderResultOption({
 
   return (
     <div
-      aria-disabled={disabled || undefined}
-      aria-selected={active}
       className={cn(
-        "cursor-default rounded-lg px-2.5 py-2 outline-none transition-colors",
-        active ? "bg-accent text-accent-foreground" : "hover:bg-muted",
+        "group flex h-8 cursor-default items-center gap-2 border-b border-border px-2.5 outline-none transition-colors last:border-b-0",
+        active ? "bg-accent text-accent-foreground ring-1 ring-inset ring-foreground/25" : "hover:bg-muted",
         disabled ? "opacity-50" : null,
       )}
-      id={optionId(optionKey)}
-      onClick={() => {
-        if (!disabled) onOpenTask(result);
-      }}
-      onPointerDown={(event) => event.preventDefault()}
-      role="option"
     >
-      <div className="truncate text-menu">
-        {taskFinderTitleParts(result.title, query).map((part, index) => part.matched ? (
-          <mark
-            className="bg-transparent font-semibold text-inherit underline decoration-foreground/30 underline-offset-2"
-            key={`${part.text}-${index}`}
-          >
-            {part.text}
-          </mark>
-        ) : <span key={`${part.text}-${index}`}>{part.text}</span>)}
+      <div
+        aria-disabled={disabled || undefined}
+        aria-selected={active}
+        className="flex min-w-0 flex-1 items-center gap-2 outline-none"
+        id={optionId(optionKey)}
+        onClick={() => {
+          if (!disabled) onOpenTask(result);
+        }}
+        onPointerDown={(event) => event.preventDefault()}
+        role="option"
+      >
+        <div className="min-w-0 flex-1 truncate text-menu">
+          {taskFinderTitleParts(result.title, query).map((part, index) => part.matched ? (
+            <mark
+              className="bg-transparent font-semibold text-inherit"
+              key={`${part.text}-${index}`}
+            >
+              {part.text}
+            </mark>
+          ) : <span key={`${part.text}-${index}`}>{part.text}</span>)}
+        </div>
+        <div className="flex shrink-0 items-center gap-1 text-metadata tabular-nums text-muted-foreground">
+          <span>{laneLabels[result.lane]}</span>
+          {metadata.map((item) => <span key={item}>· {item}</span>)}
+        </div>
       </div>
-      <div className="mt-0.5 flex min-w-0 items-center gap-1 text-metadata text-muted-foreground">
-        <span>{laneLabels[result.lane]}</span>
-        {metadata.map((item) => <span key={item}>· {item}</span>)}
-      </div>
+      {active ? (
+        <TaskFinderInlineActions
+          actionButtonRefs={actionButtonRefs}
+          actions={actions}
+          disabled={disabled}
+          inputRef={inputRef}
+          onAction={onAction}
+          pendingAction={pendingAction}
+          taskTitle={result.title}
+        />
+      ) : null}
     </div>
   );
 }
@@ -771,8 +832,8 @@ function TaskFinderCreateOption({
       aria-label={`${creating ? "Creating" : "Create"} task ${title}`}
       aria-selected={active}
       className={cn(
-        "mt-1 flex cursor-default items-center gap-2 border-t border-border px-2.5 py-2.5 outline-none transition-colors",
-        active ? "bg-accent text-accent-foreground" : "hover:bg-muted",
+        "flex h-8 shrink-0 cursor-default items-center gap-2 border-t border-border px-2.5 outline-none transition-colors",
+        active ? "bg-accent text-accent-foreground ring-1 ring-inset ring-foreground/25" : "hover:bg-muted",
       )}
       id={optionId("create")}
       onClick={() => {
@@ -781,20 +842,16 @@ function TaskFinderCreateOption({
       onPointerDown={(event) => event.preventDefault()}
       role="option"
     >
-      <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
-        <HugeiconsIcon
-          aria-hidden="true"
-          className={creating ? "animate-spin motion-reduce:animate-none" : undefined}
-          icon={creating ? Loading03Icon : TaskAdd01Icon}
-          size={13}
-          strokeWidth={1.8}
-        />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-menu font-medium">{creating ? "Creating task…" : "Create task"}</span>
-        <span className="block truncate text-metadata text-muted-foreground">{title}</span>
-      </span>
-      {!creating ? <kbd className="text-[9px] text-muted-foreground">⌘↵</kbd> : null}
+      <HugeiconsIcon
+        aria-hidden="true"
+        className={creating ? "animate-spin motion-reduce:animate-none" : "text-muted-foreground"}
+        icon={creating ? Loading03Icon : TaskAdd01Icon}
+        size={13}
+        strokeWidth={1.8}
+      />
+      <span className="shrink-0 text-menu font-medium">{creating ? "Creating task…" : "Create task"}</span>
+      <span className="min-w-0 flex-1 truncate text-metadata text-muted-foreground">{title}</span>
+      {!creating ? <kbd className="font-mono text-metadata text-muted-foreground">⌘↵</kbd> : null}
     </div>
   );
 }
@@ -828,7 +885,7 @@ function TaskFinderCreationDetails({
   return (
     <div
       aria-label="New task details"
-      className="shrink-0 border-t border-border px-2.5 py-2"
+      className="shrink-0 border-t border-border px-2 py-1.5"
       onKeyDown={handleNestedEscape}
       role="group"
     >
@@ -837,6 +894,7 @@ function TaskFinderCreationDetails({
           <span className="sr-only">Estimate in minutes</span>
           <Input
             aria-invalid={Boolean(error)}
+            className="h-7 px-2 text-supporting"
             disabled={mutationPending}
             inputMode="numeric"
             min="1"
@@ -850,6 +908,7 @@ function TaskFinderCreationDetails({
         <label className="min-w-0 flex-1">
           <span className="sr-only">Scheduled date</span>
           <Input
+            className="h-7 px-2 text-supporting"
             disabled={mutationPending || draft.addToToday}
             onChange={(event) => onUpdate({ scheduledDate: (event.target.value || null) as LocalDate | null })}
             type="date"
@@ -864,31 +923,32 @@ function TaskFinderCreationDetails({
           size="sm"
           type="button"
           variant="outline"
+          className="h-7 px-2 text-label font-semibold"
         >
           Today
         </Toggle>
         <Button
           disabled={mutationPending}
           onClick={onCreate}
-          size="sm"
+          size="xs"
           type="button"
         >
           {pending ? "Creating…" : "Create"}
         </Button>
       </div>
       {error ? <p className="mt-1 text-metadata text-destructive" role="alert">{error}</p> : null}
-      <p className="mt-1 text-[9px] text-muted-foreground">
+      <p className="mt-1 text-metadata text-muted-foreground">
         {draft.addToToday
-          ? "Creates an explicit Today commitment."
+          ? "Today commitment"
           : draft.estimate.trim()
-            ? "Creates estimated Backlog work; Slate derives its Planning lane."
-            : "Creates unestimated Backlog work in Capture."}
+            ? "Estimated Backlog · lane assigned automatically"
+            : "Unestimated Backlog · Capture"}
       </p>
     </div>
   );
 }
 
-function TaskFinderActionStrip({
+function TaskFinderInlineActions({
   actionButtonRefs,
   actions,
   disabled,
@@ -922,7 +982,7 @@ function TaskFinderActionStrip({
   return (
     <div
       aria-label={`Actions for ${taskTitle}`}
-      className="flex shrink-0 flex-wrap items-center gap-1 border-t border-border px-2 py-1.5"
+      className="flex shrink-0 items-center gap-0.5"
       role="toolbar"
     >
       {actions.map((action, index) => (
@@ -930,22 +990,26 @@ function TaskFinderActionStrip({
           aria-label={action.description ? `${action.label}. ${action.description}` : action.label}
           disabled={disabled}
           key={action.id}
-          onClick={() => onAction(action.id)}
+          onClick={(event) => {
+            event.stopPropagation();
+            onAction(action.id);
+          }}
           onKeyDown={(event) => handleKeyDown(event, index)}
           ref={(element) => { actionButtonRefs.current[index] = element; }}
-          size="xs"
-          title={action.description}
+          size="icon-xs"
+          title={action.description ? `${action.label} — ${action.description}` : action.label}
           type="button"
           variant="ghost"
         >
-          {pendingAction === action.id ? "Working…" : action.label}
+          <HugeiconsIcon
+            aria-hidden="true"
+            className={pendingAction === action.id ? "animate-spin motion-reduce:animate-none" : undefined}
+            icon={pendingAction === action.id ? Loading03Icon : taskActionIcon(action.id)}
+            size={12}
+            strokeWidth={1.8}
+          />
         </Button>
       ))}
-      {actions.some((action) => action.id === "return-capture") ? (
-        <span className="w-full px-2 text-[9px] text-muted-foreground">
-          Return to Capture clears the estimate and date.
-        </span>
-      ) : null}
     </div>
   );
 }
@@ -958,15 +1022,21 @@ function TaskFinderShortcutFooter({
   createActive: boolean;
 }) {
   return (
-    <div aria-hidden="true" className="flex h-6 shrink-0 items-center gap-2 border-t border-border px-2.5 text-[9px] text-muted-foreground">
-      {activeTask || createActive ? <span><kbd>↑↓</kbd> Navigate</span> : <span>Type to find or create</span>}
-      {activeTask ? <span><kbd>↵</kbd> Open</span> : null}
-      {activeTask ? <span><kbd>→</kbd> Actions</span> : null}
-      {createActive ? <span><kbd>↵</kbd> Create</span> : null}
-      <span><kbd>⌘↵</kbd> Create</span>
-      <span className="ml-auto"><kbd>Esc</kbd> Close</span>
+    <div aria-hidden="true" className="flex h-6 shrink-0 items-center gap-2 border-t border-border px-2.5 text-metadata text-muted-foreground">
+      {activeTask || createActive ? <span><kbd className="font-mono">↑↓</kbd> Navigate</span> : <span>Type to find or create</span>}
+      {activeTask ? <span><kbd className="font-mono">→</kbd> Actions</span> : null}
+      <span className="ml-auto"><kbd className="font-mono">Esc</kbd> Close</span>
     </div>
   );
+}
+
+function taskActionIcon(action: TaskFinderActionId) {
+  if (action === "move-today") return CalendarAdd01Icon;
+  if (action === "complete") return TaskDone01Icon;
+  if (action === "return-capture") return InboxIcon;
+  if (action === "reopen") return Undo02Icon;
+  if (action === "open") return ArrowUpRight01Icon;
+  return MoreVerticalIcon;
 }
 
 function resultMetadata(result: TaskFinderResult) {
