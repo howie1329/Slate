@@ -62,7 +62,7 @@ function WorkspaceStatusBar({
 }) {
   return (
     <div className="flex h-full items-center justify-between px-3">
-      <span aria-live="polite" className="text-footer text-muted-foreground" role="status">
+      <span aria-live="polite" className="min-w-0 truncate text-footer text-muted-foreground" role="status">
         {message}
       </span>
       <Button

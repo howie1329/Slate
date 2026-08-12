@@ -22,9 +22,9 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+import { TaskFinder } from "@/components/task-finder";
 import type { PlanningBoardFilter, PlanningBoardSort } from "@/lib/planning-board";
-import type { LocalDate } from "@/lib/planner";
+import type { LocalDate, PlannerSnapshot } from "@/lib/planner";
 import { dateFromLocalDate } from "@/lib/local-date";
 import {
   closeMainWindow,
@@ -38,9 +38,8 @@ type PlanningToolbarProps = {
   filter?: PlanningBoardFilter;
   onFilterChange?: (filter: PlanningBoardFilter) => void;
   onOpenSettings?: () => void;
-  onQueryChange?: (query: string) => void;
   onSortChange?: (sort: PlanningBoardSort) => void;
-  query?: string;
+  snapshot?: PlannerSnapshot;
   sort?: PlanningBoardSort;
 };
 
@@ -49,31 +48,17 @@ export function PlanningToolbar({
   filter = "all",
   onFilterChange,
   onOpenSettings,
-  onQueryChange,
   onSortChange,
-  query = "",
+  snapshot,
   sort = "planning",
 }: PlanningToolbarProps) {
   const isFullscreen = useMainWindowFullscreen();
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const isBoardToolbar = Boolean(onQueryChange && onFilterChange && onSortChange);
+  const isBoardToolbar = Boolean(onFilterChange && onSortChange);
 
   async function handleToggleFullscreen() {
     await toggleMainWindowFullscreen();
     window.requestAnimationFrame(() => titleRef.current?.focus());
-  }
-
-  function handleSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    if (event.key !== "Escape" || !query) return;
-
-    event.stopPropagation();
-    onQueryChange?.("");
-    window.requestAnimationFrame(() => {
-      const selectedTask = document.querySelector<HTMLElement>('[data-task-row][aria-pressed="true"]');
-      const firstTask = document.querySelector<HTMLElement>("[data-task-row]");
-      const board = document.querySelector<HTMLElement>("[data-planning-board]");
-      (selectedTask ?? firstTask ?? board)?.focus();
-    });
   }
 
   if (!isBoardToolbar) {
@@ -112,15 +97,8 @@ export function PlanningToolbar({
         </DropdownMenu>
       </div>
 
-      <div className="w-56 min-[900px]:w-[17.5rem]">
-        <Input
-          aria-label="Search tasks"
-          className="h-6 rounded-md px-2 text-composer"
-          onChange={(event) => onQueryChange?.(event.target.value)}
-          onKeyDown={handleSearchKeyDown}
-          placeholder="Search tasks…"
-          value={query}
-        />
+      <div className="justify-self-center">
+        {snapshot ? <TaskFinder snapshot={snapshot} /> : null}
       </div>
 
       <div className="flex items-center gap-1 justify-self-end">

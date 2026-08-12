@@ -2,7 +2,7 @@
 
 > **Status:** Canonical plan inventory and ownership map
 >
-> **Updated:** 2026-08-10
+> **Updated:** 2026-08-12
 
 This file is the source of truth for plan status, ownership, and relationships. The numbered plan files remain useful implementation records, but their original checklists and file paths describe the repository state at the time they were written. An unchecked historical acceptance item does not mean the current product is missing that behavior; use the status and current product sources below first.
 
@@ -37,6 +37,7 @@ These are intentional relationships, not duplicate plans:
 - **031 → 033:** Plan 033 deepens Plan 031's native projection into the exhaustive Capture / Ready / Today / Done contract and shared Lane order required before Board and List. It is backend-only and can proceed independently of the Plan 032 shell.
 - **031 + 033 → 034:** Plan 034 closes the remaining write-depth drift and migrates renderer consumers from the duplicated Today/Backlog compatibility shape to one canonical Planning lane projection.
 - **034 → 035:** Plan 035 deepens pointer, keyboard, and Task inspector movement decisions behind one in-process Planning interaction seam after the canonical projection is established.
+- **034 → 036:** Plan 036 adds a desktop-only Planning-toolbar Task finder over the canonical Planning projection without changing Board state or native task semantics.
 
 Do not create a new plan to restate one of these items. Update the owning plan, or add a narrowly scoped child plan with an explicit relationship here.
 
@@ -77,6 +78,7 @@ Do not create a new plan to restate one of these items. Update the owning plan, 
 | [033 authoritative Planning lane projection](033-authoritative-planning-lane-projection.md) | Proposed | Ready-for-agent backend-only Stage 3 slice; establishes exhaustive derived lanes, shared order, migration, and compatibility before UI work. |
 | [034 deepen Planning mutations and canonical projection](034-deepen-planning-mutations-and-canonical-projection.md) | Complete | Planning writes now cross the SQLite-backed Planning workspace seam, and renderer surfaces share one canonical lane projection. |
 | [035 deepen Planning Board interactions](035-deepen-planning-board-interactions.md) | Complete | Board and Task inspector movement decisions now share one tested in-process Planning interaction seam without changing native semantics. |
+| [036 Planning toolbar task finder MVP](036-footer-task-finder.md) | Complete | Desktop-only expanding Task finder in the Planning toolbar opens canonical tasks without changing Board state or native semantics. |
 
 Plan numbers 007 and 010 are intentionally unused. Do not invent placeholder files to fill those gaps; add a new numbered plan only when a genuinely new, scoped work item is approved.
 

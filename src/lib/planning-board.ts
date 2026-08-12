@@ -14,7 +14,6 @@ export type PlanningBoardLane = {
 
 export function planningBoardLanes(
   snapshot: PlannerSnapshot,
-  query: string,
   filter: PlanningBoardFilter,
   sort: PlanningBoardSort,
 ): PlanningBoardLane[] {
@@ -26,12 +25,10 @@ export function planningBoardLanes(
     { id: "done", label: "Done", reorder: lanes.done.reorder, tasks: lanes.done.tasks },
   ];
 
-  const normalizedQuery = query.trim().toLocaleLowerCase();
   return source.map((lane) => ({
     ...lane,
     tasks: sortTasks(
       lane.tasks.filter((task) => {
-        if (normalizedQuery && !task.title.toLocaleLowerCase().includes(normalizedQuery)) return false;
         if (filter === "attention" && lane.id === "done") return false;
         if (filter === "attention") {
           return task.estimateMinutes === null || task.badges.includes("overdue");

@@ -46,7 +46,7 @@ function snapshot() {
 
 describe("planning board projection", () => {
   it("presents the four authoritative lanes without reclassifying tasks", () => {
-    const lanes = planningBoardLanes(snapshot(), "", "all", "planning");
+    const lanes = planningBoardLanes(snapshot(), "all", "planning");
 
     assert.deepEqual(lanes.map((lane) => [lane.id, lane.tasks.map((item) => item.id)]), [
       ["capture", ["capture"]],
@@ -56,11 +56,8 @@ describe("planning board projection", () => {
     ]);
   });
 
-  it("applies search and attention filters within every lane", () => {
-    const searched = planningBoardLanes(snapshot(), "ready", "all", "planning");
-    assert.deepEqual(searched.map((lane) => lane.tasks.length), [0, 1, 0, 0]);
-
-    const attention = planningBoardLanes(snapshot(), "", "attention", "planning");
+  it("applies attention filters within every lane", () => {
+    const attention = planningBoardLanes(snapshot(), "attention", "planning");
     assert.deepEqual(attention.map((lane) => lane.tasks.map((item) => item.id)), [
       ["capture"],
       [],

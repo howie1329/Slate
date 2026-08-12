@@ -258,9 +258,12 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 - **Transient panels:** Task details and AI review panels attach above the persistent footer only while active.
 - **Density:** Preserve the normal daily loop at `360 × 520`. Prefer compact hierarchy and metadata over extra panels or route-level navigation.
 
-### Full-app Planning placeholder
+### Full-app Planning workspace
 
-The desktop Planning route currently uses a centered, border-light Coming Soon state while future Planning views are designed. Do not duplicate the Daily workspace into the full app; the menu-bar popover remains its home until those views ship.
+- **Planning toolbar:** Keep date, view, Task finder, Filter, Sort, overflow, and window controls together. The Task finder stays compact while idle and expands responsively when focused or populated.
+- **Board:** Capture, Ready, Today, and Done remain the authoritative Lane order. Finding a task must not filter, dim, reorder, or otherwise disturb these Lanes.
+- **Task finder:** The desktop-only Planning toolbar centers a compact **Find a task…** field. A non-empty query opens a bounded transient result popup below the header; `Command-F` focuses the field when another editable control is not active. Selecting a result opens the existing Task inspector without changing the Board.
+- **Scope:** The menu-bar popover retains its Daily search-and-capture command row, and Settings omits the Task finder.
 
 ### Task Rows
 

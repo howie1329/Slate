@@ -58,7 +58,6 @@ import { cn } from "@/lib/utils";
 
 type PlanningBoardProps = {
   filter: PlanningBoardFilter;
-  query: string;
   snapshot?: PlannerSnapshot;
   sort: PlanningBoardSort;
 };
@@ -75,7 +74,7 @@ const laneIcons = {
   done: Tick02Icon,
 } as const;
 
-export function PlanningBoard({ filter, query, snapshot, sort }: PlanningBoardProps) {
+export function PlanningBoard({ filter, snapshot, sort }: PlanningBoardProps) {
   const { selectTask } = useTaskSelection();
   const reorderTasks = useReorderTasks();
   const setTaskCompleted = useSetTaskCompleted();
@@ -89,13 +88,13 @@ export function PlanningBoard({ filter, query, snapshot, sort }: PlanningBoardPr
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const lanes = useMemo(
-    () => snapshot ? planningBoardLanes(snapshot, query, filter, sort) : [],
-    [filter, query, snapshot, sort],
+    () => snapshot ? planningBoardLanes(snapshot, filter, sort) : [],
+    [filter, snapshot, sort],
   );
   const tasks = useMemo(() => lanes.flatMap((lane) => lane.tasks), [lanes]);
   const activeTask = tasks.find((task) => task.id === interaction.activeTaskId) ?? null;
   const activeLane = interaction.sourceLane;
-  const canReorder = filter === "all" && !query.trim() && sort === "planning";
+  const canReorder = filter === "all" && sort === "planning";
   const mutationPending = reorderTasks.isPending
     || setTaskCompleted.isPending
     || setTaskScheduledDate.isPending

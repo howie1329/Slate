@@ -38,7 +38,6 @@ function SlateShell() {
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectFailed, setReconnectFailed] = useState(false);
   const [planningFilter, setPlanningFilter] = useState<PlanningBoardFilter>("all");
-  const [planningQuery, setPlanningQuery] = useState("");
   const [planningSort, setPlanningSort] = useState<PlanningBoardSort>("planning");
   const windowMode = useWindowMode();
   const isSettingsPage = useRouterState({
@@ -107,7 +106,6 @@ function SlateShell() {
   const fullAppContent = contentKind === "planning" ? (
     <PlanningBoard
       filter={planningFilter}
-      query={planningQuery}
       snapshot={planner.data}
       sort={planningSort}
     />
@@ -181,9 +179,8 @@ function SlateShell() {
               filter={planningFilter}
               onFilterChange={setPlanningFilter}
               onOpenSettings={handleOpenSettings}
-              onQueryChange={setPlanningQuery}
               onSortChange={setPlanningSort}
-              query={planningQuery}
+              snapshot={planner.data}
               sort={planningSort}
             />
           ) : contentKind === "settings" ? (
