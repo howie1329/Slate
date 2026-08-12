@@ -9,16 +9,30 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import { Cancel01Icon, Search01Icon } from "@hugeicons/core-free-icons";
+import {
+  Cancel01Icon,
+  Loading03Icon,
+  Search01Icon,
+  TaskAdd01Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { toast } from "sonner";
 import { useTaskSelection } from "@/components/task-selection";
 import { formatDueDate } from "@/lib/local-date";
 import type { PlannerSnapshot, PlanningLaneId } from "@/lib/planner";
+import { plannerMutationErrorMessage } from "@/lib/planner-errors";
+import { useCreateTask } from "@/lib/planner-query";
 import {
   taskFinderResults,
   taskFinderTitleParts,
   type TaskFinderResult,
 } from "@/lib/task-finder";
+import {
+  moveTaskFinderIndex,
+  taskFinderCreateInput,
+  taskFinderOptions,
+  type TaskFinderOption as TaskFinderOptionModel,
+} from "@/lib/task-finder-interaction";
 import { cn } from "@/lib/utils";
 
 const laneLabels: Record<PlanningLaneId, string> = {
@@ -36,16 +50,19 @@ type PopupPosition = {
 
 export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
   const { selectTask } = useTaskSelection();
+  const createTask = useCreateTask();
   const inputRef = useRef<HTMLInputElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+  const createPendingRef = useRef(false);
   const [query, setQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
-  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [activeOptionKey, setActiveOptionKey] = useState<string | null>(null);
   const [popupPosition, setPopupPosition] = useState<PopupPosition | null>(null);
   const results = useMemo(() => taskFinderResults(snapshot, query), [query, snapshot]);
+  const options = useMemo(() => taskFinderOptions(results, query), [query, results]);
   const isOpen = query.trim().length > 0;
-  const activeIndex = Math.max(0, results.findIndex((result) => result.id === activeTaskId));
-  const activeResult = results[activeIndex] ?? null;
+  const activeIndex = Math.max(0, options.findIndex((option) => option.key === activeOptionKey));
+  const activeOption = options[activeIndex] ?? null;
 
   useEffect(() => {
     function handleFindShortcut(event: globalThis.KeyboardEvent) {
@@ -74,13 +91,18 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
     function handlePointerDown(event: PointerEvent) {
       const target = event.target;
       if (!(target instanceof Node)) return;
-      if (inputRef.current?.parentElement?.contains(target) || popupRef.current?.contains(target)) return;
+      if (
+        createPendingRef.current
+        || createTask.isPending
+        || inputRef.current?.parentElement?.contains(target)
+        || popupRef.current?.contains(target)
+      ) return;
       closeFinder();
     }
 
     document.addEventListener("pointerdown", handlePointerDown, true);
     return () => document.removeEventListener("pointerdown", handlePointerDown, true);
-  }, [isOpen]);
+  }, [createTask.isPending, isOpen]);
 
   useLayoutEffect(() => {
     if (!isOpen) {
@@ -107,39 +129,67 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
   }, [isOpen]);
 
   useEffect(() => {
-    if (!activeResult) return;
-    document.getElementById(optionId(activeResult.id))?.scrollIntoView({ block: "nearest" });
-  }, [activeResult]);
+    if (!activeOption) return;
+    document.getElementById(optionId(activeOption.key))?.scrollIntoView({ block: "nearest" });
+  }, [activeOption]);
 
   function closeFinder() {
     setQuery("");
-    setActiveTaskId(null);
+    setActiveOptionKey(null);
   }
 
   function openTask(result: TaskFinderResult) {
+    if (createPendingRef.current || createTask.isPending) return;
     closeFinder();
     selectTask(result.id, "animate");
+  }
+
+  function createTaskFromQuery() {
+    const input = taskFinderCreateInput(query);
+    if (!input || createPendingRef.current || createTask.isPending) return;
+
+    createPendingRef.current = true;
+    createTask.mutate(input, {
+      onSuccess: (created) => {
+        createPendingRef.current = false;
+        closeFinder();
+        selectTask(created.id, "animate");
+      },
+      onError: (error) => {
+        createPendingRef.current = false;
+        toast.error(plannerMutationErrorMessage(error, "Could not create task."));
+        window.requestAnimationFrame(() => inputRef.current?.focus());
+      },
+    });
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Escape" && isOpen) {
       event.preventDefault();
       event.stopPropagation();
-      closeFinder();
+      if (!createPendingRef.current && !createTask.isPending) closeFinder();
       return;
     }
-    if (!isOpen || results.length === 0) return;
+    if (!isOpen || options.length === 0) return;
+
+    if (createPendingRef.current || createTask.isPending) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter") {
+        event.preventDefault();
+      }
+      return;
+    }
 
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       const direction = event.key === "ArrowDown" ? 1 : -1;
-      const nextIndex = Math.min(Math.max(activeIndex + direction, 0), results.length - 1);
-      setActiveTaskId(results[nextIndex].id);
+      const nextIndex = moveTaskFinderIndex(activeIndex, direction, options.length);
+      setActiveOptionKey(options[nextIndex].key);
       return;
     }
-    if (event.key === "Enter" && activeResult) {
+    if (event.key === "Enter" && activeOption) {
       event.preventDefault();
-      openTask(activeResult);
+      if (activeOption.kind === "create") createTaskFromQuery();
+      else openTask(activeOption.result);
     }
   }
 
@@ -159,20 +209,23 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
         strokeWidth={1.8}
       />
       <input
-        aria-activedescendant={activeResult ? optionId(activeResult.id) : undefined}
+        aria-activedescendant={activeOption ? optionId(activeOption.key) : undefined}
         aria-autocomplete="list"
+        aria-busy={createTask.isPending}
         aria-controls={isOpen ? "task-finder-results" : undefined}
         aria-expanded={isOpen}
-        aria-label="Find a task"
+        aria-label="Find or create a task"
         className="h-6 w-full appearance-none rounded-md border border-input bg-background py-0 pl-5 pr-8 text-composer text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 [&::-webkit-search-cancel-button]:appearance-none"
         onChange={(event) => {
           setQuery(event.target.value);
-          setActiveTaskId(null);
+          setActiveOptionKey(null);
         }}
         onKeyDown={handleKeyDown}
         onBlur={() => setIsFocused(false)}
         onFocus={() => setIsFocused(true)}
-        placeholder="Find a task…"
+        maxLength={500}
+        placeholder="Find or create a task…"
+        readOnly={createTask.isPending}
         ref={inputRef}
         role="combobox"
         type="search"
@@ -183,9 +236,11 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
           aria-label="Clear task finder"
           className="absolute right-0.5 top-1/2 inline-flex size-4 -translate-y-1/2 items-center justify-center rounded text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           onClick={() => {
+            if (createPendingRef.current || createTask.isPending) return;
             closeFinder();
             inputRef.current?.focus();
           }}
+          disabled={createTask.isPending}
           type="button"
         >
           <HugeiconsIcon aria-hidden="true" icon={Cancel01Icon} size={10} strokeWidth={1.8} />
@@ -197,8 +252,11 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
       {isOpen && popupPosition && typeof document !== "undefined"
         ? createPortal(
             <TaskFinderPopup
-              activeTaskId={activeResult?.id ?? null}
+              activeOptionKey={activeOption?.key ?? null}
+              creating={createTask.isPending}
+              onCreateTask={createTaskFromQuery}
               onOpenTask={openTask}
+              options={options}
               popupPosition={popupPosition}
               query={query}
               popupRef={popupRef}
@@ -207,20 +265,29 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
             document.body,
           )
         : null}
+      <span aria-live="polite" className="sr-only" role="status">
+        {createTask.isPending ? `Creating task ${query.trim()}` : ""}
+      </span>
     </div>
   );
 }
 
 function TaskFinderPopup({
-  activeTaskId,
+  activeOptionKey,
+  creating,
+  onCreateTask,
   onOpenTask,
+  options,
   popupPosition,
   popupRef,
   query,
   results,
 }: {
-  activeTaskId: string | null;
+  activeOptionKey: string | null;
+  creating: boolean;
+  onCreateTask: () => void;
   onOpenTask: (result: TaskFinderResult) => void;
+  options: TaskFinderOptionModel[];
   popupPosition: PopupPosition;
   popupRef: RefObject<HTMLDivElement | null>;
   query: string;
@@ -240,40 +307,53 @@ function TaskFinderPopup({
       style={style}
     >
       <div className="flex h-7 items-center justify-between border-b border-border px-2.5 text-metadata text-muted-foreground">
-        <span>Search tasks</span>
+        <span>Find or create</span>
         <span aria-live="polite" role="status">
           {results.length} {results.length === 1 ? "task" : "tasks"}
         </span>
       </div>
-      {results.length > 0 ? (
-        <div aria-label="Task finder results" className="max-h-[17.75rem] overflow-y-auto p-1" id="task-finder-results" role="listbox">
-          {results.map((result) => (
-            <TaskFinderOption
-              active={result.id === activeTaskId}
-              key={result.id}
-              onOpenTask={onOpenTask}
-              query={query}
-              result={result}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="px-3 py-6 text-center text-section-secondary text-muted-foreground" id="task-finder-results" role="status">
-          No matching tasks
-        </div>
-      )}
+      <div aria-label="Task finder results" className="max-h-[17.75rem] overflow-y-auto p-1" id="task-finder-results" role="listbox">
+        {results.length === 0 ? (
+          <div className="px-2.5 py-2 text-section-secondary text-muted-foreground" role="presentation">
+            No matching tasks
+          </div>
+        ) : null}
+        {options.map((option) => option.kind === "task" ? (
+          <TaskFinderResultOption
+            active={option.key === activeOptionKey}
+            disabled={creating}
+            key={option.key}
+            onOpenTask={onOpenTask}
+            optionKey={option.key}
+            query={query}
+            result={option.result}
+          />
+        ) : (
+          <TaskFinderCreateOption
+            active={option.key === activeOptionKey}
+            creating={creating}
+            key={option.key}
+            onCreateTask={onCreateTask}
+            title={option.title}
+          />
+        ))}
+      </div>
     </div>
   );
 }
 
-function TaskFinderOption({
+function TaskFinderResultOption({
   active,
+  disabled,
   onOpenTask,
+  optionKey,
   query,
   result,
 }: {
   active: boolean;
+  disabled: boolean;
   onOpenTask: (result: TaskFinderResult) => void;
+  optionKey: string;
   query: string;
   result: TaskFinderResult;
 }) {
@@ -281,14 +361,18 @@ function TaskFinderOption({
 
   return (
     <div
+      aria-disabled={disabled || undefined}
       aria-selected={active}
       className={cn(
         "cursor-default rounded-lg px-2.5 py-2 outline-none transition-colors",
         active ? "bg-accent text-accent-foreground" : "hover:bg-muted",
+        disabled ? "opacity-50" : null,
       )}
-      id={optionId(result.id)}
+      id={optionId(optionKey)}
       onPointerDown={(event) => event.preventDefault()}
-      onClick={() => onOpenTask(result)}
+      onClick={() => {
+        if (!disabled) onOpenTask(result);
+      }}
       role="option"
     >
       <div className="truncate text-menu">
@@ -306,6 +390,50 @@ function TaskFinderOption({
   );
 }
 
+function TaskFinderCreateOption({
+  active,
+  creating,
+  onCreateTask,
+  title,
+}: {
+  active: boolean;
+  creating: boolean;
+  onCreateTask: () => void;
+  title: string;
+}) {
+  return (
+    <div
+      aria-disabled={creating || undefined}
+      aria-label={`${creating ? "Creating" : "Create"} task ${title}`}
+      aria-selected={active}
+      className={cn(
+        "mt-1 flex cursor-default items-center gap-2 border-t border-border px-2.5 py-2.5 outline-none transition-colors",
+        active ? "bg-accent text-accent-foreground" : "hover:bg-muted",
+      )}
+      id={optionId("create")}
+      onClick={() => {
+        if (!creating) onCreateTask();
+      }}
+      onPointerDown={(event) => event.preventDefault()}
+      role="option"
+    >
+      <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
+        <HugeiconsIcon
+          aria-hidden="true"
+          className={creating ? "animate-spin motion-reduce:animate-none" : undefined}
+          icon={creating ? Loading03Icon : TaskAdd01Icon}
+          size={13}
+          strokeWidth={1.8}
+        />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-menu font-medium">{creating ? "Creating task…" : "Create task"}</span>
+        <span className="block truncate text-metadata text-muted-foreground">{title}</span>
+      </span>
+    </div>
+  );
+}
+
 function resultMetadata(result: TaskFinderResult) {
   const metadata: string[] = [];
   if (result.estimateMinutes !== null) metadata.push(`${result.estimateMinutes}m`);
@@ -318,8 +446,8 @@ function resultMetadata(result: TaskFinderResult) {
   return metadata;
 }
 
-function optionId(taskId: string) {
-  return `task-finder-option-${taskId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+function optionId(optionKey: string) {
+  return `task-finder-option-${optionKey.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 }
 
 function isEditableElement(element: Element | null) {

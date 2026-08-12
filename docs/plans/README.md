@@ -38,6 +38,7 @@ These are intentional relationships, not duplicate plans:
 - **031 + 033 → 034:** Plan 034 closes the remaining write-depth drift and migrates renderer consumers from the duplicated Today/Backlog compatibility shape to one canonical Planning lane projection.
 - **034 → 035:** Plan 035 deepens pointer, keyboard, and Task inspector movement decisions behind one in-process Planning interaction seam after the canonical projection is established.
 - **034 → 036:** Plan 036 adds a desktop-only Planning-toolbar Task finder over the canonical Planning projection without changing Board state or native task semantics.
+- **036 → 037:** Plan 037 extends the Task finder with explicit normal manual creation while reusing the existing creation, Planning projection, Planner Event, and Task inspector boundaries.
 
 Do not create a new plan to restate one of these items. Update the owning plan, or add a narrowly scoped child plan with an explicit relationship here.
 
@@ -79,6 +80,7 @@ Do not create a new plan to restate one of these items. Update the owning plan, 
 | [034 deepen Planning mutations and canonical projection](034-deepen-planning-mutations-and-canonical-projection.md) | Complete | Planning writes now cross the SQLite-backed Planning workspace seam, and renderer surfaces share one canonical lane projection. |
 | [035 deepen Planning Board interactions](035-deepen-planning-board-interactions.md) | Complete | Board and Task inspector movement decisions now share one tested in-process Planning interaction seam without changing native semantics. |
 | [036 Planning toolbar task finder MVP](036-footer-task-finder.md) | Complete | Desktop-only expanding Task finder in the Planning toolbar opens canonical tasks without changing Board state or native semantics. |
+| [037 create tasks from the Task finder](037-create-from-task-finder.md) | Complete | Explicit create option turns a non-empty finder query into a normal manual Capture task and opens its Task inspector. |
 
 Plan numbers 007 and 010 are intentionally unused. Do not invent placeholder files to fill those gaps; add a new numbered plan only when a genuinely new, scoped work item is approved.
 

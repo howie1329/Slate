@@ -262,7 +262,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 
 - **Planning toolbar:** Keep date, view, Task finder, Filter, Sort, overflow, and window controls together. The Task finder stays compact while idle and expands responsively when focused or populated.
 - **Board:** Capture, Ready, Today, and Done remain the authoritative Lane order. Finding a task must not filter, dim, reorder, or otherwise disturb these Lanes.
-- **Task finder:** The desktop-only Planning toolbar centers a compact **Find a task…** field. A non-empty query opens a bounded transient result popup below the header; `Command-F` focuses the field when another editable control is not active. Selecting a result opens the existing Task inspector without changing the Board.
+- **Task finder:** The desktop-only Planning toolbar centers a compact **Find or create a task…** field. A non-empty query opens a bounded transient result popup below the header; `Command-F` focuses the field when another editable control is not active. Existing task results remain first, while one explicit final Create task option saves the trimmed query as normal unsized, unscheduled Capture work. Opening or creating a task hands off to the existing Task inspector without changing the Board.
 - **Scope:** The menu-bar popover retains its Daily search-and-capture command row, and Settings omits the Task finder.
 
 ### Task Rows
