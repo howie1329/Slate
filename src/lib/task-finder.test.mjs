@@ -88,6 +88,8 @@ describe("task finder projection", () => {
         estimateMinutes: 45,
         scheduledDate: null,
         completedAt: null,
+        revision: 1,
+        anchorDate: null,
         badges: [],
       },
       {
@@ -97,6 +99,8 @@ describe("task finder projection", () => {
         estimateMinutes: 20,
         scheduledDate: "2026-08-14",
         completedAt: null,
+        revision: 1,
+        anchorDate: null,
         badges: ["upcoming"],
       },
     ]);

@@ -1,6 +1,6 @@
 # Plan 038: Task finder filters, enriched creation, and quick actions
 
-> **Status:** ready-for-agent
+> **Status:** Complete
 >
 > **Parent:** Plan 037 — Create tasks from the Planning toolbar Task finder
 >
@@ -198,3 +198,4 @@ The result popup remains bounded, non-modal, and anchored below the expanding Pl
 ## Comments
 
 - Specification synthesized from the implemented Plans 036–037 and the selected Task finder improvements on 2026-08-12.
+- Implemented on 2026-08-12 through the existing renderer interaction model and Planner mutation hooks. The change adds ephemeral filters, enriched creation, `Command-Enter`, contextual revision-safe actions, empty-state guidance, and shortcut hints without changing native commands, persistence, Planner Event kinds, Board state, or the compact Daily workspace.

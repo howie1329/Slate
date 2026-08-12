@@ -13,6 +13,8 @@ export type TaskFinderResult = {
   estimateMinutes: number | null;
   scheduledDate: LocalDate | null;
   completedAt: string | null;
+  revision: number;
+  anchorDate: LocalDate | null;
   badges: WorkspaceBadge[];
 };
 
@@ -41,6 +43,8 @@ export function taskFinderResults(snapshot: PlannerSnapshot, query: string): Tas
         estimateMinutes: task.estimateMinutes,
         scheduledDate: task.scheduledDate,
         completedAt: task.completedAt,
+        revision: task.revision,
+        anchorDate: task.anchorDate,
         badges: task.badges,
       }];
     })
