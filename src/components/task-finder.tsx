@@ -18,6 +18,11 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { toast } from "sonner";
 import { useTaskSelection } from "@/components/task-selection";
+import { Button } from "@/components/ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { Input } from "@/components/ui/input";
+import { Toggle } from "@/components/ui/toggle";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { formatDueDate } from "@/lib/local-date";
 import type { LocalDate, PlannerSnapshot, PlanningLaneId } from "@/lib/planner";
 import { plannerMutationErrorMessage } from "@/lib/planner-errors";
@@ -406,9 +411,9 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
         value={query}
       />
       {query || hasTaskFinderFilters(filters) ? (
-        <button
+        <Button
           aria-label="Clear task finder"
-          className="absolute right-0.5 top-1/2 inline-flex size-4 -translate-y-1/2 items-center justify-center rounded text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          className="absolute right-0.5 top-1/2 -translate-y-1/2"
           disabled={mutationPending}
           onClick={() => {
             if (mutationPending) return;
@@ -416,10 +421,12 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
             inputRef.current?.focus();
             setIsOpen(true);
           }}
+          size="icon-xs"
           type="button"
+          variant="ghost"
         >
-          <HugeiconsIcon aria-hidden="true" icon={Cancel01Icon} size={10} strokeWidth={1.8} />
-        </button>
+          <HugeiconsIcon aria-hidden="true" icon={Cancel01Icon} strokeWidth={1.8} />
+        </Button>
       ) : (
         <kbd className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 font-sans text-[9px] text-muted-foreground">⌘F</kbd>
       )}
@@ -547,9 +554,14 @@ function TaskFinderPopup({
       />
 
       {emptyState === "instructions" ? (
-        <div className="min-h-0 flex-1 px-3 py-5 text-center text-section-secondary text-muted-foreground">
-          Type to find an existing task or create new work.
-        </div>
+        <Empty className="min-h-0 gap-1 px-3 py-5">
+          <EmptyHeader className="gap-1">
+            <EmptyTitle className="text-menu">Find or create a task</EmptyTitle>
+            <EmptyDescription className="text-section-secondary">
+              Type a title, or use filters to narrow existing work.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
         <div
           aria-label="Task finder results"
@@ -558,9 +570,16 @@ function TaskFinderPopup({
           role="listbox"
         >
           {emptyState ? (
-            <div className="px-2.5 py-2 text-section-secondary text-muted-foreground" role="presentation">
-              {emptyState === "filtered-no-match" ? "No tasks match these filters" : "No matching tasks"}
-            </div>
+            <Empty className="gap-1 px-2.5 py-3" role="presentation">
+              <EmptyHeader className="gap-1">
+                <EmptyTitle className="text-menu">
+                  {emptyState === "filtered-no-match" ? "No tasks match these filters" : "No matching tasks"}
+                </EmptyTitle>
+                <EmptyDescription className="text-metadata">
+                  You can still create the task below.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : null}
           {options.map((option) => option.kind === "task" ? (
             <TaskFinderResultOption
@@ -627,67 +646,60 @@ function TaskFinderFilters({
   onToggleAttention: (filter: "overdue" | "needsEstimate") => void;
   onToggleLane: (lane: PlanningLaneId) => void;
 }) {
+  const attentionValues = [
+    ...(filters.overdue ? ["overdue"] : []),
+    ...(filters.needsEstimate ? ["needsEstimate"] : []),
+  ];
+
   return (
     <div aria-label="Task filters" className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border px-2 py-1.5">
-      {filterLanes.map((lane) => (
-        <FilterChip
-          active={filters.lane === lane}
-          disabled={disabled}
-          key={lane}
-          label={laneLabels[lane]}
-          onClick={() => onToggleLane(lane)}
-        />
-      ))}
-      <FilterChip
-        active={filters.overdue}
+      <ToggleGroup
+        aria-label="Planning lane filter"
         disabled={disabled}
-        label="Overdue"
-        onClick={() => onToggleAttention("overdue")}
-      />
-      <FilterChip
-        active={filters.needsEstimate}
+        onValueChange={(values) => {
+          const nextLane = values[values.length - 1] as PlanningLaneId | undefined;
+          if (nextLane && nextLane !== filters.lane) onToggleLane(nextLane);
+          else if (!nextLane && filters.lane) onToggleLane(filters.lane);
+        }}
+        size="sm"
+        spacing={1}
+        value={filters.lane ? [filters.lane] : []}
+        variant="outline"
+      >
+        {filterLanes.map((lane) => (
+          <ToggleGroupItem key={lane} value={lane}>{laneLabels[lane]}</ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+      <ToggleGroup
+        aria-label="Attention filters"
         disabled={disabled}
-        label="Needs estimate"
-        onClick={() => onToggleAttention("needsEstimate")}
-      />
+        onValueChange={(values) => {
+          const overdue = values.includes("overdue");
+          const needsEstimate = values.includes("needsEstimate");
+          if (overdue !== filters.overdue) onToggleAttention("overdue");
+          if (needsEstimate !== filters.needsEstimate) onToggleAttention("needsEstimate");
+        }}
+        size="sm"
+        spacing={1}
+        value={attentionValues}
+        variant="outline"
+      >
+        <ToggleGroupItem value="overdue">Overdue</ToggleGroupItem>
+        <ToggleGroupItem value="needsEstimate">Needs estimate</ToggleGroupItem>
+      </ToggleGroup>
       {hasTaskFinderFilters(filters) ? (
-        <button
-          className="ml-auto rounded px-1.5 py-0.5 text-metadata text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        <Button
+          className="ml-auto"
           disabled={disabled}
           onClick={onClear}
+          size="xs"
           type="button"
+          variant="ghost"
         >
           Clear
-        </button>
+        </Button>
       ) : null}
     </div>
-  );
-}
-
-function FilterChip({
-  active,
-  disabled,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  disabled: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      aria-pressed={active}
-      className={cn(
-        "rounded-md px-1.5 py-0.5 text-metadata outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
-        active ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground",
-      )}
-      disabled={disabled}
-      onClick={onClick}
-      type="button"
-    >
-      {label}
-    </button>
   );
 }
 
@@ -823,9 +835,8 @@ function TaskFinderCreationDetails({
       <div className="flex items-center gap-1.5">
         <label className="min-w-0 flex-1">
           <span className="sr-only">Estimate in minutes</span>
-          <input
+          <Input
             aria-invalid={Boolean(error)}
-            className="h-6 w-full rounded-md border border-input bg-background px-2 text-metadata outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
             disabled={mutationPending}
             inputMode="numeric"
             min="1"
@@ -838,34 +849,32 @@ function TaskFinderCreationDetails({
         </label>
         <label className="min-w-0 flex-1">
           <span className="sr-only">Scheduled date</span>
-          <input
-            className="h-6 w-full rounded-md border border-input bg-background px-2 text-metadata outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50"
+          <Input
             disabled={mutationPending || draft.addToToday}
             onChange={(event) => onUpdate({ scheduledDate: (event.target.value || null) as LocalDate | null })}
             type="date"
             value={draft.addToToday ? "" : draft.scheduledDate ?? ""}
           />
         </label>
-        <button
+        <Toggle
           aria-pressed={draft.addToToday}
-          className={cn(
-            "h-6 shrink-0 rounded-md px-2 text-metadata outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
-            draft.addToToday ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground",
-          )}
           disabled={mutationPending}
           onClick={onToggleToday}
+          pressed={draft.addToToday}
+          size="sm"
           type="button"
+          variant="outline"
         >
           Today
-        </button>
-        <button
-          className="h-6 shrink-0 rounded-md bg-primary px-2 text-metadata font-medium text-primary-foreground outline-none hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+        </Toggle>
+        <Button
           disabled={mutationPending}
           onClick={onCreate}
+          size="sm"
           type="button"
         >
           {pending ? "Creating…" : "Create"}
-        </button>
+        </Button>
       </div>
       {error ? <p className="mt-1 text-metadata text-destructive" role="alert">{error}</p> : null}
       <p className="mt-1 text-[9px] text-muted-foreground">
@@ -917,22 +926,20 @@ function TaskFinderActionStrip({
       role="toolbar"
     >
       {actions.map((action, index) => (
-        <button
+        <Button
           aria-label={action.description ? `${action.label}. ${action.description}` : action.label}
-          className={cn(
-            "rounded-md px-2 py-1 text-metadata outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
-            action.id === "return-capture" ? "text-muted-foreground" : "text-foreground",
-          )}
           disabled={disabled}
           key={action.id}
           onClick={() => onAction(action.id)}
           onKeyDown={(event) => handleKeyDown(event, index)}
           ref={(element) => { actionButtonRefs.current[index] = element; }}
+          size="xs"
           title={action.description}
           type="button"
+          variant="ghost"
         >
           {pendingAction === action.id ? "Working…" : action.label}
-        </button>
+        </Button>
       ))}
       {actions.some((action) => action.id === "return-capture") ? (
         <span className="w-full px-2 text-[9px] text-muted-foreground">
