@@ -36,6 +36,19 @@ export type Task = {
   anchorDate: LocalDate | null;
 };
 
+export type TaskEventState = Omit<Task, "createdAt">;
+
+export type TaskHistoryEntry = {
+  id: string;
+  localDate: LocalDate;
+  occurredAt: string;
+  kind: string;
+  source: string;
+  operationId: string;
+  before: TaskEventState | { task: TaskEventState; scope: string; position: number } | null;
+  after: TaskEventState | { task: TaskEventState; scope: string; position: number } | null;
+};
+
 export type WorkspaceBadge = "needs-estimate" | "unscheduled" | "overdue" | "upcoming";
 export const PLANNING_LANES = ["capture", "ready", "today", "done"] as const;
 export type PlanningLaneId = (typeof PLANNING_LANES)[number];
@@ -212,6 +225,10 @@ function plannerInvoke<T>(command: string, payload?: Record<string, unknown>) {
 
 export function getPlannerSnapshot() {
   return plannerInvoke<PlannerSnapshot>("get_planner_snapshot");
+}
+
+export function getTaskHistory(taskId: string) {
+  return plannerInvoke<TaskHistoryEntry[]>("get_task_history", { taskId });
 }
 
 export function retryPersistence() {

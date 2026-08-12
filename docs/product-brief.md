@@ -25,6 +25,7 @@ Slate 1.1.0 is the current local planning release candidate. It provides:
 - Pointer and keyboard ordering within the active Today list, persisted through SQLite.
 - Visible Today capacity, remaining minutes, and over-capacity state.
 - A task-detail panel above the compact Settings utility strip.
+- A read-only per-task activity trace in the full-window task inspector, backed by the local event ledger.
 - macOS Keychain storage for provider API keys.
 - Reviewable AI Assist and Plan My Day flows through the packaged Node sidecar.
 - A short, skippable first-run onboarding flow that explains capacity, Backlog, Today, and task details.
@@ -50,7 +51,7 @@ The returned task revision bounds a five-second Undo action. Undo succeeds only 
 - **Settings** contains daily capacity, AI provider/model/key configuration, and the persistent planning instruction.
 - **Daily command row** is always available at the top of the workspace. It supports search, Enter-to-save quick capture, and the context-sensitive AI action. Text invokes AI Assist; empty input invokes the Plan My Day review flow. A thin Settings utility strip remains available at the bottom, with Open full app alongside it in the popover.
 - **Menu-bar popover** is the primary surface. It dismisses when focus leaves it and must support the essential daily loop within the compact window.
-- **Full window** provides more room for the same workflow. It may later support configuration, comparison, history, and review surfaces, but it must not be required for ordinary daily planning.
+- **Full window** provides more room for the same workflow. Its task inspector exposes recorded task activity; it may later support broader comparison, history, and review surfaces, but it must not be required for ordinary daily planning.
 
 The term **Log** may become a future product label if it makes the broader task record clearer. The current route and user-facing surface remain Backlog until that change is earned through testing.
 

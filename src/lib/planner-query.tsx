@@ -14,6 +14,7 @@ import {
   generateAiAssist,
   generateDailyPlan,
   getPlannerSnapshot,
+  getTaskHistory,
   isTauriWindow,
   reorderTasks,
   saveSettings,
@@ -37,6 +38,7 @@ import { filterDailyWorkspace } from "@/lib/daily-workspace";
 import { reorderPlanningLane, type OrderedPlanningLane } from "@/lib/planning-cache";
 
 export const plannerStateQueryKey = ["plannerState"] as const;
+export const taskHistoryQueryKey = ["taskHistory"] as const;
 
 export function PlannerQueryProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -64,7 +66,7 @@ function PlannerChangeListener() {
 
   useEffect(() => {
     const invalidate = () => {
-      void invalidatePlannerState(queryClient);
+      void invalidatePlannerData(queryClient);
     };
     window.addEventListener("focus", invalidate);
 
@@ -100,11 +102,24 @@ export function usePlannerState() {
   });
 }
 
-function invalidatePlannerState(queryClient: QueryClient) {
-  return queryClient.invalidateQueries(
-    { queryKey: plannerStateQueryKey },
-    { cancelRefetch: false },
-  );
+export function useTaskHistory(taskId: string) {
+  return useQuery({
+    queryKey: [...taskHistoryQueryKey, taskId],
+    queryFn: () => getTaskHistory(taskId),
+  });
+}
+
+function invalidatePlannerData(queryClient: QueryClient) {
+  return Promise.all([
+    queryClient.invalidateQueries(
+      { queryKey: plannerStateQueryKey },
+      { cancelRefetch: false },
+    ),
+    queryClient.invalidateQueries(
+      { queryKey: taskHistoryQueryKey },
+      { cancelRefetch: false },
+    ),
+  ]);
 }
 
 function usePlannerMutation<TInput, TOutput = void>(mutationFn: (input: TInput) => Promise<TOutput>) {
@@ -112,8 +127,8 @@ function usePlannerMutation<TInput, TOutput = void>(mutationFn: (input: TInput) 
 
   return useMutation({
     mutationFn,
-    onSuccess: () => invalidatePlannerState(queryClient),
-    onError: () => invalidatePlannerState(queryClient),
+    onSuccess: () => invalidatePlannerData(queryClient),
+    onError: () => invalidatePlannerData(queryClient),
   });
 }
 

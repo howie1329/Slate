@@ -168,6 +168,19 @@ pub(crate) struct TaskEventState {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct TaskHistoryEntry {
+    id: String,
+    local_date: String,
+    occurred_at: String,
+    kind: String,
+    source: String,
+    operation_id: String,
+    before: Option<serde_json::Value>,
+    after: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Settings {
     daily_capacity_minutes: i64,
     planning_instruction: String,
@@ -407,6 +420,63 @@ impl Repository {
             .collect::<Result<Vec<_>, _>>()
             .map_err(database_error)?;
         Ok(tasks)
+    }
+
+    fn task_history(&self, task_id: &str) -> Result<Vec<TaskHistoryEntry>, String> {
+        if task_id.trim().is_empty() {
+            return Err("Task ID is required.".into());
+        }
+
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT id, local_date, occurred_at, kind, source, operation_id,
+                        before_json, after_json
+                 FROM planner_events
+                 WHERE task_id = ?1
+                 ORDER BY occurred_at DESC, rowid DESC",
+            )
+            .map_err(database_error)?;
+        let rows = statement
+            .query_map([task_id], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, String>(5)?,
+                    row.get::<_, Option<String>>(6)?,
+                    row.get::<_, Option<String>>(7)?,
+                ))
+            })
+            .map_err(database_error)?;
+
+        rows.map(|row| {
+            let (id, local_date, occurred_at, kind, source, operation_id, before_json, after_json) =
+                row.map_err(database_error)?;
+            let before = before_json
+                .as_deref()
+                .map(serde_json::from_str)
+                .transpose()
+                .map_err(json_error)?;
+            let after = after_json
+                .as_deref()
+                .map(serde_json::from_str)
+                .transpose()
+                .map_err(json_error)?;
+            Ok(TaskHistoryEntry {
+                id,
+                local_date,
+                occurred_at,
+                kind,
+                source,
+                operation_id,
+                before,
+                after,
+            })
+        })
+        .collect()
     }
 
     fn orders(&self) -> Result<HashMap<String, Vec<String>>, String> {
@@ -1067,6 +1137,14 @@ struct ReviewedChangeSet {
 #[tauri::command]
 pub fn get_planner_snapshot(state: State<PersistenceState>) -> Result<PlannerSnapshot, String> {
     planner_snapshot(&state)
+}
+
+#[tauri::command]
+pub fn get_task_history(
+    state: State<PersistenceState>,
+    task_id: String,
+) -> Result<Vec<TaskHistoryEntry>, String> {
+    with_repository(&state, |repository| repository.task_history(&task_id))
 }
 
 pub(crate) fn read_ai_assist_context(state: &PersistenceState) -> Result<AiAssistContext, String> {
@@ -2036,6 +2114,45 @@ mod tests {
         );
         drop(reopened);
         fs::remove_dir_all(directory).expect("remove temporary test directory");
+    }
+
+    #[test]
+    fn task_history_returns_newest_first_with_typed_before_and_after_state() {
+        let mut database = TestDatabase::new();
+        let task = create_task(&mut database.repository, "Trace this task");
+        database
+            .repository
+            .update_task(UpdateTaskInput {
+                id: task.id.clone(),
+                title: "Trace the task history".into(),
+                estimate_minutes: Some(45),
+                scheduled_date: None,
+                anchor_date: None,
+                expected_revision: task.revision,
+            })
+            .expect("update task");
+
+        let history = database
+            .repository
+            .task_history(&task.id)
+            .expect("load task history");
+
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].kind, "task-updated");
+        assert_eq!(
+            history[0].before.as_ref().expect("before state")["title"],
+            "Trace this task"
+        );
+        assert_eq!(
+            history[0].after.as_ref().expect("after state")["estimateMinutes"],
+            45
+        );
+        assert_eq!(history[1].kind, "task-created");
+        assert!(history[1].before.is_none());
+        assert_eq!(
+            history[1].after.as_ref().expect("created state")["revision"],
+            1
+        );
     }
 
     #[test]

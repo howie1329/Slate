@@ -223,7 +223,8 @@ Repeated-deferral insights do not appear in the Needs Attention surface until St
 
 - Add a temporary focus mode for active Today commitments.
 - Add a reviewable one-off **Make This Fit** action for an oversized or unclear task.
-- Add recent capture, completion, and per-task history inspection backed by the Stage 2 event ledger.
+- Per-task history inspection backed by the Stage 2 event ledger is available in the full-window task inspector.
+- Add broader recent-capture and recent-completion review surfaces only if they improve workspace review.
 - Add drag-in capture from selected text, links, or files only as reviewed user capture.
 
 ### 2.3 — Conditional full-window daily review and recovery

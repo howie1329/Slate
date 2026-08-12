@@ -294,6 +294,7 @@ The desktop Planning route currently uses a centered, border-light Coming Soon s
 - **Placement:** A utility-strip-adjacent transient panel using `12px` top corners and a bounded compact height.
 - **Surface:** A tinted task-detail surface with quiet boundary and no decorative shadow.
 - **Interaction:** Editing stays close to the task list, dismisses with Escape or outside click, and respects reduced motion.
+- **Full-window activity:** The desktop inspector adds a compact newest-first activity trace beneath Planning. It uses the existing event ledger, shows human-readable action/source/time metadata, and remains absent from the menu-bar popover.
 
 ## Do's and Don'ts
 

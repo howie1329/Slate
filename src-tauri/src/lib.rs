@@ -60,6 +60,7 @@ pub fn run() {
             hide_quick_capture,
             get_quick_capture_shortcut_error,
             persistence::get_planner_snapshot,
+            persistence::get_task_history,
             persistence::create_task,
             persistence::undo_quick_capture,
             quick_capture::get_quick_capture_draft,

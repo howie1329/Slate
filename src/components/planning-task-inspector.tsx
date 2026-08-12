@@ -34,9 +34,16 @@ import { planningInteraction } from "@/lib/planning-interaction";
 import {
   useDeleteTask,
   useSetTaskCompleted,
+  useTaskHistory,
   useUpdateTask,
 } from "@/lib/planner-query";
-import type { LocalDate, PlannerSnapshot, PlanningTask } from "@/lib/planner";
+import type {
+  LocalDate,
+  PlannerSnapshot,
+  PlanningTask,
+  TaskEventState,
+  TaskHistoryEntry,
+} from "@/lib/planner";
 import { PLANNING_LANES, type PlanningLaneId } from "@/lib/planning-board";
 
 type PlanningTaskInspectorProps = {
@@ -371,6 +378,8 @@ export function PlanningTaskInspector({
             </PropertyRow>
           </div>
         </section>
+
+        <TaskHistory taskId={task.id} />
       </div>
 
       <footer className="shrink-0 border-t border-border bg-background p-4">
@@ -435,6 +444,179 @@ export function PlanningTaskInspector({
       </footer>
     </form>
   );
+}
+
+function TaskHistory({ taskId }: { taskId: string }) {
+  const history = useTaskHistory(taskId);
+
+  return (
+    <section aria-labelledby="planning-task-history" className="mt-6 border-t border-border pt-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="m-0 text-section-secondary font-semibold capitalize" id="planning-task-history">
+          Activity
+        </h2>
+        {history.data ? (
+          <span className="text-metadata tabular-nums text-muted-foreground">
+            {history.data.length} {history.data.length === 1 ? "event" : "events"}
+          </span>
+        ) : null}
+      </div>
+
+      {history.isPending ? (
+        <div aria-label="Loading task activity" className="mt-4 space-y-4" role="status">
+          {["w-24", "w-32", "w-20"].map((width) => (
+            <div className="flex gap-3" key={width}>
+              <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-border" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <div className={`h-3 animate-pulse rounded bg-muted motion-reduce:animate-none ${width}`} />
+                <div className="h-2.5 w-28 animate-pulse rounded bg-muted motion-reduce:animate-none" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : history.isError ? (
+        <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground" role="status">
+          <span>Activity is unavailable.</span>
+          <Button onClick={() => void history.refetch()} size="xs" type="button" variant="ghost">
+            Retry
+          </Button>
+        </div>
+      ) : history.data?.length ? (
+        <ol
+          aria-label="Task activity, newest first"
+          className="mt-4 max-h-[min(20rem,40dvh)] space-y-0 overflow-y-auto overscroll-contain pr-1"
+          reversed
+          tabIndex={0}
+        >
+          {history.data.map((entry, index) => (
+            <li className="relative grid grid-cols-[0.5rem_minmax(0,1fr)] gap-2.5 pb-4 last:pb-0" key={entry.id}>
+              {index < history.data.length - 1 ? (
+                <span aria-hidden="true" className="absolute bottom-0 left-[3px] top-2 w-px bg-border" />
+              ) : null}
+              <span aria-hidden="true" className="relative z-[1] mt-1 size-2 rounded-full border border-border bg-background" />
+              <div className="min-w-0">
+                <p className="m-0 text-xs font-medium leading-4">{historyTitle(entry)}</p>
+                {historyDetail(entry) ? (
+                  <p className="m-0 mt-0.5 text-metadata leading-3 text-muted-foreground">
+                    {historyDetail(entry)}
+                  </p>
+                ) : null}
+                <p
+                  className="m-0 mt-1 text-metadata leading-3 text-muted-foreground"
+                  title={formatExactTimestamp(entry.occurredAt)}
+                >
+                  {sourceLabel(entry.source)} · {formatHistoryTimestamp(entry.occurredAt)}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="m-0 mt-3 text-xs leading-4 text-muted-foreground">No recorded activity yet.</p>
+      )}
+    </section>
+  );
+}
+
+function historyTitle(entry: TaskHistoryEntry) {
+  if (entry.kind === "task-updated") {
+    const fields = changedFieldLabels(entry);
+    return fields.length ? `${joinLabels(fields)} changed` : "Task updated";
+  }
+
+  return {
+    "history-started": "History tracking started",
+    "task-anchored": "Anchored for today",
+    "task-committed": "Committed to Today",
+    "task-completed": "Marked complete",
+    "task-created": "Task created",
+    "task-deleted": "Task deleted",
+    "task-reopened": "Task reopened",
+    "task-reordered": "Planning order changed",
+    "task-returned-to-backlog": "Returned to Backlog",
+    "task-unanchored": "Anchor removed",
+  }[entry.kind] ?? "Task updated";
+}
+
+function historyDetail(entry: TaskHistoryEntry) {
+  if (entry.kind === "history-started") {
+    return "Earlier changes predate the activity ledger.";
+  }
+  if (entry.kind !== "task-updated") return null;
+
+  const before = eventTaskState(entry.before);
+  const after = eventTaskState(entry.after);
+  if (!before || !after) return null;
+
+  const changes: string[] = [];
+  if (before.estimateMinutes !== after.estimateMinutes) {
+    changes.push(`${formatEstimate(before.estimateMinutes)} → ${formatEstimate(after.estimateMinutes)}`);
+  }
+  if (before.scheduledDate !== after.scheduledDate) {
+    changes.push(`${formatHistoryDate(before.scheduledDate)} → ${formatHistoryDate(after.scheduledDate)}`);
+  }
+  return changes.length ? changes.join(" · ") : null;
+}
+
+function changedFieldLabels(entry: TaskHistoryEntry) {
+  const before = eventTaskState(entry.before);
+  const after = eventTaskState(entry.after);
+  if (!before || !after) return [];
+
+  const fields: string[] = [];
+  if (before.title !== after.title) fields.push("Title");
+  if (before.estimateMinutes !== after.estimateMinutes) fields.push("estimate");
+  if (before.scheduledDate !== after.scheduledDate) fields.push("date");
+  if (before.anchorDate !== after.anchorDate) fields.push("anchor");
+  return fields;
+}
+
+function eventTaskState(value: TaskHistoryEntry["before"] | TaskHistoryEntry["after"]): TaskEventState | null {
+  if (!value) return null;
+  return "task" in value ? value.task : value;
+}
+
+function joinLabels(labels: string[]) {
+  if (labels.length < 2) return labels[0] ?? "Task";
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+  return `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
+}
+
+function sourceLabel(source: string) {
+  return {
+    "ai-assist": "AI Assist",
+    manual: "Manual",
+    "manual-quick-capture": "Quick Capture",
+    "manual-quick-capture-undo": "Quick Capture",
+    migration: "Slate",
+    onboarding: "Onboarding",
+    "plan-my-day": "Plan My Day",
+  }[source] ?? source;
+}
+
+function formatEstimate(minutes: number | null) {
+  return minutes === null ? "No estimate" : `${minutes}m`;
+}
+
+function formatHistoryDate(value: LocalDate | null) {
+  if (!value) return "No date";
+  return dateFromLocalDate(value).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+
+function formatHistoryTimestamp(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(undefined, {
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    month: "short",
+  });
+}
+
+function formatExactTimestamp(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
 function PropertyRow({
