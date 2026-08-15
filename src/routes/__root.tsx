@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { useAiReview } from "@/components/ai-review";
 import { OnboardingFlow } from "@/components/onboarding-flow";
 import { PlanningBoard } from "@/components/planning-board";
+import { PlanningList } from "@/components/planning-list";
 import { PlanningTaskInspector } from "@/components/planning-task-inspector";
 import { PlanningToolbar, SettingsToolbar } from "@/components/planning-toolbar";
 import { PlanningWorkspaceShell } from "@/components/planning-workspace-shell";
@@ -39,6 +40,7 @@ function SlateShell() {
   const [reconnectFailed, setReconnectFailed] = useState(false);
   const [planningFilter, setPlanningFilter] = useState<PlanningBoardFilter>("all");
   const [planningSort, setPlanningSort] = useState<PlanningBoardSort>("planning");
+  const [planningView, setPlanningView] = useState<"board" | "list">("board");
   const windowMode = useWindowMode();
   const isSettingsPage = useRouterState({
     select: (state) => state.location.pathname === "/settings",
@@ -104,11 +106,11 @@ function SlateShell() {
   );
   const contentKind = planner.isError ? "recovery" : isSettingsPage ? "settings" : "planning";
   const fullAppContent = contentKind === "planning" ? (
-    <PlanningBoard
-      filter={planningFilter}
-      snapshot={planner.data}
-      sort={planningSort}
-    />
+    planningView === "list" ? (
+      <PlanningList filter={planningFilter} snapshot={planner.data} sort={planningSort} />
+    ) : (
+      <PlanningBoard filter={planningFilter} snapshot={planner.data} sort={planningSort} />
+    )
   ) : routeContent;
   const planningInspectorEntry = contentKind === "planning" && planner.data && selectedTaskId
     ? planningTaskEntry(planner.data, selectedTaskId)
@@ -180,8 +182,10 @@ function SlateShell() {
               onFilterChange={setPlanningFilter}
               onOpenSettings={handleOpenSettings}
               onSortChange={setPlanningSort}
+              onViewChange={setPlanningView}
               snapshot={planner.data}
               sort={planningSort}
+              view={planningView}
             />
           ) : contentKind === "settings" ? (
             <SettingsToolbar

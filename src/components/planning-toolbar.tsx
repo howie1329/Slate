@@ -39,8 +39,10 @@ type PlanningToolbarProps = {
   onFilterChange?: (filter: PlanningBoardFilter) => void;
   onOpenSettings?: () => void;
   onSortChange?: (sort: PlanningBoardSort) => void;
+  onViewChange?: (view: "board" | "list") => void;
   snapshot?: PlannerSnapshot;
   sort?: PlanningBoardSort;
+  view?: "board" | "list";
 };
 
 export function PlanningToolbar({
@@ -49,8 +51,10 @@ export function PlanningToolbar({
   onFilterChange,
   onOpenSettings,
   onSortChange,
+  onViewChange,
   snapshot,
   sort = "planning",
+  view = "board",
 }: PlanningToolbarProps) {
   const isFullscreen = useMainWindowFullscreen();
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -86,13 +90,19 @@ export function PlanningToolbar({
 
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button className="ml-1 h-6 min-w-20 justify-between px-2 text-section-secondary font-normal" size="xs" type="button" variant="outline" />}>
-            Board
+            {view === "list" ? "List" : "Board"}
             <HugeiconsIcon aria-hidden="true" icon={ArrowDown01Icon} size={11} strokeWidth={1.8} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-32">
             <DropdownMenuItem disabled>Week <span className="ml-auto text-metadata text-muted-foreground">Soon</span></DropdownMenuItem>
-            <DropdownMenuItem disabled>List <span className="ml-auto text-metadata text-muted-foreground">Soon</span></DropdownMenuItem>
-            <DropdownMenuItem>Board</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onViewChange?.("list")}>
+              List
+              {view === "list" ? <span className="ml-auto text-metadata text-muted-foreground">Current</span> : null}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onViewChange?.("board")}>
+              Board
+              {view === "board" ? <span className="ml-auto text-metadata text-muted-foreground">Current</span> : null}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
