@@ -92,6 +92,9 @@ export function PlanningList({ filter, snapshot, sort }: PlanningListProps) {
     [filter, snapshot, sort],
   );
   const tasks = useMemo(() => lanes.flatMap((lane) => lane.tasks), [lanes]);
+  const backlogLanes = lanes.filter((lane) => lane.id !== "today");
+  const todayLane = lanes.find((lane) => lane.id === "today");
+  const backlogTaskCount = backlogLanes.reduce((total, lane) => total + lane.tasks.length, 0);
   const activeTask = tasks.find((task) => task.id === interaction.activeTaskId) ?? null;
   const activeLane = interaction.sourceLane;
   const canReorder = filter === "all" && sort === "planning";
@@ -164,7 +167,7 @@ export function PlanningList({ filter, snapshot, sort }: PlanningListProps) {
   }
 
   return (
-    <section aria-label="Planning list" className="h-full min-h-0 overflow-y-auto bg-background outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" data-planning-list tabIndex={-1}>
+    <section aria-label="Planning list" className="h-full min-h-0 overflow-hidden bg-background outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" data-planning-list tabIndex={-1}>
       <h1 className="sr-only">Planning list</h1>
       <DndContext
         collisionDetection={closestCenter}
@@ -182,26 +185,56 @@ export function PlanningList({ filter, snapshot, sort }: PlanningListProps) {
         onDragStart={(event: DragStartEvent) => transitionInteraction({ type: "drag-start", taskId: String(event.active.id) })}
         sensors={sensors}
       >
-        <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col px-4 pb-8 max-[639px]:px-2">
-          {lanes.map((lane) => (
-            <PlanningListLane
-              activeLane={activeLane}
-              activeTask={activeTask}
-              canReorder={canReorder}
-              capacity={lane.id === "today" ? snapshot.planning.capacity : undefined}
-              capacityPreview={lane.id === "today" ? interaction.capacityPreview : null}
-              collapsed={collapsedLanes[lane.id]}
-              key={lane.id}
-              lane={lane}
-              mutationPending={mutationPending}
-              onComplete={handleToggleCompleted}
-              onToggle={() => toggleLane(lane.id)}
-              overLane={interaction.overLane}
-              overTargetValid={interaction.validOverTarget}
-              overTaskId={interaction.overTaskId}
-              pendingTaskId={pendingTaskId}
-            />
-          ))}
+        <div className="grid h-full min-h-0 grid-cols-[minmax(0,1.65fr)_minmax(20rem,0.85fr)] max-[900px]:grid-cols-1 max-[900px]:grid-rows-[minmax(0,1fr)_minmax(16rem,auto)]">
+          <div className="min-h-0 overflow-y-auto overscroll-contain border-r border-border max-[900px]:border-r-0 max-[900px]:border-b">
+            <div className="w-full px-5 pb-8 pt-0 max-[639px]:px-2">
+              <div className="sticky top-0 z-20 flex min-h-14 items-center justify-between border-b border-border bg-background px-2">
+                <h2 className="m-0 text-menu font-semibold">All work</h2>
+                <span className="text-estimate tabular-nums text-muted-foreground">{backlogTaskCount} tasks</span>
+              </div>
+              {backlogLanes.map((lane) => (
+                <PlanningListLane
+                  activeLane={activeLane}
+                  activeTask={activeTask}
+                  canReorder={canReorder}
+                  capacityPreview={null}
+                  collapsed={collapsedLanes[lane.id]}
+                  key={lane.id}
+                  lane={lane}
+                  mutationPending={mutationPending}
+                  onComplete={handleToggleCompleted}
+                  onToggle={() => toggleLane(lane.id)}
+                  overLane={interaction.overLane}
+                  overTargetValid={interaction.validOverTarget}
+                  overTaskId={interaction.overTaskId}
+                  pendingTaskId={pendingTaskId}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="min-h-0 overflow-y-auto overscroll-contain bg-muted/15 max-[900px]:border-t max-[900px]:border-border">
+            <div className="h-full w-full px-5 pb-8 pt-0 max-[639px]:px-2">
+              {todayLane ? (
+                <PlanningListLane
+                  activeLane={activeLane}
+                  activeTask={activeTask}
+                  canReorder={canReorder}
+                  capacity={snapshot.planning.capacity}
+                  capacityPreview={interaction.capacityPreview}
+                  collapsed={collapsedLanes.today}
+                  isTodayPane
+                  lane={todayLane}
+                  mutationPending={mutationPending}
+                  onComplete={handleToggleCompleted}
+                  onToggle={() => toggleLane("today")}
+                  overLane={interaction.overLane}
+                  overTargetValid={interaction.validOverTarget}
+                  overTaskId={interaction.overTaskId}
+                  pendingTaskId={pendingTaskId}
+                />
+              ) : null}
+            </div>
+          </div>
         </div>
         <DragOverlay dropAnimation={{ duration: 150, easing: "cubic-bezier(0.23, 1, 0.32, 1)" }}>
           {activeTask && activeLane ? <ListDragPreview lane={activeLane} task={activeTask} /> : null}
@@ -219,6 +252,7 @@ function PlanningListLane({
   capacity,
   capacityPreview,
   collapsed,
+  isTodayPane = false,
   lane,
   mutationPending,
   onComplete,
@@ -234,6 +268,7 @@ function PlanningListLane({
   capacity?: PlannerSnapshot["planning"]["capacity"];
   capacityPreview: CapacityPreview | null;
   collapsed: boolean;
+  isTodayPane?: boolean;
   lane: PlanningBoardLane;
   mutationPending: boolean;
   onComplete: (task: PlanningTask) => void;
@@ -253,8 +288,8 @@ function PlanningListLane({
   const isValidTarget = isTargeted && overTargetValid;
 
   return (
-    <section aria-labelledby={`planning-list-lane-${id}`} className={cn("relative border-b border-border last:border-b-0", id === "today" && "bg-muted/15", isTargeted && isValidTarget && "bg-muted/35")} data-planning-list-lane={id} ref={setNodeRef}>
-      <button aria-controls={`planning-list-lane-content-${id}`} aria-expanded={!collapsed} className="flex min-h-12 w-full items-center gap-2 px-2 text-left outline-none transition-colors duration-150 hover:bg-muted/55 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none" onClick={onToggle} type="button">
+    <section aria-labelledby={`planning-list-lane-${id}`} className={cn("relative border-b border-border last:border-b-0", isTodayPane && "flex min-h-full flex-col border-b-0", !isTodayPane && id === "today" && "bg-muted/15", isTargeted && isValidTarget && "bg-muted/35")} data-planning-list-lane={id} ref={setNodeRef}>
+      <button aria-controls={`planning-list-lane-content-${id}`} aria-expanded={!collapsed} className={cn("flex min-h-12 w-full items-center gap-2 px-2 text-left outline-none transition-colors duration-150 hover:bg-muted/55 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none", isTodayPane && "sticky top-0 z-10 min-h-16 bg-muted/15")} onClick={onToggle} type="button">
         <HugeiconsIcon aria-hidden="true" icon={collapsed ? ArrowDown01Icon : ArrowUp01Icon} size={13} strokeWidth={1.8} />
         <HugeiconsIcon aria-hidden="true" className={cn(id !== "today" && "text-muted-foreground")} icon={Icon} size={15} strokeWidth={1.7} />
         <span className={cn("text-menu", id === "today" ? "font-semibold" : "font-medium")} id={`planning-list-lane-${id}`}>{label}</span>
@@ -268,14 +303,14 @@ function PlanningListLane({
       </button>
       {!collapsed ? tasks.length ? (
         <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
-          <ul className="m-0 list-none p-0" id={`planning-list-lane-content-${id}`}>
+          <ul className={cn("m-0 list-none p-0", isTodayPane && "flex-1")} id={`planning-list-lane-content-${id}`}>
             {tasks.map((task) => (
               <PlanningListRow activeLane={activeLane} activeTaskId={activeTask?.id ?? null} canReorder={canReorder} key={task.id} lane={id} onComplete={onComplete} overTaskId={overTaskId} pending={mutationPending && (pendingTaskId === null || pendingTaskId === task.id)} task={task} />
             ))}
           </ul>
         </SortableContext>
       ) : (
-        <div className={cn("flex min-h-20 items-center justify-center px-4 pb-4 text-center text-supporting text-muted-foreground", isOver && isValidTarget && "text-foreground")} id={`planning-list-lane-content-${id}`}>
+        <div className={cn("flex min-h-20 items-center justify-center px-4 pb-4 text-center text-supporting text-muted-foreground", isTodayPane && "min-h-0 flex-1", isOver && isValidTarget && "text-foreground")} id={`planning-list-lane-content-${id}`}>
           {activeTask && isOver && isValidTarget ? dropTargetMessage(id, activeTask) : emptyLaneMessage(id)}
         </div>
       ) : null}
@@ -373,5 +408,22 @@ function dropTargetMessage(id: PlanningLaneId, task: PlanningTask) {
 }
 
 function PlanningListLoading() {
-  return <div aria-busy="true" aria-label="Loading planning list" className="mx-auto h-full w-full max-w-5xl overflow-hidden px-4 max-[639px]:px-2"><div className="mb-4 h-12 animate-pulse rounded-md bg-muted motion-reduce:animate-none" />{[0, 1, 2, 3, 4, 5, 6, 7].map((row) => <div className="h-12 animate-pulse border-b border-border bg-muted/45 motion-reduce:animate-none" key={row} />)}</div>;
+  return (
+    <div aria-busy="true" aria-label="Loading planning list" className="grid h-full min-h-0 grid-cols-[minmax(0,1.65fr)_minmax(20rem,0.85fr)] max-[900px]:grid-cols-1 max-[900px]:grid-rows-[minmax(0,1fr)_minmax(16rem,auto)]">
+      <div className="min-h-0 overflow-hidden border-r border-border px-5 max-[900px]:border-r-0 max-[900px]:border-b max-[639px]:px-2">
+        <div className="flex min-h-14 items-center border-b border-border px-2">
+          <div className="h-4 w-24 animate-pulse rounded bg-muted motion-reduce:animate-none" />
+        </div>
+        {[0, 1, 2, 3, 4, 5].map((row) => <div className="h-12 animate-pulse border-b border-border bg-muted/45 motion-reduce:animate-none" key={row} />)}
+      </div>
+      <div className="min-h-0 overflow-hidden bg-muted/15 px-5 max-[900px]:border-t max-[900px]:border-border max-[639px]:px-2">
+        <div className="flex min-h-16 items-center border-b border-border">
+          <div className="h-4 w-20 animate-pulse rounded bg-muted motion-reduce:animate-none" />
+        </div>
+        <div className="flex h-32 items-center justify-center">
+          <div className="h-4 w-36 animate-pulse rounded bg-muted motion-reduce:animate-none" />
+        </div>
+      </div>
+    </div>
+  );
 }
