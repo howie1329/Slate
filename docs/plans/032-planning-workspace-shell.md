@@ -1,10 +1,12 @@
 # Plan 032: Establish the Planning workspace shell
 
-> **Status:** ready-for-agent
+> **Status:** Implemented; historical implementation record
 >
 > **Parent:** Stage 3 — Full-window planning workspace, 2.0 foundation
 >
-> **Scope:** Shell UI only; Planning view contents and new planning behavior are deferred
+> **Scope:** Original shell-only slice; later plans now provide the Planning view contents and interactions
+
+> **Current-tree note:** The shell, toolbar, inspector boundary, status bar, and native window behavior described here are implemented. The original Coming Soon placeholder and “future views are not shipped yet” language describe the slice’s starting point and are retained as historical design context; the current full-window route now hosts Board and List views.
 
 ## Problem Statement
 

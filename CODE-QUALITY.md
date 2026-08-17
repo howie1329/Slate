@@ -9,5 +9,5 @@
 - Limit Tauri changes to the smallest capability and Rust surface needed; do not broaden native access speculatively.
 - Retain the existing accessibility baseline: semantic landmarks, labelled sections, visible focus styles, and readable contrast.
 
-Use the real validation commands listed in `AGENTS.md`; no automated test command is configured yet.
+Use the real validation commands listed in `AGENTS.md`. The root package has no dedicated test script; focused renderer tests run directly with Node, while sidecar tests use `npm --prefix sidecar test` and native tests use Cargo.
 <!-- agentkit:end code-quality -->

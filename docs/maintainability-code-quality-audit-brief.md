@@ -6,6 +6,8 @@
 >
 > **Scope:** First-party renderer and native structure, duplication, dead code, testability, tooling, dependencies, and release hygiene
 
+> **Historical note:** This is a read-only audit snapshot. Some cited renderer paths and findings describe the repository at the audit commit and are not a current implementation inventory; use the current source, `AGENTS.md`, and the canonical roadmap for present-day status.
+
 ## Purpose
 
 This brief records the maintainability and code-quality cleanup findings for Slate. It does not prescribe a large architectural rewrite. The recommended changes preserve the current explicit React/Tauri/SQLite design and favor small, cohesive improvements.

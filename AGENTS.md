@@ -1,7 +1,7 @@
 <!-- agentkit:start agents -->
 # Slate agent guide
 
-Slate is a local-first macOS planner for deciding what work realistically fits into today. Slate 1.0.0 is the shipped baseline: it includes the compact desktop shell, Today/Backlog/Settings workspace, SQLite persistence, task lifecycle and ordering operations, daily capacity state, native Keychain storage, and reviewable AI Assist and Plan My Day flows through the packaged Node sidecar.
+Slate is a local-first macOS planner for deciding what work realistically fits into today. Slate 1.1.0 is the current release-candidate baseline: it includes the compact Daily shell, global quick capture, SQLite persistence, task lifecycle and ordering operations, daily capacity state, native Keychain storage, and reviewable AI Assist and Plan My Day flows through the packaged Node sidecar. The current branch is advancing the Stage 3 full-window Planning workspace with canonical Capture/Ready/Today/Done lanes, Board/List views, the desktop Task finder, and the task inspector.
 
 ## Source of truth
 
@@ -20,14 +20,14 @@ Read the relevant companion guidance before making changes:
 
 - `src/routes/`: file-based TanStack Router routes and page UI.
 - `src/routes/__root.tsx`: shared Slate shell, navigation, and footer placement.
-- `src/components/`: task, workspace, settings, and UI interactions.
+- `src/components/`: Daily, Planning Board/List, Task finder, inspector, settings, and shared UI interactions.
 - `src/lib/`: renderer/native planner boundary, query hooks, task grouping, and window behavior.
 - `src/router.tsx`: router setup; `src/routeTree.gen.ts` is generated and must not be hand-edited.
 - `src/styles.css`: Tailwind entry point and global design tokens.
 - `src-tauri/assets/`: canonical native app-icon source assets.
 - `src-tauri/icons/slate/`: generated macOS bundle icons referenced by `tauri.conf.json`.
 - `src-tauri/src/`: native persistence, credentials, window, and tray behavior.
-- `src-tauri/src/planning_workspace.rs`: authoritative Today/Backlog projection, capacity, ordering, reorder guards, and AI planning facts.
+- `src-tauri/src/planning_workspace.rs`: authoritative Capture/Ready/Today/Done projection, capacity, ordering, reorder guards, and AI planning facts.
 - `src-tauri/tauri.conf.json`: native window and bundle configuration.
 - `docs/`: product documentation and implementation plans.
 
@@ -40,6 +40,7 @@ Use npm with the committed `package-lock.json`.
 | Run the web dev server | `npm run dev` |
 | Run the desktop app | `npm run dev:desktop` |
 | Build the web application and type-check | `npm run build` |
+| Run sidecar tests | `npm --prefix sidecar test` |
 | Preview the web build | `npm run preview` |
 | Build and verify the ad-hoc-signed macOS DMG | `npm run release:macos` |
 | Verify an existing ad-hoc macOS release bundle | `npm run verify:macos-release` |
@@ -68,5 +69,6 @@ For a native release bundle, use `npm run tauri -- build`. The package currently
 3. Confirm route changes did not require edits to generated router output.
 4. Check that desktop-specific changes remain usable in the compact popover and full window.
 5. Review native permissions and persistence boundaries when changing `src-tauri/`.
-6. Summarize user-visible behavior, changed files, deferred work, and validation performed.
+6. Check the current Stage 2/Stage 3 status in `docs/roadmap.md` and `docs/plans/README.md` when handing off planning-workspace changes.
+7. Summarize user-visible behavior, changed files, deferred work, and validation performed.
 <!-- agentkit:end agents -->

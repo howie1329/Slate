@@ -2,7 +2,7 @@
 
 > **Status:** Canonical plan inventory and ownership map
 >
-> **Updated:** 2026-08-12
+> **Updated:** 2026-08-16
 
 This file is the source of truth for plan status, ownership, and relationships. The numbered plan files remain useful implementation records, but their original checklists and file paths describe the repository state at the time they were written. An unchecked historical acceptance item does not mean the current product is missing that behavior; use the status and current product sources below first.
 
@@ -76,8 +76,8 @@ Do not create a new plan to restate one of these items. Update the owning plan, 
 | [029 explicit Daily movement actions](029-explicit-daily-movement-actions.md) | Complete | Child implementation slice of 026. |
 | [030 Daily workspace polish](030-daily-workspace-polish-cleanup.md) | Complete | Final polish and cleanup pass for the 026–029 workspace sequence. |
 | [031 planning workspace boundary](031-deepen-planning-workspace-boundary.md) | Complete | The shipped Daily workspace now uses one authoritative native projection and planning-order mutation boundary. |
-| [032 Planning workspace shell](032-planning-workspace-shell.md) | Proposed | Ready-for-agent shell-only Stage 3 slice; establishes the full-app composition without Board/List contents or new planning behavior. |
-| [033 authoritative Planning lane projection](033-authoritative-planning-lane-projection.md) | Proposed | Ready-for-agent backend-only Stage 3 slice; establishes exhaustive derived lanes, shared order, migration, and compatibility before UI work. |
+| [032 Planning workspace shell](032-planning-workspace-shell.md) | Implemented | Historical shell slice. The full-app composition is implemented and now hosts the current Board/List workspace; its original Coming Soon placeholder is retained as design history. |
+| [033 authoritative Planning lane projection](033-authoritative-planning-lane-projection.md) | Implemented | Historical backend slice. Exhaustive derived lanes, shared order, migration, and compatibility are implemented and were deepened by Plan 034. |
 | [034 deepen Planning mutations and canonical projection](034-deepen-planning-mutations-and-canonical-projection.md) | Complete | Planning writes now cross the SQLite-backed Planning workspace seam, and renderer surfaces share one canonical lane projection. |
 | [035 deepen Planning Board interactions](035-deepen-planning-board-interactions.md) | Complete | Board and Task inspector movement decisions now share one tested in-process Planning interaction seam without changing native semantics. |
 | [036 Planning toolbar task finder MVP](036-footer-task-finder.md) | Complete | Desktop-only expanding Task finder in the Planning toolbar opens canonical tasks without changing Board state or native semantics. |
@@ -88,4 +88,4 @@ Plan numbers 007 and 010 are intentionally unused. Do not invent placeholder fil
 
 ## Planning rule
 
-The next work queue comes from [`docs/roadmap.md`](../roadmap.md), not from the presence of an old unchecked box in a completed or implemented plan. The current roadmap gate is Stage 2 validation and evidence gathering; conditional 2.3 recovery work remains deferred until user evidence earns it.
+The next work queue comes from [`docs/roadmap.md`](../roadmap.md), not from the presence of an old unchecked box in a completed or implemented plan. The current gate is Stage 2 packaged/manual validation and evidence gathering while Stage 3 / 2.0 parity and reversibility work continues. Conditional 2.3 recovery work remains deferred until user evidence earns it.

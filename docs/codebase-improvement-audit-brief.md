@@ -6,6 +6,8 @@
 >
 > **Scope:** Correctness, security boundaries, verification, native persistence, dependencies, and near-term product direction
 
+> **Historical note:** This is a read-only audit snapshot. Some cited renderer paths and findings describe the repository at the audit commit and are not a current implementation inventory; use the current source, `AGENTS.md`, and the canonical roadmap for present-day status.
+
 ## Purpose
 
 This brief records the findings from the broad Improve skill audit of Slate. It is advisory only: no source changes or implementation plans were produced as part of the audit.

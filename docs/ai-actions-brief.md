@@ -83,7 +83,7 @@ No task is written to SQLite before the user accepts the result.
 
 ### Purpose
 
-Plan My Day proposes what existing Log tasks should be committed to Today based on available capacity and the user’s planning context.
+Plan My Day proposes what existing Backlog tasks should be committed to Today based on available capacity and the user’s planning context.
 
 ### Trigger
 
@@ -95,9 +95,9 @@ The planner receives:
 
 - Existing uncompleted Today tasks as fixed planning context, not candidates for movement.
 - Remaining capacity.
-- Log tasks with valid positive estimates.
+- Backlog tasks with valid positive estimates.
 - Explicit dates and overdue state.
-- Current Log ordering as a soft preference signal.
+- Current Backlog ordering as a soft preference signal.
 - The saved planning instruction.
 - Task titles and estimates.
 
@@ -109,7 +109,7 @@ Plan My Day returns an additive list of task assignments for Today. Each propose
 
 - Task title.
 - Estimate.
-- Source Log section or date context when useful.
+- Source Backlog section or date context when useful.
 - The resulting Today date and native-derived position.
 
 Existing Today tasks are not returned as assignments. They stay on Today with their current date and order. Selected Backlog tasks receive the current local Today date and Today scope only when the user accepts the plan.
@@ -127,7 +127,7 @@ The plan should fill remaining capacity where possible. It may leave capacity un
    - **Redo** — generate a new plan using the current state.
    - **Dismiss** — close the panel without changing tasks.
 
-Running Plan My Day again after accepting, completing, deleting, or returning a task to Log should fill only newly available capacity. It must not silently remove or reorder existing commitments.
+Running Plan My Day again after accepting, completing, deleting, or returning a task to Backlog should fill only newly available capacity. It must not silently remove or reorder existing commitments.
 
 If there are no eligible tasks or no remaining capacity, the review panel should explain why there is nothing to add rather than producing an empty ambiguous state.
 

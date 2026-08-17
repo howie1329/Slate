@@ -1,10 +1,12 @@
 # Plan 033: Build the authoritative Planning lane projection
 
-> **Status:** ready-for-agent
+> **Status:** Implemented; historical implementation record
 >
 > **Parent:** Stage 3 — Full-window planning workspace, 2.0 foundation
 >
-> **Scope:** Backend lane projection and ordering only; Planning view UI and cross-lane interaction are deferred
+> **Scope:** Original backend-only slice; later plans now provide Planning UI and cross-lane interaction
+
+> **Current-tree note:** The authoritative four-lane projection, shared ordering, migration, and compatibility boundary described here are implemented. Plan 034 deepened the mutation seam, and Plans 035–038 added the current Board/List, inspector, and Task finder surfaces. The deferred UI language below describes the original slice boundary, not the current tree.
 
 ## Problem Statement
 
@@ -143,4 +145,3 @@ Use a forward SQLite migration to translate existing order records into the cano
 - Plan 032 and Plan 033 are complementary: the former establishes the full-app UI frame, while this plan establishes the native facts that later Planning views will render. Neither implements the Board or List itself.
 - Replacing legacy Backlog ordering with shared Lane order is an intentional product change. Date states remain visible metadata, but they no longer act as hidden user-order partitions.
 - The roadmap's Stage 2 validation gate remains relevant to shipping the broader Stage 3 experience. This backend slice can be implemented and tested independently without claiming that the complete Planning workspace has earned release.
-

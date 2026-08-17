@@ -1,6 +1,6 @@
 # Slate Product Brief
 
-> **Status:** Current product contract and 1.1 release candidate
+> **Status:** Current product contract; 1.1 release candidate and Stage 3 / 2.0 implementation in progress
 >
 > This brief describes the Slate 1.0.x product contract, the 1.0.1 onboarding release, the 1.1.0 quick-capture release candidate, and the boundaries future work must preserve. The staged expansion plan lives in [the roadmap](roadmap.md).
 
@@ -30,9 +30,13 @@ Slate 1.1.0 is the current local planning release candidate. It provides:
 - Reviewable AI Assist and Plan My Day flows through the packaged Node sidecar.
 - A short, skippable first-run onboarding flow that explains capacity, Backlog, Today, and task details.
 - Configurable global quick capture with a dedicated compact capture window, title-only Backlog creation, draft preservation, and revision-safe Undo.
+- A canonical full-window Planning projection with `Capture`, `Ready`, `Today`, and `Done` lanes.
+- Full-window Board and List views, a desktop Task finder with creation and bounded task actions, and a task inspector with read-only activity history.
 - Cross-window refresh through native planner-change events and TanStack Query invalidation.
 
 AI Assist and Plan My Day ship as reviewable Keychain-backed sidecar flows. The manual workflow remains the product’s source of truth, and AI never commits a task or plan without explicit acceptance.
+
+The current branch is in the Stage 3 / 2.0 workspace slice. The full-window route currently composes the Planning Board or List, Planning toolbar, Task finder, and task inspector over the canonical native projection. The Daily command row and AI review tray remain composed in the menu-bar Daily workspace; bringing those actions into the full window, adding reversible planning movement, and completing desktop acceptance remain open 2.0 work. This is an implementation gap against the intended full-window parity, not a second task model.
 
 End-of-day review, changed-day recovery, Spaces, integrations, sync, mobile, and MCP remain outside the shipped 1.1 baseline and follow the evidence-gated roadmap. The unfinished-day and changed-day review candidates are now conditional full-window 2.3 work.
 
@@ -49,9 +53,9 @@ The returned task revision bounds a five-second Undo action. Undo succeeds only 
 - **Daily workspace** is the default workspace. It shows Today as the dominant section and a flat, collapsible Backlog beneath it. Today includes dated work for today, active committed minutes, remaining capacity, unsized commitments that need estimates, over-capacity state, and completed work at the bottom. There is no separate Done section.
 - **Backlog** is the current task record for work that is not committed to Today. Its metadata can identify Needs estimate, Unscheduled, Overdue / needs reschedule, and Upcoming work without making each state a top-level route or section.
 - **Settings** contains daily capacity, AI provider/model/key configuration, and the persistent planning instruction.
-- **Daily command row** is always available at the top of the workspace. It supports search, Enter-to-save quick capture, and the context-sensitive AI action. Text invokes AI Assist; empty input invokes the Plan My Day review flow. A thin Settings utility strip remains available at the bottom, with Open full app alongside it in the popover.
+- **Daily command row** is always available at the top of the Daily workspace. It supports search, Enter-to-save quick capture, and the context-sensitive AI action. Text invokes AI Assist; empty input invokes the Plan My Day review flow. A thin Settings utility strip remains available at the bottom, with Open full app alongside it in the popover.
 - **Menu-bar popover** is the primary surface. It dismisses when focus leaves it and must support the essential daily loop within the compact window.
-- **Full window** provides a four-Lane Planning Board and Task inspector with recorded task activity. Its desktop-only Planning-toolbar Task finder expands while active, searches current task titles across every Lane, and can narrow results with visible Lane, Overdue, and Needs estimate filters. The finder supports optional estimate/date details, an explicit Today commitment, `Command-Enter` creation, and bounded revision-safe task actions. Finder state remains temporary; opening, creating, or acting on a task uses the existing Planning and inspector boundaries without changing Board Filter, Sort, or card placement. The menu-bar popover keeps its separate Daily search-and-capture workflow.
+- **Full window** provides four-Lane Planning Board and List views plus a Task inspector with recorded task activity. Its desktop-only Planning-toolbar Task finder expands while active, searches current task titles across every Lane, and can narrow results with visible Lane, Overdue, and Needs estimate filters. The finder supports optional estimate/date details, an explicit Today commitment, `Command-Enter` creation, and bounded revision-safe task actions. Finder state remains temporary; opening, creating, or acting on a task uses the existing Planning and inspector boundaries without changing Board Filter, Sort, or card placement. The menu-bar popover keeps its separate Daily search-and-capture workflow while full-window command-row and AI-review parity remains a 2.0 completion item.
 
 The term **Log** may become a future product label if it makes the broader task record clearer. The current route and user-facing surface remain Backlog until that change is earned through testing.
 

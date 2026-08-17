@@ -2,7 +2,7 @@
 
 > **Status:** Directional roadmap
 >
-> **Updated:** 2026-08-10
+> **Updated:** 2026-08-16
 >
 > This document describes the order in which Slate should earn new capabilities. It is not a fixed release schedule. Each stage should be validated against the product thesis before the next stage expands the model.
 
@@ -74,9 +74,18 @@ Slate 1.0.0 is the shipped baseline for the first usable daily planning loop:
 - Reviewable AI Assist and atomic Plan My Day flows through the Keychain-backed packaged Node sidecar.
 - An ad-hoc-signed Apple Silicon DMG for macOS 13.5 or later, with an explicit first-launch security warning and published checksum.
 
-Stage 1 is complete, and the Stage 2 capture and foundation implementation is present in the current 1.1 release candidate. The next roadmap gate is Stage 2 validation and evidence gathering, not Spaces, sync, mobile, or integrations. The larger unfinished-day and changed-day review experiences are intentionally deferred to the full-window workspace and remain evidence-gated. The distinction between the shipped Backlog view and a future richer Log view stays deliberate.
+Stage 1 is complete. The Stage 2 capture and durable-foundation implementation is present, but its packaged/manual acceptance and real-use evidence gate remains open. Stage 3 / 2.0 implementation is now active on the current branch: the canonical planning projection, Board, List, task inspector, Task finder, and shared interaction seam are implemented. The immediate work is to close the Stage 2 evidence gate and finish the 2.0 trust/parity contract, not to begin Spaces, sync, mobile, or integrations. The larger unfinished-day and changed-day review experiences remain evidence-gated full-window work.
 
-The 1.1 implementation slice is global quick capture: a configurable macOS shortcut opens a dedicated 520 × 72 command-bar capture window (360 × 72 minimum), restores an in-process draft, and creates a title-only Backlog task with revision-safe Undo. Clipboard, selected text, application context, AI enrichment, and destination selection remain deferred. The unfinished-day and changed-day review concepts are not popover requirements; they are conditional full-window work in Stage 3.
+The completed 1.1 implementation slice is global quick capture: a configurable macOS shortcut opens a dedicated 520 × 72 command-bar capture window (360 × 72 minimum), restores an in-process draft, and creates a title-only Backlog task with revision-safe Undo. Clipboard, selected text, application context, AI enrichment, and destination selection remain deferred. The unfinished-day and changed-day review concepts are not popover requirements; they are conditional full-window work in Stage 3.
+
+The current Stage 3 implementation includes:
+
+- An authoritative `Capture / Ready / Today / Done` projection with shared lane ordering and capacity facts.
+- Full-window Board and List views over that projection, including pointer/keyboard drag movement, filters, presentation sorting, and capacity previews.
+- A Planning-toolbar Task finder that searches every lane, creates tasks, and exposes bounded revision-safe task actions.
+- A full-window task inspector with read-only task activity history.
+
+The current Stage 3 gap is intentional and explicit: the full-window route does not yet compose the Daily command row or AI review tray, planning movement does not yet have user-facing Undo or an equivalent operation receipt, and the final packaged/manual desktop acceptance matrix is still open.
 
 ## Stage 1 — Shipped local daily planner
 
@@ -122,6 +131,8 @@ When a plan is over capacity, Slate should explain the overage and offer recover
 
 ## Stage 2 — Capture and durable planning foundations (1.1–1.x)
 
+**Status:** Implemented in the current tree; release acceptance and evidence gathering remain open.
+
 ### Goal
 
 Help Slate capture work outside the popover and establish the durable history, capacity, and stale-safe mutation boundaries that later full-window planning can reuse.
@@ -134,7 +145,7 @@ The detailed behavior and data boundaries are defined in [Daily resilience](dail
 - The ad-hoc-signed packaged app and compact popover have passed release acceptance.
 - Manual task lifecycle, capacity, AI review, and persistence are trustworthy before the durable planning foundations expand the model.
 
-Slate 1.0.0 satisfies these entry gates. Stage 2 remains a deliberate product decision rather than an automatic expansion.
+Slate 1.0.0 satisfied these entry gates, and Stage 2 was subsequently implemented as the current 1.1 foundation. Its release acceptance and real-use evidence gate remain open.
 
 ### Foundations
 
@@ -178,6 +189,8 @@ The dedicated unfinished-day review and changed-day recovery flows are moved out
 
 ## Stage 3 — Build the full-window planning workspace (2.0–2.x)
 
+**Status:** In progress. The 2.0 foundation is partially implemented; 2.1–2.3 work remains planned or conditional.
+
 ### Goal
 
 Give Slate a visual, spacious desktop surface for shaping and reviewing commitments while preserving the menu-bar popover as the fast daily planning tool.
@@ -194,7 +207,11 @@ The product direction and release slices are defined in [Full-window planning wo
 - Keep movement atomic, stale-safe, and reversible through the Stage 2 mutation boundary.
 - Add a restrained full-window toolbar with search, view selection, and capacity context.
 
+Current implementation covers the canonical lanes, Board, List, shared lane ordering, task selection/inspection, Task finder, pointer/keyboard drag movement, filters, sorting, and capacity previews. Remaining 2.0 work is full-window Daily/AI parity, explicit non-drag movement alternatives, reversible movement, and final desktop acceptance across compact, empty, error, persistence, and reduced-motion states.
+
 ### 2.1 — Planning acceleration
+
+**Status:** Not started as a complete release slice. Current Board/List filters and Task finder actions are foundation work, not the full 2.1 batch-planning scope.
 
 - Add a small number of useful filters and safe multi-select actions.
 - Add batch Fit into Today and scheduling actions through reviewed change sets.

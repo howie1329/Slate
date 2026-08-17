@@ -2,9 +2,15 @@
 
 > **Status:** Directional product definition
 >
-> **Updated:** 2026-07-24
+> **Updated:** 2026-08-16
 >
 > This document defines Slate 2.0–2.x after the local planner and 1.x daily-resilience boundaries are trustworthy. It is a product direction, not an implementation plan or a commitment to every feature listed here.
+
+## Current implementation status
+
+The current Stage 3 branch has moved beyond the original shell/placeholder slice. The full app now hosts the authoritative `Capture / Ready / Today / Done` projection through Board and List views, shared lane ordering, capacity-aware movement previews, a desktop Task finder, and a task inspector with read-only activity history. The menu-bar popover remains the complete fast path for the normal daily loop.
+
+The 2.0 foundation is not complete yet. Full-window Daily command-row and AI-review parity, explicit non-drag movement alternatives, user-facing reversible movement, and final packaged/manual acceptance remain open. The 2.1–2.3 candidates below remain future or evidence-gated work.
 
 ## Direction
 

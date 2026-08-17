@@ -2,9 +2,11 @@
 
 > **Status:** Directional Stage 2 foundation contract and conditional 2.3 full-window review definition
 >
-> **Updated:** 2026-08-08
+> **Updated:** 2026-08-16
 
 The 1.1 implementation begins with the focused global quick-capture slice described below. The unfinished-day and changed-day review concepts originally described as 1.2 and 1.3 are moved to a conditional 2.3 full-window slot; they are not requirements for the menu-bar popover.
+
+The Stage 2 durable foundation is implemented in the current tree: planner events, task revisions, global/weekly capacity, stale-safe mutations, reviewed Plan My Day acceptance, and cross-window invalidation are present. The remaining Stage 2 work is packaged/manual validation and real-use evidence. Stage 3 now reuses these boundaries for the in-progress full-window Board/List workspace; the conditional recovery candidates remain deferred.
 
 ## Purpose
 
