@@ -3,13 +3,23 @@ import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AnimatePresence } from "motion/react";
 import { AiReviewTray } from "@/components/ai-review-tray";
-import { useAiReview } from "@/components/ai-review";
+import { useAiReview, type AiReviewState } from "@/components/ai-review";
+import { PlanningPlanInspector, type PlanReviewState } from "@/components/planning-plan-inspector";
 import { TaskDetailPanel } from "@/components/task-detail-panel";
 import { useTaskMotion } from "@/components/task-motion";
 import { useTaskSelection } from "@/components/task-selection";
 import { Button } from "@/components/ui/button";
+import type { PlannerSnapshot } from "@/lib/planner";
 
-export function WorkspaceInspector({ onOpenSettings }: { onOpenSettings?: () => void }) {
+export function WorkspaceInspector({
+  onDismissPlan,
+  onOpenSettings,
+  snapshot,
+}: {
+  onDismissPlan?: () => void;
+  onOpenSettings?: () => void;
+  snapshot: PlannerSnapshot;
+}) {
   const { clearTaskMutation, taskMutation } = useTaskMotion();
   const { clearSelection, selectedTaskId, selectedTaskTransition } = useTaskSelection();
   const aiReview = useAiReview();
@@ -39,9 +49,17 @@ export function WorkspaceInspector({ onOpenSettings }: { onOpenSettings?: () => 
 
   function handleClose() {
     if (aiReview.state.kind !== "idle") {
-      aiReview.dismiss();
+      handleAiDismiss();
     } else {
       clearSelection();
+    }
+  }
+
+  function handleAiDismiss() {
+    if (isPlanReviewState(aiReview.state) && onDismissPlan) {
+      onDismissPlan();
+    } else {
+      aiReview.dismiss();
     }
   }
 
@@ -88,13 +106,23 @@ export function WorkspaceInspector({ onOpenSettings }: { onOpenSettings?: () => 
               windowMode="full"
             />
           ) : null}
-          {aiReview.state.kind !== "idle" ? (
+          {isPlanReviewState(aiReview.state) ? (
+            <PlanningPlanInspector
+              key={`plan-review:${aiReview.state.requestId}`}
+              onAccept={aiReview.acceptPlan}
+              onDismiss={handleAiDismiss}
+              onOpenSettings={onOpenSettings}
+              onRedo={aiReview.redoPlan}
+              snapshot={snapshot}
+              state={aiReview.state}
+            />
+          ) : aiReview.state.kind !== "idle" ? (
             <AiReviewTray
               key="ai-review"
               onAcceptPlan={aiReview.acceptPlan}
-              onDismiss={aiReview.dismiss}
+              onDismiss={handleAiDismiss}
               onOpenSettings={onOpenSettings}
-              onRedo={isPlanReviewState(aiReview.state) ? aiReview.redoPlan : aiReview.redoAssist}
+              onRedo={aiReview.redoAssist}
               state={aiReview.state}
               windowMode="full"
             />
@@ -105,6 +133,6 @@ export function WorkspaceInspector({ onOpenSettings }: { onOpenSettings?: () => 
   );
 }
 
-function isPlanReviewState(state: ReturnType<typeof useAiReview>["state"]) {
+function isPlanReviewState(state: AiReviewState): state is PlanReviewState {
   return state.kind.startsWith("plan") || (state.kind === "unavailable" && state.mode === "plan");
 }

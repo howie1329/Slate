@@ -84,8 +84,9 @@ The current Stage 3 implementation includes:
 - Full-window Board and List views over that projection, including pointer/keyboard drag movement, filters, presentation sorting, and capacity previews.
 - A Planning-toolbar Task finder that searches every lane, creates tasks, and exposes bounded revision-safe task actions.
 - A full-window task inspector with read-only task activity history.
+- A connected editable Plan My Day inspector with eligible Ready additions, safer-mix selection, live capacity feedback, and atomic acceptance.
 
-The current Stage 3 gap is intentional and explicit: the full-window Planning toolbar now exposes the context-sensitive AI action beside Task finder and routes its review into the inspector, while the compact Daily search-and-capture row remains popover-specific. Planning movement does not yet have user-facing Undo or an equivalent operation receipt, and the final packaged/manual desktop acceptance matrix is still open.
+The current Stage 3 gap is intentional and explicit: the full-window Planning toolbar exposes the context-sensitive AI action beside Task finder, and Plan My Day now uses the inspector as an editable connected builder while the compact Daily search-and-capture row remains popover-specific. Planning movement does not yet have user-facing Undo or an equivalent operation receipt, and the final packaged/manual desktop acceptance matrix is still open.
 
 ## Stage 1 — Shipped local daily planner
 
@@ -207,7 +208,7 @@ The product direction and release slices are defined in [Full-window planning wo
 - Keep movement atomic, stale-safe, and reversible through the Stage 2 mutation boundary.
 - Add a restrained full-window toolbar with search, view selection, and capacity context.
 
-Current implementation covers the canonical lanes, Board, List, shared lane ordering, task selection/inspection, Task finder, the adjacent context-sensitive AI action with full-window review, pointer/keyboard drag movement, filters, sorting, and capacity previews. Remaining 2.0 work is explicit non-drag movement alternatives, reversible movement, and final desktop acceptance across compact, empty, error, persistence, and reduced-motion states.
+Current implementation covers the canonical lanes, Board, List, shared lane ordering, task selection/inspection, Task finder, the adjacent context-sensitive AI action, the editable connected Plan My Day inspector, pointer/keyboard drag movement, filters, sorting, and capacity previews. Remaining 2.0 work is explicit non-drag movement alternatives, reversible movement, and final desktop acceptance across compact, empty, error, persistence, and reduced-motion states.
 
 ### 2.1 — Planning acceleration
 
@@ -215,7 +216,7 @@ Current implementation covers the canonical lanes, Board, List, shared lane orde
 
 - Add a small number of useful filters and safe multi-select actions.
 - Add batch Fit into Today and scheduling actions through reviewed change sets.
-- Give Plan My Day more room for inspecting proposed additions before acceptance.
+- Extend the delivered full-window Plan My Day builder only if real use identifies missing review context or candidate controls.
 - Add a lightweight Today / Next / Later horizon without introducing a calendar or time-blocking grid.
 - Add a calm Needs Attention surface for current actionable states such as missing estimates, overdue work, and over-capacity plans.
 

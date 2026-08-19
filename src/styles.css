@@ -379,6 +379,17 @@
     outline-offset: -2px;
   }
 
+  @container planning-workspace (max-width: 959px) {
+    .planning-workspace-inspector {
+      position: absolute;
+      inset-block: 0;
+      right: 0;
+      z-index: 20;
+      width: min(var(--planning-inspector-width), calc(100% - 40px));
+      box-shadow: -4px 0 8px color-mix(in oklch, var(--foreground) 8%, transparent);
+    }
+  }
+
   .planning-workspace-status {
     height: var(--planning-status-height);
   }

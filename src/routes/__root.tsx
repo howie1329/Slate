@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Outlet, createRootRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { useAiReview } from "@/components/ai-review";
@@ -50,8 +50,10 @@ function SlateShell() {
   });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const { clearSelection, selectedTaskDraftLane, selectedTaskId } = useTaskSelection();
-  const { dismiss: dismissAiReview, state: aiReviewState } = useAiReview();
+  const aiReview = useAiReview();
+  const { dismiss: dismissAiReview, state: aiReviewState } = aiReview;
   const { routeTransition, setRouteTransition } = useRouteMotion();
+  const previousAiStateKindRef = useRef(aiReviewState.kind);
 
   useEffect(() => {
     clearSelection("instant");
@@ -71,6 +73,19 @@ function SlateShell() {
       setIsEmptyInspectorOpen(false);
     }
   }, [aiReviewState.kind, selectedTaskId]);
+
+  useEffect(() => {
+    const previousKind = previousAiStateKindRef.current;
+    previousAiStateKindRef.current = aiReviewState.kind;
+    if (
+      windowMode === "full"
+      && !isSettingsPage
+      && previousKind === "plan-accepting"
+      && aiReviewState.kind === "idle"
+    ) {
+      setIsEmptyInspectorOpen(true);
+    }
+  }, [aiReviewState.kind, isSettingsPage, windowMode]);
 
   if (windowMode === "quick-capture") {
     return <QuickCaptureWindow />;
@@ -103,7 +118,7 @@ function SlateShell() {
 
   function handleToggleInspector() {
     if (aiReviewState.kind !== "idle") {
-      dismissAiReview();
+      handleDismissAiReview();
       return;
     }
     if (selectedTaskId) {
@@ -111,6 +126,14 @@ function SlateShell() {
       return;
     }
     setIsEmptyInspectorOpen((isOpen) => !isOpen);
+  }
+
+  function handleDismissAiReview() {
+    const shouldKeepInspectorOpen = windowMode === "full" && isPlanReviewState(aiReviewState);
+    dismissAiReview();
+    if (shouldKeepInspectorOpen) {
+      setIsEmptyInspectorOpen(true);
+    }
   }
 
   const recovery = (
@@ -137,8 +160,12 @@ function SlateShell() {
   const planningInspectorEntry = contentKind === "planning" && planner.data && selectedTaskId
     ? planningTaskEntry(planner.data, selectedTaskId)
     : undefined;
-  const fullWindowInspector = aiReviewState.kind !== "idle" ? (
-    <WorkspaceInspector onOpenSettings={handleOpenSettings} />
+  const fullWindowInspector = aiReviewState.kind !== "idle" && planner.data ? (
+    <WorkspaceInspector
+      onDismissPlan={handleDismissAiReview}
+      onOpenSettings={handleOpenSettings}
+      snapshot={planner.data}
+    />
   ) : planningInspectorEntry && planner.data ? (
     <PlanningTaskInspector
       draftLane={selectedTaskDraftLane}
@@ -147,8 +174,13 @@ function SlateShell() {
       snapshot={planner.data}
       task={planningInspectorEntry.task}
     />
-  ) : contentKind === "planning" && isEmptyInspectorOpen ? (
-    <PlanningEmptyInspector onClose={() => setIsEmptyInspectorOpen(false)} />
+  ) : contentKind === "planning" && isEmptyInspectorOpen && planner.data ? (
+    <PlanningEmptyInspector
+      onClose={() => setIsEmptyInspectorOpen(false)}
+      onOpenSettings={handleOpenSettings}
+      onPlanMyDay={aiReview.startPlan}
+      snapshot={planner.data}
+    />
   ) : null;
   const onboarding = planner.data && windowMode === "popover" ? (
     <OnboardingFlow
@@ -172,7 +204,7 @@ function SlateShell() {
         const isInsideOnboarding = target?.closest("[data-onboarding]");
 
         if (aiReviewState.kind !== "idle" && !isInsideInspector && !isInsideReview) {
-          dismissAiReview();
+          handleDismissAiReview();
         }
         if (
           selectedTaskId
@@ -186,7 +218,7 @@ function SlateShell() {
       onKeyDown={(event) => {
         if (event.key === "Escape" && aiReviewState.kind !== "idle" && !event.defaultPrevented) {
           event.preventDefault();
-          dismissAiReview();
+          handleDismissAiReview();
         } else if (event.key === "Escape" && selectedTaskId && !event.defaultPrevented) {
           event.preventDefault();
           clearSelection("instant");
@@ -243,6 +275,10 @@ function SlateShell() {
       {windowMode === "popover" ? onboarding : null}
     </div>
   );
+}
+
+function isPlanReviewState(state: ReturnType<typeof useAiReview>["state"]) {
+  return state.kind.startsWith("plan") || (state.kind === "unavailable" && state.mode === "plan");
 }
 
 type RouteFadeProps = {

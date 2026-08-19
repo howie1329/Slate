@@ -1,7 +1,7 @@
 <!-- agentkit:start agents -->
 # Slate agent guide
 
-Slate is a local-first macOS planner for deciding what work realistically fits into today. Slate 1.1.0 is the current release-candidate baseline: it includes the compact Daily shell, global quick capture, SQLite persistence, task lifecycle and ordering operations, daily capacity state, native Keychain storage, and reviewable AI Assist and Plan My Day flows through the packaged Node sidecar. The current branch is advancing the Stage 3 full-window Planning workspace with canonical Capture/Ready/Today/Done lanes, Board/List views, the desktop Task finder, and the task inspector.
+Slate is a local-first macOS planner for deciding what work realistically fits into today. Slate 1.1.0 is the current release-candidate baseline: it includes the compact Daily shell, global quick capture, SQLite persistence, task lifecycle and ordering operations, daily capacity state, native Keychain storage, and reviewable AI Assist and Plan My Day flows through the packaged Node sidecar. The current branch is advancing the Stage 3 full-window Planning workspace with canonical Capture/Ready/Today/Done lanes, Board/List views, the desktop Task finder, the task inspector, and an editable connected Plan My Day inspector builder.
 
 ## Source of truth
 

@@ -299,6 +299,15 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 - **Interaction:** Editing stays close to the task list, dismisses with Escape or outside click, and respects reduced motion.
 - **Full-window activity:** The desktop inspector adds a compact newest-first activity trace beneath Planning. It uses the existing event ledger, shows human-readable action/source/time metadata, and remains absent from the menu-bar popover.
 
+### Full-window Plan My Day Inspector
+
+- **Placement:** Plan My Day is an editable mode of the right Workspace inspector. The Board or List remains visible; below 960px of Planning canvas width, the inspector overlays from the right and leaves a 40px context edge.
+- **Hierarchy:** Lead with **Build your day**, a concise reviewable-AI explanation, and one capacity line showing committed, proposed, and remaining or over-capacity minutes. Keep the proposal visually secondary until acceptance.
+- **Proposal editing:** Generated additions begin included. Each row exposes title, source-date context, estimate, order, and an explicit remove action. **Add from Backlog** opens an inline searchable view of estimated Ready tasks that are currently eligible for Today.
+- **Safer mix:** Offer the deterministic safer-mix action only when eligible work can preserve at least 40 minutes of open capacity. Never present it as a score or autonomous optimization.
+- **Actions:** Keep Dismiss, Generate again, and Accept plan pinned to the inspector footer. Disable acceptance when the selection is empty, over capacity, or being accepted.
+- **Trust:** Existing Today commitments remain fixed Board/List context. No task changes until explicit acceptance; native stale and capacity validation remains authoritative and atomic.
+
 ## Do's and Don'ts
 
 ### Do:
