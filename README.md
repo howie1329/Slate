@@ -34,7 +34,7 @@ Slate is designed around a compact menu-bar popover that can perform the essenti
 - **Settings:** daily capacity, AI provider/model configuration, provider-specific Keychain credentials, and planning instruction through one explicit Save action.
 - **Persistent footer:** compact Settings access and, in the popover, Open Full App. Capture and AI actions live in the Daily command row.
 
-The full window currently provides the Planning Board/List workspace, Task finder, and task inspector over the same local task model. The popover remains the complete fast path for the ordinary daily loop. Full-window Daily command-row and AI-review parity, reversible planning movement, and final desktop acceptance remain part of the 2.0 completion gate.
+The full window currently provides the Planning Board/List workspace, Task finder, task inspector, and a context-sensitive AI action beside the Task finder. AI Assist and Plan My Day reviews open in the full-window inspector over the same local task model. The popover remains the complete fast path for the ordinary daily loop; reversible planning movement and final desktop acceptance remain part of the 2.0 completion gate.
 
 ## Development
 

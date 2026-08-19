@@ -1,6 +1,6 @@
 # Full-window planning workspace
 
-> **Current implementation status (2026-08-16):** The Stage 3 foundation is in progress. The full app currently hosts canonical Board and List views, shared lane ordering, capacity-aware movement previews, the desktop Task finder, and a task inspector with activity history. Full-window Daily command-row/AI parity, reversible movement, and final desktop acceptance remain open 2.0 work.
+> **Current implementation status (2026-08-19):** The Stage 3 foundation is in progress. The full app currently hosts canonical Board and List views, shared lane ordering, capacity-aware movement previews, the desktop Task finder with an adjacent context-sensitive AI action, and a task inspector with activity history and AI review states. Reversible movement and final desktop acceptance remain open 2.0 work.
 
 This folder contains the product direction for Slate 2.0–2.x: a spacious planning workspace for shaping commitments while the menu-bar popover remains focused on deciding what fits today.
 

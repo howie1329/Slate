@@ -9,7 +9,7 @@ import { useTaskMotion } from "@/components/task-motion";
 import { useTaskSelection } from "@/components/task-selection";
 import { Button } from "@/components/ui/button";
 
-export function WorkspaceInspector() {
+export function WorkspaceInspector({ onOpenSettings }: { onOpenSettings?: () => void }) {
   const { clearTaskMutation, taskMutation } = useTaskMotion();
   const { clearSelection, selectedTaskId, selectedTaskTransition } = useTaskSelection();
   const aiReview = useAiReview();
@@ -93,6 +93,7 @@ export function WorkspaceInspector() {
               key="ai-review"
               onAcceptPlan={aiReview.acceptPlan}
               onDismiss={aiReview.dismiss}
+              onOpenSettings={onOpenSettings}
               onRedo={isPlanReviewState(aiReview.state) ? aiReview.redoPlan : aiReview.redoAssist}
               state={aiReview.state}
               windowMode="full"

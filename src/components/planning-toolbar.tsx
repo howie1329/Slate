@@ -4,6 +4,7 @@ import {
   ArrowLeft01Icon,
   ArrowUp01Icon,
   Calendar01Icon,
+  LayoutRightIcon,
   Settings01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -36,7 +37,9 @@ import {
 type PlanningToolbarProps = {
   date?: LocalDate;
   filter?: PlanningBoardFilter;
+  inspectorOpen?: boolean;
   onFilterChange?: (filter: PlanningBoardFilter) => void;
+  onToggleInspector?: () => void;
   onOpenSettings?: () => void;
   onSortChange?: (sort: PlanningBoardSort) => void;
   onViewChange?: (view: "board" | "list") => void;
@@ -48,7 +51,9 @@ type PlanningToolbarProps = {
 export function PlanningToolbar({
   date,
   filter = "all",
+  inspectorOpen = false,
   onFilterChange,
+  onToggleInspector,
   onOpenSettings,
   onSortChange,
   onViewChange,
@@ -108,10 +113,25 @@ export function PlanningToolbar({
       </div>
 
       <div className="justify-self-center">
-        {snapshot ? <TaskFinder snapshot={snapshot} /> : null}
+        {snapshot ? <TaskFinder onOpenSettings={onOpenSettings} snapshot={snapshot} /> : null}
       </div>
 
       <div className="flex items-center gap-1 justify-self-end">
+        {onToggleInspector ? (
+          <Button
+            aria-label="Toggle inspector"
+            aria-pressed={Boolean(inspectorOpen)}
+            className="size-6 text-muted-foreground"
+            onClick={onToggleInspector}
+            size="icon-xs"
+            title={inspectorOpen ? "Close inspector" : "Open inspector"}
+            type="button"
+            variant={inspectorOpen ? "secondary" : "ghost"}
+          >
+            <HugeiconsIcon aria-hidden="true" icon={LayoutRightIcon} size={13} strokeWidth={1.8} />
+          </Button>
+        ) : null}
+
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button className="h-6 px-2 text-section-secondary font-normal text-muted-foreground hover:text-foreground" size="xs" type="button" variant={filter === "all" ? "ghost" : "secondary"} />}>
             Filter

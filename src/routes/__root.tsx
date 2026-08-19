@@ -4,12 +4,14 @@ import { motion } from "motion/react";
 import { useAiReview } from "@/components/ai-review";
 import { OnboardingFlow } from "@/components/onboarding-flow";
 import { PlanningBoard } from "@/components/planning-board";
+import { PlanningEmptyInspector } from "@/components/planning-empty-inspector";
 import { PlanningList } from "@/components/planning-list";
 import { PlanningTaskInspector } from "@/components/planning-task-inspector";
 import { PlanningToolbar, SettingsToolbar } from "@/components/planning-toolbar";
 import { PlanningWorkspaceShell } from "@/components/planning-workspace-shell";
 import { QuickCaptureWindow } from "@/components/quick-capture-window";
 import { WorkspaceFooter } from "@/components/workspace-footer";
+import { WorkspaceInspector } from "@/components/workspace-inspector";
 import { RouteMotionProvider, useRouteMotion, type RouteMotionTransition } from "@/components/route-motion";
 import { TaskMotionProvider } from "@/components/task-motion";
 import { TaskSelectionProvider, useTaskSelection } from "@/components/task-selection";
@@ -41,6 +43,7 @@ function SlateShell() {
   const [planningFilter, setPlanningFilter] = useState<PlanningBoardFilter>("all");
   const [planningSort, setPlanningSort] = useState<PlanningBoardSort>("planning");
   const [planningView, setPlanningView] = useState<"board" | "list">("board");
+  const [isEmptyInspectorOpen, setIsEmptyInspectorOpen] = useState(false);
   const windowMode = useWindowMode();
   const isSettingsPage = useRouterState({
     select: (state) => state.location.pathname === "/settings",
@@ -53,6 +56,7 @@ function SlateShell() {
   useEffect(() => {
     clearSelection("instant");
     dismissAiReview();
+    setIsEmptyInspectorOpen(false);
     setRouteTransition("instant");
   }, [clearSelection, dismissAiReview, pathname, setRouteTransition]);
 
@@ -61,6 +65,12 @@ function SlateShell() {
       clearSelection("instant");
     }
   }, [aiReviewState.kind, clearSelection, selectedTaskId]);
+
+  useEffect(() => {
+    if (aiReviewState.kind !== "idle" || selectedTaskId) {
+      setIsEmptyInspectorOpen(false);
+    }
+  }, [aiReviewState.kind, selectedTaskId]);
 
   if (windowMode === "quick-capture") {
     return <QuickCaptureWindow />;
@@ -91,6 +101,18 @@ function SlateShell() {
     void navigate({ to: "/" });
   }
 
+  function handleToggleInspector() {
+    if (aiReviewState.kind !== "idle") {
+      dismissAiReview();
+      return;
+    }
+    if (selectedTaskId) {
+      clearSelection("instant");
+      return;
+    }
+    setIsEmptyInspectorOpen((isOpen) => !isOpen);
+  }
+
   const recovery = (
     <PersistenceRecovery
       isReconnecting={isReconnecting}
@@ -115,6 +137,19 @@ function SlateShell() {
   const planningInspectorEntry = contentKind === "planning" && planner.data && selectedTaskId
     ? planningTaskEntry(planner.data, selectedTaskId)
     : undefined;
+  const fullWindowInspector = aiReviewState.kind !== "idle" ? (
+    <WorkspaceInspector onOpenSettings={handleOpenSettings} />
+  ) : planningInspectorEntry && planner.data ? (
+    <PlanningTaskInspector
+      draftLane={selectedTaskDraftLane}
+      initialLane={planningInspectorEntry.lane}
+      key={`${planningInspectorEntry.task.id}:${selectedTaskDraftLane ?? "persisted"}`}
+      snapshot={planner.data}
+      task={planningInspectorEntry.task}
+    />
+  ) : contentKind === "planning" && isEmptyInspectorOpen ? (
+    <PlanningEmptyInspector onClose={() => setIsEmptyInspectorOpen(false)} />
+  ) : null;
   const onboarding = planner.data && windowMode === "popover" ? (
     <OnboardingFlow
       isSettingsPage={isSettingsPage}
@@ -164,24 +199,18 @@ function SlateShell() {
         <PlanningWorkspaceShell
           contentKind={contentKind}
           globalLayer={onboarding}
-          inspector={planningInspectorEntry && planner.data ? (
-            <PlanningTaskInspector
-              draftLane={selectedTaskDraftLane}
-              initialLane={planningInspectorEntry.lane}
-              key={`${planningInspectorEntry.task.id}:${selectedTaskDraftLane ?? "persisted"}`}
-              snapshot={planner.data}
-              task={planningInspectorEntry.task}
-            />
-          ) : null}
+          inspector={fullWindowInspector}
           onOpenSettings={handleOpenSettings}
           statusMessage={isReconnecting ? "Reconnecting to local data…" : reconnectFailed ? "Local data is still unavailable." : undefined}
           toolbar={contentKind === "planning" ? (
             <PlanningToolbar
               date={planner.data?.today}
               filter={planningFilter}
+              inspectorOpen={Boolean(fullWindowInspector)}
               onFilterChange={setPlanningFilter}
               onOpenSettings={handleOpenSettings}
               onSortChange={setPlanningSort}
+              onToggleInspector={handleToggleInspector}
               onViewChange={setPlanningView}
               snapshot={planner.data}
               sort={planningSort}

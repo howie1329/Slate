@@ -85,7 +85,7 @@ The current Stage 3 implementation includes:
 - A Planning-toolbar Task finder that searches every lane, creates tasks, and exposes bounded revision-safe task actions.
 - A full-window task inspector with read-only task activity history.
 
-The current Stage 3 gap is intentional and explicit: the full-window route does not yet compose the Daily command row or AI review tray, planning movement does not yet have user-facing Undo or an equivalent operation receipt, and the final packaged/manual desktop acceptance matrix is still open.
+The current Stage 3 gap is intentional and explicit: the full-window Planning toolbar now exposes the context-sensitive AI action beside Task finder and routes its review into the inspector, while the compact Daily search-and-capture row remains popover-specific. Planning movement does not yet have user-facing Undo or an equivalent operation receipt, and the final packaged/manual desktop acceptance matrix is still open.
 
 ## Stage 1 — Shipped local daily planner
 
@@ -207,7 +207,7 @@ The product direction and release slices are defined in [Full-window planning wo
 - Keep movement atomic, stale-safe, and reversible through the Stage 2 mutation boundary.
 - Add a restrained full-window toolbar with search, view selection, and capacity context.
 
-Current implementation covers the canonical lanes, Board, List, shared lane ordering, task selection/inspection, Task finder, pointer/keyboard drag movement, filters, sorting, and capacity previews. Remaining 2.0 work is full-window Daily/AI parity, explicit non-drag movement alternatives, reversible movement, and final desktop acceptance across compact, empty, error, persistence, and reduced-motion states.
+Current implementation covers the canonical lanes, Board, List, shared lane ordering, task selection/inspection, Task finder, the adjacent context-sensitive AI action with full-window review, pointer/keyboard drag movement, filters, sorting, and capacity previews. Remaining 2.0 work is explicit non-drag movement alternatives, reversible movement, and final desktop acceptance across compact, empty, error, persistence, and reduced-motion states.
 
 ### 2.1 — Planning acceleration
 

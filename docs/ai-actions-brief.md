@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Slate has one AI action button in the Daily command row. The button changes behavior based on whether the command input contains text:
+Slate has one context-sensitive AI action at each planning entry surface: the Daily command row in the popover and the adjacent action beside the full-window Task finder. Both buttons change behavior based on whether their input contains text:
 
 - With non-empty input: **AI Assist**.
 - With empty or whitespace-only input: **Plan My Day**.
@@ -23,6 +23,8 @@ The Daily workspace contains:
 - One AI button whose action is selected from the input state.
 
 The compact footer contains Settings and Open full app access. The AI review tray and task detail panel appear above that utility strip.
+
+The full-window Planning toolbar mirrors the same AI action beside Task finder. Its review replaces the task inspector temporarily, so the proposal has enough room for loading, editing, dismissal, retry, stale-plan, and acceptance states without changing the Board or List surface.
 
 The AI button should treat whitespace-only input as empty. Its label, tooltip, and accessible name should reflect the active action:
 

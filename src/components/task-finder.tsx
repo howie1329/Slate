@@ -18,11 +18,13 @@ import {
   Loading03Icon,
   MoreVerticalIcon,
   Search01Icon,
+  SparklesIcon,
   TaskAdd01Icon,
   TaskDone01Icon,
   Undo02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { useAiReview } from "@/components/ai-review";
 import { toast } from "sonner";
 import { useTaskSelection } from "@/components/task-selection";
 import { Button } from "@/components/ui/button";
@@ -78,13 +80,20 @@ type PopupPosition = {
   width: number;
 };
 
-export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
+type TaskFinderProps = {
+  onOpenSettings?: () => void;
+  snapshot: PlannerSnapshot;
+};
+
+export function TaskFinder({ onOpenSettings, snapshot }: TaskFinderProps) {
   const { selectTask } = useTaskSelection();
+  const aiReview = useAiReview();
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const setTaskCompleted = useSetTaskCompleted();
   const setTaskScheduledDate = useSetTaskScheduledDate();
   const inputRef = useRef<HTMLInputElement>(null);
+  const finderRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const actionButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const mutationPendingRef = useRef(false);
@@ -99,6 +108,10 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [popupPosition, setPopupPosition] = useState<PopupPosition | null>(null);
+  const aiBusy =
+    aiReview.state.kind === "assist-loading"
+    || aiReview.state.kind === "plan-loading"
+    || aiReview.state.kind === "plan-accepting";
   const filtersActive = hasTaskFinderFilters(filters);
   const titleResults = useMemo(
     () => taskFinderResults(snapshot, query, filtersActive),
@@ -172,7 +185,7 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
       if (!(target instanceof Node)) return;
       if (
         mutationPendingRef.current
-        || inputRef.current?.parentElement?.contains(target)
+        || finderRef.current?.contains(target)
         || popupRef.current?.contains(target)
       ) return;
       closeFinder();
@@ -386,65 +399,123 @@ export function TaskFinder({ snapshot }: { snapshot: PlannerSnapshot }) {
     updateCreationDraft({ addToToday: true });
   }
 
+  function handleAiAction() {
+    if (aiBusy) return;
+    if (snapshot.aiAvailability !== "configured") {
+      onOpenSettings?.();
+      return;
+    }
+
+    const capture = query.trim();
+    if (capture) {
+      aiReview.startAssist(capture, null);
+    } else {
+      aiReview.startPlan();
+    }
+    resetFinderState();
+    setIsOpen(false);
+  }
+
   return (
     <div
       className={cn(
-        "relative h-6 min-w-0 transition-[width] duration-200 ease-out motion-reduce:transition-none",
-        isOpen ? "w-[min(28rem,calc(100vw-2rem))]" : "w-56",
+        "flex min-w-0 items-center gap-1",
       )}
       data-task-finder
+      ref={finderRef}
     >
-      <HugeiconsIcon
-        aria-hidden="true"
-        className="pointer-events-none absolute left-1.5 top-1/2 z-10 -translate-y-1/2 text-muted-foreground"
-        icon={Search01Icon}
-        size={11}
-        strokeWidth={1.8}
-      />
-      <input
-        aria-activedescendant={activeOption ? optionId(activeOption.key) : undefined}
-        aria-autocomplete="list"
-        aria-busy={mutationPending}
-        aria-controls={options.length > 0 ? "task-finder-results" : undefined}
-        aria-expanded={isOpen}
-        aria-label="Find or create a task"
-        className="h-6 w-full appearance-none rounded-md border border-input bg-background py-0 pl-5 pr-8 text-composer text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 [&::-webkit-search-cancel-button]:appearance-none"
-        maxLength={500}
-        onChange={(event) => {
-          setQuery(event.target.value);
-          setActiveOptionKey(null);
-          setCreationError(null);
-          setIsOpen(true);
-        }}
-        onFocus={() => setIsOpen(true)}
-        onKeyDown={handleInputKeyDown}
-        placeholder="Find or create a task…"
-        readOnly={mutationPending}
-        ref={inputRef}
-        role="combobox"
-        type="search"
-        value={query}
-      />
-      {query || hasTaskFinderFilters(filters) ? (
-        <Button
-          aria-label="Clear task finder"
-          className="absolute right-0.5 top-1/2 -translate-y-1/2"
-          disabled={mutationPending}
-          onClick={() => {
-            if (mutationPending) return;
-            resetFinderState();
-            inputRef.current?.focus();
+      <div
+        className={cn(
+          "relative h-6 min-w-0 transition-[width] duration-200 ease-out motion-reduce:transition-none",
+          isOpen ? "w-[min(28rem,calc(100vw-2rem))]" : "w-56",
+        )}
+      >
+        <HugeiconsIcon
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1.5 top-1/2 z-10 -translate-y-1/2 text-muted-foreground"
+          icon={Search01Icon}
+          size={11}
+          strokeWidth={1.8}
+        />
+        <input
+          aria-activedescendant={activeOption ? optionId(activeOption.key) : undefined}
+          aria-autocomplete="list"
+          aria-busy={mutationPending}
+          aria-controls={options.length > 0 ? "task-finder-results" : undefined}
+          aria-expanded={isOpen}
+          aria-label="Find or create a task"
+          className="h-6 w-full appearance-none rounded-md border border-input bg-background py-0 pl-5 pr-8 text-composer text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 [&::-webkit-search-cancel-button]:appearance-none"
+          maxLength={500}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setActiveOptionKey(null);
+            setCreationError(null);
             setIsOpen(true);
           }}
-          size="icon-xs"
-          type="button"
-          variant="ghost"
-        >
-          <HugeiconsIcon aria-hidden="true" icon={Cancel01Icon} strokeWidth={1.8} />
-        </Button>
-      ) : (
-        <kbd className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 font-mono text-metadata text-muted-foreground">⌘F</kbd>
-      )}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={handleInputKeyDown}
+          placeholder="Find or create a task…"
+          readOnly={mutationPending}
+          ref={inputRef}
+          role="combobox"
+          type="search"
+          value={query}
+        />
+        {query || hasTaskFinderFilters(filters) ? (
+          <Button
+            aria-label="Clear task finder"
+            className="absolute right-0.5 top-1/2 -translate-y-1/2"
+            disabled={mutationPending}
+            onClick={() => {
+              if (mutationPending) return;
+              resetFinderState();
+              inputRef.current?.focus();
+              setIsOpen(true);
+            }}
+            size="icon-xs"
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon aria-hidden="true" icon={Cancel01Icon} strokeWidth={1.8} />
+          </Button>
+        ) : (
+          <kbd className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 font-mono text-metadata text-muted-foreground">⌘F</kbd>
+        )}
+      </div>
+      <Button
+        aria-label={
+          snapshot.aiAvailability !== "configured"
+            ? "Configure AI in Settings"
+            : aiBusy
+              ? "Generating AI review"
+              : query.trim()
+                ? "Use AI Assist"
+                : "Plan my day with AI"
+        }
+        className="size-6 text-muted-foreground"
+        disabled={aiBusy}
+        onClick={handleAiAction}
+        size="icon-xs"
+        title={
+          snapshot.aiAvailability !== "configured"
+            ? "Configure AI in Settings"
+            : aiBusy
+              ? "Generating AI review"
+              : query.trim()
+                ? "Use AI Assist"
+                : "Plan My Day"
+        }
+        type="button"
+        variant="ghost"
+      >
+        <HugeiconsIcon
+          aria-hidden="true"
+          className={aiBusy ? "animate-pulse motion-reduce:animate-none" : undefined}
+          icon={SparklesIcon}
+          size={13}
+          strokeWidth={1.8}
+        />
+      </Button>
 
       {isOpen && popupPosition && typeof document !== "undefined"
         ? createPortal(

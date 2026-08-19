@@ -8,9 +8,9 @@
 
 ## Current implementation status
 
-The current Stage 3 branch has moved beyond the original shell/placeholder slice. The full app now hosts the authoritative `Capture / Ready / Today / Done` projection through Board and List views, shared lane ordering, capacity-aware movement previews, a desktop Task finder, and a task inspector with read-only activity history. The menu-bar popover remains the complete fast path for the normal daily loop.
+The current Stage 3 branch has moved beyond the original shell/placeholder slice. The full app now hosts the authoritative `Capture / Ready / Today / Done` projection through Board and List views, shared lane ordering, capacity-aware movement previews, a desktop Task finder with an adjacent context-sensitive AI action, and a task inspector with read-only activity history and AI review states. The menu-bar popover remains the complete fast path for the normal daily loop.
 
-The 2.0 foundation is not complete yet. Full-window Daily command-row and AI-review parity, explicit non-drag movement alternatives, user-facing reversible movement, and final packaged/manual acceptance remain open. The 2.1–2.3 candidates below remain future or evidence-gated work.
+The 2.0 foundation is not complete yet. Explicit non-drag movement alternatives, user-facing reversible movement, and final packaged/manual acceptance remain open. The compact Daily search-and-capture row remains popover-specific; the full-window Planning toolbar provides the AI action and review surface without introducing a second task model. The 2.1–2.3 candidates below remain future or evidence-gated work.
 
 ## Direction
 
