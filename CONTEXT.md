@@ -32,6 +32,10 @@ _Avoid_: unchanged popover footer, task-detail tray
 The right-side contextual region of the Planning workspace shell. It shows either task detail or a reviewable AI action without losing the surrounding Planning workspace context.
 _Avoid_: modal, bottom review tray, simultaneous task and AI panels
 
+**Full-window Plan review**:
+The richer Plan My Day review available in the Full app's Workspace inspector. It distinguishes fixed Today commitments from proposed additions and lets the user include or exclude additions before accepting, while the Daily workspace retains its compact Plan My Day review.
+_Avoid_: Planning Session, autonomous plan, replacement for compact Plan My Day
+
 **Task inspector**:
 The task-detail mode of the Workspace inspector, used to view and edit the selected task.
 _Avoid_: separate task-detail window, bottom task-detail panel

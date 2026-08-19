@@ -83,6 +83,7 @@ Do not create a new plan to restate one of these items. Update the owning plan, 
 | [036 Planning toolbar task finder MVP](036-footer-task-finder.md) | Complete | Desktop-only expanding Task finder in the Planning toolbar opens canonical tasks without changing Board state or native semantics. |
 | [037 create tasks from the Task finder](037-create-from-task-finder.md) | Complete | Explicit create option turns a non-empty finder query into a normal manual Capture task and opens its Task inspector. |
 | [038 Task finder filters, creation, and actions](038-task-finder-filters-creation-and-actions.md) | Complete | Desktop finder now has visible filters, enriched capture, direct creation, revision-safe quick actions, instructional states, and keyboard guidance. |
+| [039 richer Full-window Plan review UI](039-richer-full-window-plan-review-ui.md) | Planned | UI-only selectable Plan My Day review in the Workspace inspector; native generation and acceptance connection remain deferred. |
 
 Plan numbers 007 and 010 are intentionally unused. Do not invent placeholder files to fill those gaps; add a new numbered plan only when a genuinely new, scoped work item is approved.
 
