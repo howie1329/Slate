@@ -8,6 +8,7 @@ import { useRouteMotion } from "@/components/route-motion";
 import { TaskDetailPanel } from "@/components/task-detail-panel";
 import { useTaskMotion } from "@/components/task-motion";
 import { useTaskSelection } from "@/components/task-selection";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { openFullApp, type WindowMode } from "@/lib/window-mode";
 
@@ -47,17 +48,20 @@ export function WorkspaceFooter({ windowMode }: WorkspaceFooterProps) {
           </Button>
         ) : null}
 
-        <Button
-          aria-label="Open settings"
-          className="size-6 rounded-md text-muted-foreground"
-          onClick={handleOpenSettings}
-          size="icon-xs"
-          title="Open settings"
-          type="button"
-          variant="ghost"
-        >
-          <HugeiconsIcon aria-hidden="true" icon={Settings01Icon} size={12} strokeWidth={1.8} />
-        </Button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle className="size-6 rounded-md text-muted-foreground" size="icon-xs" />
+          <Button
+            aria-label="Open settings"
+            className="size-6 rounded-md text-muted-foreground"
+            onClick={handleOpenSettings}
+            size="icon-xs"
+            title="Open settings"
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon aria-hidden="true" icon={Settings01Icon} size={12} strokeWidth={1.8} />
+          </Button>
+        </div>
       </div>
 
       <AnimatePresence

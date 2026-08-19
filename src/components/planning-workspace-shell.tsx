@@ -3,6 +3,7 @@ import { Settings01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PlanningToolbar } from "@/components/planning-toolbar";
 import { PlanningWorkspaceFrame } from "@/components/planning-workspace-frame";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 
 type PlanningWorkspaceShellProps = {
@@ -65,18 +66,21 @@ function WorkspaceStatusBar({
       <span aria-live="polite" className="min-w-0 truncate text-footer text-muted-foreground" role="status">
         {message}
       </span>
-      <Button
-        aria-current={isSettingsPage ? "page" : undefined}
-        aria-label="Open settings"
-        className="size-5 rounded text-muted-foreground"
-        disabled={isSettingsPage}
-        onClick={onOpenSettings}
-        title="Open settings"
-        type="button"
-        variant="ghost"
-      >
-        <HugeiconsIcon aria-hidden="true" icon={Settings01Icon} size={11} strokeWidth={1.8} />
-      </Button>
+      <div className="flex items-center gap-1">
+        <ThemeToggle className="size-5 rounded text-muted-foreground" size="icon-xs" />
+        <Button
+          aria-current={isSettingsPage ? "page" : undefined}
+          aria-label="Open settings"
+          className="size-5 rounded text-muted-foreground"
+          disabled={isSettingsPage}
+          onClick={onOpenSettings}
+          title="Open settings"
+          type="button"
+          variant="ghost"
+        >
+          <HugeiconsIcon aria-hidden="true" icon={Settings01Icon} size={11} strokeWidth={1.8} />
+        </Button>
+      </div>
     </div>
   );
 }

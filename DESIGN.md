@@ -254,7 +254,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 - **Command row:** A slim search-and-capture entry sits above the scrollable task surface. It is the primary way to add work and the visual entry point for search and reviewable AI actions.
 - **Today:** The dominant section shows the remaining-minute value, a thin progress rail, active tasks, and completed Today tasks at the bottom.
 - **Backlog:** A single flat list appears beneath Today by default. Needs estimate, Overdue, Upcoming, and Unscheduled remain row metadata rather than category headings. The section can collapse locally when the user wants to protect the Today view.
-- **Persistent footer:** A slim muted tray anchors icon-only utilities to the bottom edge, with accessible names and tooltips preserving clarity. The popover shows Open full app on the left and Settings on the right; the full app shows Settings on the right.
+- **Persistent footer:** A slim muted tray anchors icon-only utilities to the bottom edge, with accessible names and tooltips preserving clarity. The popover shows Open full app on the left and Theme plus Settings on the right; the full app shows Theme plus Settings on the right.
 - **Transient panels:** Task details and AI review panels attach above the persistent footer only while active.
 - **Density:** Preserve the normal daily loop at `360 × 520`. Prefer compact hierarchy and metadata over extra panels or route-level navigation.
 
@@ -282,7 +282,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 
 - **Structure:** A slim top command row holds the search-and-capture field and reviewable AI action. Enter submits a captured title; there is no separate save button. The row remains visible while the task list scrolls.
 - **Hierarchy:** The command row is visually quiet; the task list and Today capacity carry the main emphasis. Enter-to-save stays implicit and keyboard-first.
-- **Persistent footer:** The 28px tray uses a slight muted tint and hairline divider. Icon-only utilities stay quiet, with the popover split between Open full app and Settings and the full app keeping Settings on the right; accessible names and tooltips carry the text labels.
+- **Persistent footer:** The 28px tray uses a slight muted tint and hairline divider. Icon-only utilities stay quiet, with the popover split between Open full app on the left and Theme plus Settings on the right, while the full app keeps Theme plus Settings on the right; accessible names and tooltips carry the text labels.
 - **Transient panels:** Task details and AI review panels attach above the footer when active and disappear with the selection or review state.
 
 ### Quick Capture Window
