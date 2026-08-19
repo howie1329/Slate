@@ -1,15 +1,23 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { Outlet, createRootRoute, useRouterState } from "@tanstack/react-router";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Outlet, createRootRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { useAiReview } from "@/components/ai-review";
 import { OnboardingFlow } from "@/components/onboarding-flow";
+import { PlanningBoard } from "@/components/planning-board";
+import { PlanningEmptyInspector } from "@/components/planning-empty-inspector";
+import { PlanningList } from "@/components/planning-list";
+import { PlanningTaskInspector } from "@/components/planning-task-inspector";
+import { PlanningToolbar, SettingsToolbar } from "@/components/planning-toolbar";
+import { PlanningWorkspaceShell } from "@/components/planning-workspace-shell";
 import { QuickCaptureWindow } from "@/components/quick-capture-window";
 import { WorkspaceFooter } from "@/components/workspace-footer";
+import { WorkspaceInspector } from "@/components/workspace-inspector";
 import { RouteMotionProvider, useRouteMotion, type RouteMotionTransition } from "@/components/route-motion";
 import { TaskMotionProvider } from "@/components/task-motion";
 import { TaskSelectionProvider, useTaskSelection } from "@/components/task-selection";
 import { Button } from "@/components/ui/button";
-import { retryPersistence } from "@/lib/planner";
+import { planningTaskEntry, retryPersistence } from "@/lib/planner";
+import type { PlanningBoardFilter, PlanningBoardSort } from "@/lib/planning-board";
 import { hidePopover, useWindowMode } from "@/lib/window-mode";
 import { usePlannerState } from "@/lib/planner-query";
 
@@ -29,22 +37,55 @@ export const Route = createRootRoute({
 
 function SlateShell() {
   const planner = usePlannerState();
+  const navigate = useNavigate();
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectFailed, setReconnectFailed] = useState(false);
+  const [planningFilter, setPlanningFilter] = useState<PlanningBoardFilter>("all");
+  const [planningSort, setPlanningSort] = useState<PlanningBoardSort>("planning");
+  const [planningView, setPlanningView] = useState<"board" | "list">("board");
+  const [isEmptyInspectorOpen, setIsEmptyInspectorOpen] = useState(false);
   const windowMode = useWindowMode();
   const isSettingsPage = useRouterState({
     select: (state) => state.location.pathname === "/settings",
   });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const { clearSelection, selectedTaskId } = useTaskSelection();
-  const { dismiss: dismissAiReview, state: aiReviewState } = useAiReview();
+  const { clearSelection, selectedTaskDraftLane, selectedTaskId } = useTaskSelection();
+  const aiReview = useAiReview();
+  const { dismiss: dismissAiReview, state: aiReviewState } = aiReview;
   const { routeTransition, setRouteTransition } = useRouteMotion();
+  const previousAiStateKindRef = useRef(aiReviewState.kind);
 
   useEffect(() => {
     clearSelection("instant");
     dismissAiReview();
+    setIsEmptyInspectorOpen(false);
     setRouteTransition("instant");
   }, [clearSelection, dismissAiReview, pathname, setRouteTransition]);
+
+  useEffect(() => {
+    if (aiReviewState.kind !== "idle" && selectedTaskId) {
+      clearSelection("instant");
+    }
+  }, [aiReviewState.kind, clearSelection, selectedTaskId]);
+
+  useEffect(() => {
+    if (aiReviewState.kind !== "idle" || selectedTaskId) {
+      setIsEmptyInspectorOpen(false);
+    }
+  }, [aiReviewState.kind, selectedTaskId]);
+
+  useEffect(() => {
+    const previousKind = previousAiStateKindRef.current;
+    previousAiStateKindRef.current = aiReviewState.kind;
+    if (
+      windowMode === "full"
+      && !isSettingsPage
+      && previousKind === "plan-accepting"
+      && aiReviewState.kind === "idle"
+    ) {
+      setIsEmptyInspectorOpen(true);
+    }
+  }, [aiReviewState.kind, isSettingsPage, windowMode]);
 
   if (windowMode === "quick-capture") {
     return <QuickCaptureWindow />;
@@ -65,32 +106,119 @@ function SlateShell() {
     }
   }
 
-  if (planner.isError) {
-    return <PersistenceRecovery isReconnecting={isReconnecting} onReconnect={handleRetryPersistence} retryFailed={reconnectFailed} />;
+  function handleOpenSettings() {
+    setRouteTransition("animate");
+    void navigate({ to: "/settings" });
   }
 
+  function handleBackToBoard() {
+    setRouteTransition("animate");
+    void navigate({ to: "/" });
+  }
+
+  function handleToggleInspector() {
+    if (aiReviewState.kind !== "idle") {
+      handleDismissAiReview();
+      return;
+    }
+    if (selectedTaskId) {
+      clearSelection("instant");
+      return;
+    }
+    setIsEmptyInspectorOpen((isOpen) => !isOpen);
+  }
+
+  function handleDismissAiReview() {
+    const shouldKeepInspectorOpen = windowMode === "full" && isPlanReviewState(aiReviewState);
+    dismissAiReview();
+    if (shouldKeepInspectorOpen) {
+      setIsEmptyInspectorOpen(true);
+    }
+  }
+
+  const recovery = (
+    <PersistenceRecovery
+      isReconnecting={isReconnecting}
+      onReconnect={handleRetryPersistence}
+      retryFailed={reconnectFailed}
+    />
+  );
+
+  const routeContent = planner.isError ? recovery : (
+    <RouteFade className="h-full min-h-0" key={pathname} transition={routeTransition}>
+      <Outlet />
+    </RouteFade>
+  );
+  const contentKind = planner.isError ? "recovery" : isSettingsPage ? "settings" : "planning";
+  const fullAppContent = contentKind === "planning" ? (
+    planningView === "list" ? (
+      <PlanningList filter={planningFilter} snapshot={planner.data} sort={planningSort} />
+    ) : (
+      <PlanningBoard filter={planningFilter} snapshot={planner.data} sort={planningSort} />
+    )
+  ) : routeContent;
+  const planningInspectorEntry = contentKind === "planning" && planner.data && selectedTaskId
+    ? planningTaskEntry(planner.data, selectedTaskId)
+    : undefined;
+  const fullWindowInspector = aiReviewState.kind !== "idle" && planner.data ? (
+    <WorkspaceInspector
+      onDismissPlan={handleDismissAiReview}
+      onOpenSettings={handleOpenSettings}
+      snapshot={planner.data}
+    />
+  ) : planningInspectorEntry && planner.data ? (
+    <PlanningTaskInspector
+      draftLane={selectedTaskDraftLane}
+      initialLane={planningInspectorEntry.lane}
+      key={`${planningInspectorEntry.task.id}:${selectedTaskDraftLane ?? "persisted"}`}
+      snapshot={planner.data}
+      task={planningInspectorEntry.task}
+    />
+  ) : contentKind === "planning" && isEmptyInspectorOpen && planner.data ? (
+    <PlanningEmptyInspector
+      onClose={() => setIsEmptyInspectorOpen(false)}
+      onOpenSettings={handleOpenSettings}
+      onPlanMyDay={aiReview.startPlan}
+      snapshot={planner.data}
+    />
+  ) : null;
+  const onboarding = planner.data && windowMode === "popover" ? (
+    <OnboardingFlow
+      isSettingsPage={isSettingsPage}
+      pathname={pathname}
+      planner={planner.data}
+      windowMode={windowMode}
+    />
+  ) : null;
+
   return (
-    <main
-      className={`relative flex h-dvh flex-col overflow-hidden bg-background text-foreground antialiased ${
+    <div
+      className={`relative h-dvh overflow-hidden bg-background text-foreground antialiased ${
         windowMode === "popover" ? "rounded-2xl ring-1 ring-border/70" : ""
       }`}
       data-window-mode={windowMode}
       onPointerDownCapture={(event) => {
         const target = event.target instanceof Element ? event.target : null;
+        const isInsideInspector = target?.closest("[data-contextual-inspector]");
         const isInsideReview = target?.closest("[data-ai-review], [data-ai-review-calendar]");
         const isInsideOnboarding = target?.closest("[data-onboarding]");
 
-        if (aiReviewState.kind !== "idle" && !isInsideReview) {
-          dismissAiReview();
+        if (aiReviewState.kind !== "idle" && !isInsideInspector && !isInsideReview) {
+          handleDismissAiReview();
         }
-        if (selectedTaskId && !isInsideOnboarding && !target?.closest("[data-task-detail], [data-task-row], [data-task-calendar]")) {
+        if (
+          selectedTaskId
+          && !isInsideInspector
+          && !isInsideOnboarding
+          && !target?.closest("[data-task-detail], [data-task-row], [data-task-calendar]")
+        ) {
           clearSelection();
         }
       }}
       onKeyDown={(event) => {
         if (event.key === "Escape" && aiReviewState.kind !== "idle" && !event.defaultPrevented) {
           event.preventDefault();
-          dismissAiReview();
+          handleDismissAiReview();
         } else if (event.key === "Escape" && selectedTaskId && !event.defaultPrevented) {
           event.preventDefault();
           clearSelection("instant");
@@ -99,33 +227,58 @@ function SlateShell() {
         }
       }}
     >
-      {isSettingsPage ? (
-        <RouteFade className="h-full min-h-0" key={pathname} transition={routeTransition}>
-          <Outlet />
-        </RouteFade>
+      {windowMode === "full" ? (
+        <PlanningWorkspaceShell
+          contentKind={contentKind}
+          globalLayer={onboarding}
+          inspector={fullWindowInspector}
+          onOpenSettings={handleOpenSettings}
+          statusMessage={isReconnecting ? "Reconnecting to local data…" : reconnectFailed ? "Local data is still unavailable." : undefined}
+          toolbar={contentKind === "planning" ? (
+            <PlanningToolbar
+              date={planner.data?.today}
+              filter={planningFilter}
+              inspectorOpen={Boolean(fullWindowInspector)}
+              onFilterChange={setPlanningFilter}
+              onOpenSettings={handleOpenSettings}
+              onSortChange={setPlanningSort}
+              onToggleInspector={handleToggleInspector}
+              onViewChange={setPlanningView}
+              snapshot={planner.data}
+              sort={planningSort}
+              view={planningView}
+            />
+          ) : contentKind === "settings" ? (
+            <SettingsToolbar
+              date={planner.data?.today}
+              onBackToBoard={handleBackToBoard}
+            />
+          ) : undefined}
+        >
+          {fullAppContent}
+        </PlanningWorkspaceShell>
       ) : (
-        <>
-          <div className="slate-workspace relative min-h-0 flex-1">
-            <RouteFade className="absolute inset-0" key={pathname} transition={routeTransition}>
-              <Outlet />
-            </RouteFade>
-          </div>
+        <main className="flex h-full min-h-0 flex-col overflow-hidden">
+          {planner.isError ? recovery : isSettingsPage ? routeContent : (
+            <>
+              <div className="slate-workspace relative min-h-0 flex-1 overflow-hidden">
+                <RouteFade className="absolute inset-0" key={pathname} transition={routeTransition}>
+                  <Outlet />
+                </RouteFade>
+              </div>
 
-          <WorkspaceFooter
-            windowMode={windowMode}
-          />
-        </>
+              <WorkspaceFooter windowMode={windowMode} />
+            </>
+          )}
+        </main>
       )}
-      {planner.data ? (
-        <OnboardingFlow
-          isSettingsPage={isSettingsPage}
-          pathname={pathname}
-          planner={planner.data}
-          windowMode={windowMode}
-        />
-      ) : null}
-    </main>
+      {windowMode === "popover" ? onboarding : null}
+    </div>
   );
+}
+
+function isPlanReviewState(state: ReturnType<typeof useAiReview>["state"]) {
+  return state.kind.startsWith("plan") || (state.kind === "unavailable" && state.mode === "plan");
 }
 
 type RouteFadeProps = {
@@ -155,7 +308,7 @@ type PersistenceRecoveryProps = {
 
 function PersistenceRecovery({ isReconnecting, onReconnect, retryFailed }: PersistenceRecoveryProps) {
   return (
-    <main className="flex h-dvh items-center justify-center bg-background px-6 text-foreground">
+    <div className="flex h-full items-center justify-center bg-background px-6 text-foreground">
       <section aria-labelledby="persistence-recovery-heading" className="w-full max-w-sm rounded-lg border border-border bg-card p-5">
         <p className="m-0 text-menu-label font-semibold text-muted-foreground">Local data</p>
         <h1 className="mb-0 mt-2 font-heading text-2xl font-semibold leading-tight tracking-tight" id="persistence-recovery-heading">
@@ -173,6 +326,6 @@ function PersistenceRecovery({ isReconnecting, onReconnect, retryFailed }: Persi
           {isReconnecting ? "Reconnecting…" : "Refresh connection"}
         </Button>
       </section>
-    </main>
+    </div>
   );
 }

@@ -2,7 +2,7 @@
 
 > **Status:** Directional roadmap
 >
-> **Updated:** 2026-08-08
+> **Updated:** 2026-08-16
 >
 > This document describes the order in which Slate should earn new capabilities. It is not a fixed release schedule. Each stage should be validated against the product thesis before the next stage expands the model.
 
@@ -74,9 +74,19 @@ Slate 1.0.0 is the shipped baseline for the first usable daily planning loop:
 - Reviewable AI Assist and atomic Plan My Day flows through the Keychain-backed packaged Node sidecar.
 - An ad-hoc-signed Apple Silicon DMG for macOS 13.5 or later, with an explicit first-launch security warning and published checksum.
 
-Stage 1 is complete, and the Stage 2 capture and foundation implementation is present in the current 1.1 release candidate. The next roadmap gate is Stage 2 validation and evidence gathering, not Spaces, sync, mobile, or integrations. The larger unfinished-day and changed-day review experiences are intentionally deferred to the full-window workspace and remain evidence-gated. The distinction between the shipped Backlog view and a future richer Log view stays deliberate.
+Stage 1 is complete. The Stage 2 capture and durable-foundation implementation is present, but its packaged/manual acceptance and real-use evidence gate remains open. Stage 3 / 2.0 implementation is now active on the current branch: the canonical planning projection, Board, List, task inspector, Task finder, and shared interaction seam are implemented. The immediate work is to close the Stage 2 evidence gate and finish the 2.0 trust/parity contract, not to begin Spaces, sync, mobile, or integrations. The larger unfinished-day and changed-day review experiences remain evidence-gated full-window work.
 
-The 1.1 implementation slice is global quick capture: a configurable macOS shortcut opens a dedicated 520 × 72 command-bar capture window (360 × 72 minimum), restores an in-process draft, and creates a title-only Backlog task with revision-safe Undo. Clipboard, selected text, application context, AI enrichment, and destination selection remain deferred. The unfinished-day and changed-day review concepts are not popover requirements; they are conditional full-window work in Stage 3.
+The completed 1.1 implementation slice is global quick capture: a configurable macOS shortcut opens a dedicated 520 × 72 command-bar capture window (360 × 72 minimum), restores an in-process draft, and creates a title-only Backlog task with revision-safe Undo. Clipboard, selected text, application context, AI enrichment, and destination selection remain deferred. The unfinished-day and changed-day review concepts are not popover requirements; they are conditional full-window work in Stage 3.
+
+The current Stage 3 implementation includes:
+
+- An authoritative `Capture / Ready / Today / Done` projection with shared lane ordering and capacity facts.
+- Full-window Board and List views over that projection, including pointer/keyboard drag movement, filters, presentation sorting, and capacity previews.
+- A Planning-toolbar Task finder that searches every lane, creates tasks, and exposes bounded revision-safe task actions.
+- A full-window task inspector with read-only task activity history.
+- A connected editable Plan My Day inspector with eligible Ready additions, safer-mix selection, live capacity feedback, and atomic acceptance.
+
+The current Stage 3 gap is intentional and explicit: the full-window Planning toolbar exposes the context-sensitive AI action beside Task finder, and Plan My Day now uses the inspector as an editable connected builder while the compact Daily search-and-capture row remains popover-specific. Planning movement does not yet have user-facing Undo or an equivalent operation receipt, and the final packaged/manual desktop acceptance matrix is still open.
 
 ## Stage 1 — Shipped local daily planner
 
@@ -122,6 +132,8 @@ When a plan is over capacity, Slate should explain the overage and offer recover
 
 ## Stage 2 — Capture and durable planning foundations (1.1–1.x)
 
+**Status:** Implemented in the current tree; release acceptance and evidence gathering remain open.
+
 ### Goal
 
 Help Slate capture work outside the popover and establish the durable history, capacity, and stale-safe mutation boundaries that later full-window planning can reuse.
@@ -134,7 +146,7 @@ The detailed behavior and data boundaries are defined in [Daily resilience](dail
 - The ad-hoc-signed packaged app and compact popover have passed release acceptance.
 - Manual task lifecycle, capacity, AI review, and persistence are trustworthy before the durable planning foundations expand the model.
 
-Slate 1.0.0 satisfies these entry gates. Stage 2 remains a deliberate product decision rather than an automatic expansion.
+Slate 1.0.0 satisfied these entry gates, and Stage 2 was subsequently implemented as the current 1.1 foundation. Its release acceptance and real-use evidence gate remain open.
 
 ### Foundations
 
@@ -178,6 +190,8 @@ The dedicated unfinished-day review and changed-day recovery flows are moved out
 
 ## Stage 3 — Build the full-window planning workspace (2.0–2.x)
 
+**Status:** In progress. The 2.0 foundation is partially implemented; 2.1–2.3 work remains planned or conditional.
+
 ### Goal
 
 Give Slate a visual, spacious desktop surface for shaping and reviewing commitments while preserving the menu-bar popover as the fast daily planning tool.
@@ -194,13 +208,32 @@ The product direction and release slices are defined in [Full-window planning wo
 - Keep movement atomic, stale-safe, and reversible through the Stage 2 mutation boundary.
 - Add a restrained full-window toolbar with search, view selection, and capacity context.
 
+Current implementation covers the canonical lanes, Board, List, shared lane ordering, task selection/inspection, Task finder, the adjacent context-sensitive AI action, the editable connected Plan My Day inspector, pointer/keyboard drag movement, filters, sorting, and capacity previews. Remaining 2.0 work is explicit non-drag movement alternatives, reversible movement, and final desktop acceptance across compact, empty, error, persistence, and reduced-motion states.
+
 ### 2.1 — Planning acceleration
+
+**Status:** Not started as a complete release slice. Current Board/List filters and Task finder actions are foundation work, not the full 2.1 batch-planning scope.
 
 - Add a small number of useful filters and safe multi-select actions.
 - Add batch Fit into Today and scheduling actions through reviewed change sets.
-- Give Plan My Day more room for inspecting proposed additions before acceptance.
+- Extend the delivered full-window Plan My Day builder only if real use identifies missing review context or candidate controls.
 - Add a lightweight Today / Next / Later horizon without introducing a calendar or time-blocking grid.
 - Add a calm Needs Attention surface for current actionable states such as missing estimates, overdue work, and over-capacity plans.
+
+#### Conditional Planning Session candidate
+
+After the 2.0 board and List foundation is usable, real use may justify a temporary **Planning Session** in the full-window workspace. This is a focused conversational planning surface for the messy step before a task is ready: clarifying vague work, challenging an unrealistic plan, and turning the conversation into a small set of concrete Slate proposals.
+
+The candidate is earned only if AI Assist, Plan My Day, and ordinary task editing do not adequately support that kind of ambiguity. It must:
+
+- Remain full-window and optional; the menu-bar popover stays the fast path for the normal daily loop.
+- Use explicit, bounded context such as Today, Ready/Capture, remaining capacity, and one selected task. It must not send the entire planner state by default.
+- Keep one resettable, ephemeral session initially. No conversation library, folders, personas, chat search, or permanent chat history.
+- Return reviewable proposals for independent task creation, title/estimate/date edits, eligible additions to Today, or deliberate returns to Backlog.
+- Apply accepted proposals through the shared stale-safe, atomic change-set boundary. Conversation text, dismissed proposals, and model reasoning do not become planner history.
+- Preserve the existing domain boundary: no subtasks, nested projects, week view, time-blocking grid, autonomous actions, or silent Today changes.
+
+External research is a separate future candidate. It must not turn Planning Session into a general research workspace or make network access a prerequisite for manual planning.
 
 Repeated-deferral insights do not appear in the Needs Attention surface until Stage 4 Calibration has enough history.
 
@@ -208,7 +241,8 @@ Repeated-deferral insights do not appear in the Needs Attention surface until St
 
 - Add a temporary focus mode for active Today commitments.
 - Add a reviewable one-off **Make This Fit** action for an oversized or unclear task.
-- Add recent capture, completion, and per-task history inspection backed by the Stage 2 event ledger.
+- Per-task history inspection backed by the Stage 2 event ledger is available in the full-window task inspector.
+- Add broader recent-capture and recent-completion review surfaces only if they improve workspace review.
 - Add drag-in capture from selected text, links, or files only as reviewed user capture.
 
 ### 2.3 — Conditional full-window daily review and recovery
@@ -428,7 +462,7 @@ The companion does not initially reproduce desktop settings, bulk source managem
 
 ### Goal
 
-Allow local AI clients and coding agents to use Slate as the user’s persistent commitment system without putting chat inside Slate or requiring a cloud account.
+Allow local AI clients and coding agents to use Slate as the user’s persistent commitment system without requiring a general-purpose chat product inside Slate or a cloud account.
 
 MCP is eligible after the Stage 2 history, authorization, expected-state, and shared mutation rules are stable. It may ship before the full-window workspace, Spaces, integrations, sync, or mobile and does not block those releases.
 
@@ -473,6 +507,7 @@ Before expanding the product, answer these questions with real use:
 
 - Do users understand Backlog versus Today without onboarding?
 - Does Plan My Day save effort while preserving trust and control?
+- Does a bounded Planning Session turn ambiguous work into clearer, reviewable commitments without becoming an in-app chat product?
 - Does global quick capture reduce capture friction without causing accidental commitments?
 - Does the full-window workspace reveal recurring friction around unfinished-day review or changed-day recovery?
 - Does the full-window workspace make commitment planning clearer without creating project-management overhead?
@@ -488,6 +523,7 @@ If a feature does not improve one of these outcomes, it should be reduced, postp
 
 - A full project-management system with nested hierarchies and dependency graphs.
 - A calendar or time-blocking replacement.
+- A general-purpose in-app chat or research workspace.
 - An always-on autonomous agent.
 - A social productivity product.
 - A dashboard that turns work, rest, or reduced capacity into a performance score.

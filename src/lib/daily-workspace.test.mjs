@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { filterDailyWorkspace } from "./daily-workspace.ts";
 
-function task(id, title, badges = []) {
+function task(id, title, badges = [], overrides = {}) {
   return {
     id,
     title,
@@ -13,6 +13,7 @@ function task(id, title, badges = []) {
     revision: 1,
     anchorDate: null,
     badges,
+    ...overrides,
   };
 }
 
@@ -22,10 +23,15 @@ function section(tasks, reorder = null) {
 
 function planning() {
   return {
-    today: {
-      active: section([
-        task("1", "Write proposal", ["needs-estimate"]),
-        task("2", "Review notes"),
+    lanes: {
+      capture: section([task("4", "Draft outline", ["unscheduled"])]),
+      ready: section([
+        task("5", "Old follow-up", ["overdue"]),
+        task("6", "Future review", ["upcoming"]),
+      ]),
+      today: section([
+        task("1", "Write proposal", ["needs-estimate"], { estimateMinutes: null, scheduledDate: "2026-08-09" }),
+        task("2", "Review notes", [], { scheduledDate: "2026-08-09" }),
       ], {
         scope: "today:2026-08-09",
         expectedRevisions: [
@@ -33,34 +39,27 @@ function planning() {
           { id: "2", revision: 1 },
         ],
       }),
-      completed: section([task("3", "Send update")]),
-      capacity: {
-        limitMinutes: 120,
-        committedMinutes: 60,
-        remainingMinutes: 60,
-        overageMinutes: 0,
-        isOverCapacity: false,
-        overflowTaskId: null,
-      },
-      totalTaskCount: 3,
-      unsizedTaskCount: 1,
-    },
-    backlog: {
-      active: section([
-        task("4", "Draft outline", ["unscheduled"]),
-        task("5", "Old follow-up", ["overdue"]),
-        task("6", "Future review", ["upcoming"]),
+      done: section([
+        task("3", "Send update", [], { completedAt: "2026-08-09T12:00:00Z", scheduledDate: "2026-08-09" }),
       ]),
-      completed: section([]),
-      totalTaskCount: 3,
-      activeTaskCount: 3,
+      counts: { capture: 1, ready: 2, today: 2, done: 1 },
+    },
+    capacity: {
+      limitMinutes: 120,
+      committedMinutes: 60,
+      remainingMinutes: 60,
+      overageMinutes: 0,
+      isOverCapacity: false,
+      overflowTaskId: null,
     },
   };
 }
 
+const today = "2026-08-09";
+
 describe("Daily workspace presentation adapter", () => {
   it("filters authoritative sections without changing their order", () => {
-    const model = filterDailyWorkspace(planning(), "review");
+    const model = filterDailyWorkspace(planning(), today, "review");
 
     assert.deepEqual(model.today.active.tasks.map(({ id }) => id), ["2"]);
     assert.deepEqual(model.backlog.active.tasks.map(({ id }) => id), ["6"]);
@@ -69,7 +68,7 @@ describe("Daily workspace presentation adapter", () => {
   });
 
   it("maps native semantic badges to renderer copy and tone", () => {
-    const model = filterDailyWorkspace(planning());
+    const model = filterDailyWorkspace(planning(), today);
 
     assert.deepEqual(model.today.active.metadataByTaskId["1"], [
       { label: "Needs estimate", tone: "caution" },
@@ -83,7 +82,7 @@ describe("Daily workspace presentation adapter", () => {
   });
 
   it("preserves authoritative capacity and totals while filtering", () => {
-    const model = filterDailyWorkspace(planning(), "missing");
+    const model = filterDailyWorkspace(planning(), today, "missing");
 
     assert.equal(model.hasMatches, false);
     assert.equal(model.today.capacity.remainingMinutes, 60);

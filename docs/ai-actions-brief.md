@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Slate has one AI action button in the Daily command row. The button changes behavior based on whether the command input contains text:
+Slate has one context-sensitive AI action at each planning entry surface: the Daily command row in the popover and the adjacent action beside the full-window Task finder. Both buttons change behavior based on whether their input contains text:
 
 - With non-empty input: **AI Assist**.
 - With empty or whitespace-only input: **Plan My Day**.
@@ -23,6 +23,8 @@ The Daily workspace contains:
 - One AI button whose action is selected from the input state.
 
 The compact footer contains Settings and Open full app access. The AI review tray and task detail panel appear above that utility strip.
+
+The full-window Planning toolbar mirrors the same AI action beside Task finder. Its review replaces the task inspector temporarily, so the proposal has enough room for loading, editing, dismissal, retry, stale-plan, and acceptance states without changing the Board or List surface.
 
 The AI button should treat whitespace-only input as empty. Its label, tooltip, and accessible name should reflect the active action:
 
@@ -83,7 +85,7 @@ No task is written to SQLite before the user accepts the result.
 
 ### Purpose
 
-Plan My Day proposes what existing Log tasks should be committed to Today based on available capacity and the user’s planning context.
+Plan My Day proposes what existing Backlog tasks should be committed to Today based on available capacity and the user’s planning context.
 
 ### Trigger
 
@@ -95,9 +97,9 @@ The planner receives:
 
 - Existing uncompleted Today tasks as fixed planning context, not candidates for movement.
 - Remaining capacity.
-- Log tasks with valid positive estimates.
+- Backlog tasks with valid positive estimates.
 - Explicit dates and overdue state.
-- Current Log ordering as a soft preference signal.
+- Current Backlog ordering as a soft preference signal.
 - The saved planning instruction.
 - Task titles and estimates.
 
@@ -109,7 +111,7 @@ Plan My Day returns an additive list of task assignments for Today. Each propose
 
 - Task title.
 - Estimate.
-- Source Log section or date context when useful.
+- Source Backlog section or date context when useful.
 - The resulting Today date and native-derived position.
 
 Existing Today tasks are not returned as assignments. They stay on Today with their current date and order. Selected Backlog tasks receive the current local Today date and Today scope only when the user accepts the plan.
@@ -127,7 +129,7 @@ The plan should fill remaining capacity where possible. It may leave capacity un
    - **Redo** — generate a new plan using the current state.
    - **Dismiss** — close the panel without changing tasks.
 
-Running Plan My Day again after accepting, completing, deleting, or returning a task to Log should fill only newly available capacity. It must not silently remove or reorder existing commitments.
+Running Plan My Day again after accepting, completing, deleting, or returning a task to Backlog should fill only newly available capacity. It must not silently remove or reorder existing commitments.
 
 If there are no eligible tasks or no remaining capacity, the review panel should explain why there is nothing to add rather than producing an empty ambiguous state.
 

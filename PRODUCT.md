@@ -35,7 +35,7 @@ Avoid the density and coordination overhead of a project-management suite, the p
 1. Make the daily trade-off legible at a glance.
 2. Keep the user in control: automation proposes; people decide.
 3. Favor a focused, quiet workflow over feature breadth.
-4. Design for the compact macOS menu-bar window first, with the full app providing more room for the same work.
+4. Design for the compact macOS menu-bar window first, with the full app providing more room to shape the same commitments without becoming a prerequisite for the daily loop.
 5. Treat local ownership and reliable offline manual planning as first-class product qualities.
 6. Use hierarchy, spacing, and state changes to communicate importance before adding decoration.
 

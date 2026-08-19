@@ -31,6 +31,7 @@ import { useTaskSelection, type TaskSelectionTransition } from "@/components/tas
 import type { WindowMode } from "@/lib/window-mode";
 
 type EditingField = "estimate" | "title" | null;
+type ValidationError = Exclude<EditingField, null>;
 
 const panelEnterEase = [0.23, 1, 0.32, 1] as const;
 
@@ -105,6 +106,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
   const [scheduledDate, setScheduledDate] = useState<LocalDate | null>(null);
   const [anchorDate, setAnchorDate] = useState<LocalDate | null>(null);
   const [editingField, setEditingField] = useState<EditingField>(null);
+  const [validationError, setValidationError] = useState<ValidationError | null>(null);
   const [deleteArmed, setDeleteArmed] = useState(false);
   const [isStale, setIsStale] = useState(false);
   const draftRevisionRef = useRef<number | null>(null);
@@ -130,6 +132,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
     draftRevisionRef.current = task.revision;
     setIsStale(false);
     setEditingField(null);
+    setValidationError(null);
     setDeleteArmed(false);
   }, [task]);
 
@@ -177,16 +180,20 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
     const trimmedTitle = title.trim();
 
     if (!trimmedTitle) {
+      setValidationError("title");
       toast.error("Task title cannot be empty.");
       setEditingField("title");
       return;
     }
 
     if (estimateMinutes === undefined) {
+      setValidationError("estimate");
       toast.error("Enter a whole number of minutes, or leave the estimate blank.");
       setEditingField("estimate");
       return;
     }
+
+    setValidationError(null);
 
     const mutationVersion = recordTaskMutation({
       kind: "update",
@@ -224,6 +231,7 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
     setAnchorDate(task.anchorDate);
     draftRevisionRef.current = task.revision;
     setIsStale(false);
+    setValidationError(null);
   }
 
   function handleDelete(event: React.MouseEvent<HTMLButtonElement>) {
@@ -292,7 +300,11 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
     <motion.form
       aria-label={`Edit ${selectedTask.title}`}
       animate="visible"
-      className="task-detail-panel absolute inset-x-4 bottom-full rounded-t-xl border-x border-t border-[var(--task-detail-border)] bg-[var(--task-detail)] text-[var(--task-detail-foreground)]"
+      className={
+        windowMode === "full"
+          ? "task-detail-panel relative h-full w-full overflow-y-auto bg-[var(--task-detail)] text-[var(--task-detail-foreground)]"
+          : "task-detail-panel absolute inset-x-4 bottom-full rounded-t-xl border-x border-t border-[var(--task-detail-border)] bg-[var(--task-detail)] text-[var(--task-detail-foreground)]"
+      }
       exit="exit"
       id="task-detail-panel"
       initial={transition === "animate" ? "hidden" : false}
@@ -321,218 +333,503 @@ export function TaskDetailPanel({ taskId, transition, windowMode }: TaskDetailPa
           </Button>
         </div>
       ) : null}
-      <motion.div
-        animate="visible"
-        className={`mx-auto flex min-h-12 w-full max-w-xl min-w-0 items-center gap-1 px-4 py-2 sm:px-6 ${windowMode === "full" ? "max-w-3xl px-8" : ""}`}
-        initial={transition === "animate" ? "hidden" : false}
-        variants={panelContentVariants}
-      >
-        <div className="min-w-0 flex-1">
-          {editingField === "title" ? (
-            <Input
-              aria-label="Task title"
-              autoFocus
-              className="h-8 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] placeholder:text-[var(--task-detail-muted)] focus-visible:border-ring"
-              disabled={controlsDisabled}
-              onBlur={() => setEditingField(null)}
-              onChange={(event) => setTitle(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  setEditingField(null);
-                }
-              }}
-              value={title}
-            />
-          ) : (
-            <button
-              aria-label="Edit task title"
-              className="flex h-8 w-full items-center truncate rounded-md px-2 text-left text-menu font-medium outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none"
-              disabled={controlsDisabled}
-              onClick={() => setEditingField("title")}
-              type="button"
-            >
-              {title || "Untitled task"}
-            </button>
-          )}
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1">
-          {editingField === "estimate" ? (
-            <Input
-              aria-label="Estimate in minutes"
-              autoFocus
-              className="h-8 w-20 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] placeholder:text-[var(--task-detail-muted)] focus-visible:border-ring"
-              disabled={controlsDisabled}
-              inputMode="numeric"
-              min="1"
-              onBlur={() => setEditingField(null)}
-              onChange={(event) => setEstimate(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  setEditingField(null);
-                }
-              }}
-              placeholder="Minutes"
-              type="number"
-              value={estimate}
-            />
-          ) : (
-            <button
-              aria-label="Edit estimate"
-              className="flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-menu tabular-nums outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none"
-              disabled={controlsDisabled}
-              onClick={() => setEditingField("estimate")}
-              type="button"
-            >
-              <HugeiconsIcon aria-hidden="true" icon={Clock01Icon} size={15} strokeWidth={1.7} />
-              <span>{estimate.trim() ? `${estimate.trim()}m` : "Set time"}</span>
-            </button>
-          )}
-
-          <Popover>
-            <PopoverTrigger
-              render={
-                <Button
-                  aria-label="Edit due date"
-                  className="h-8 min-w-0 justify-start px-2 text-[var(--task-detail-foreground)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
+      {windowMode === "popover" ? (
+        <motion.div
+          animate="visible"
+          className="mx-auto w-full max-w-xl min-w-0"
+          initial={transition === "animate" ? "hidden" : false}
+          variants={panelContentVariants}
+        >
+          <div className="flex min-h-12 items-center gap-2 px-4 py-2">
+            <div className="min-w-0 flex-1">
+              {editingField === "title" ? (
+                <Input
+                  aria-describedby={validationError === "title" ? "task-detail-validation" : undefined}
+                  aria-invalid={validationError === "title"}
+                  aria-label="Task title"
+                  autoFocus
+                  className="h-8 border-transparent bg-transparent px-2 text-menu font-semibold text-[var(--task-detail-foreground)] capitalize shadow-none placeholder:normal-case placeholder:text-[var(--task-detail-muted)] focus-visible:bg-[var(--task-detail-field)]"
                   disabled={controlsDisabled}
-                  title="Edit due date"
-                  type="button"
-                  variant="ghost"
+                  onBlur={() => setEditingField(null)}
+                  onChange={(event) => {
+                    setTitle(event.target.value);
+                    if (validationError === "title") setValidationError(null);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      setEditingField(null);
+                    }
+                  }}
+                  value={title}
                 />
-              }
-            >
-              <HugeiconsIcon data-icon="inline-start" icon={Calendar01Icon} strokeWidth={1.7} />
-              <span className="truncate text-menu">{formatDueDate(scheduledDate)}</span>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-auto p-0" data-task-calendar side="top" sideOffset={8}>
-              <Calendar
-                mode="single"
-                onSelect={(date) => {
-                  if (date) {
-                    setScheduledDate(localDateFromDate(date));
-                  }
-                }}
-                selected={scheduledDate ? dateFromLocalDate(scheduledDate) : undefined}
-              />
-              {scheduledDate !== null ? (
-                <div className="border-t border-border p-2">
-                  <Button
-                    className="w-full justify-center text-menu"
-                    onClick={() => setScheduledDate(null)}
-                    type="button"
-                    variant="ghost"
-                  >
-                    Return to Backlog
-                  </Button>
-                </div>
-              ) : null}
-            </PopoverContent>
-          </Popover>
+              ) : (
+                <button
+                  aria-describedby={validationError === "title" ? "task-detail-validation" : undefined}
+                  aria-invalid={validationError === "title"}
+                  aria-label="Edit task title"
+                  className="flex h-8 w-full min-w-0 items-center truncate rounded-md px-2 text-left text-menu font-semibold capitalize outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none"
+                  disabled={controlsDisabled}
+                  onClick={() => setEditingField("title")}
+                  type="button"
+                >
+                  <span className="truncate">{title || "Untitled task"}</span>
+                </button>
+              )}
+            </div>
 
-          {activeTask.completedAt === null && activeTask.estimateMinutes !== null && activeTask.scheduledDate === planner.data?.today ? (
-            <Button
-              aria-label={anchorDate === planner.data.today ? "Remove Anchor for today" : "Anchor task for today"}
-              aria-pressed={anchorDate === planner.data.today}
-              className={anchorDate === planner.data.today ? "text-primary" : "text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"}
-              disabled={controlsDisabled}
-              onClick={() => setAnchorDate(anchorDate === planner.data?.today ? null : planner.data?.today ?? null)}
-              size="icon-sm"
-              title={anchorDate === planner.data.today ? "Remove Anchor for today" : "Anchor for today"}
-              type="button"
-              variant="ghost"
+            <div className="flex shrink-0 items-center gap-1">
+              <Button
+                aria-label={updateTask.isPending ? "Saving changes" : "Save changes"}
+                className={isDirty ? undefined : "text-[var(--task-detail-muted)] hover:bg-transparent hover:text-[var(--task-detail-muted)]"}
+                disabled={!isDirty || isSaving}
+                size="icon-sm"
+                title={updateTask.isPending ? "Saving changes" : "Save changes"}
+                type="submit"
+                variant={isDirty ? "default" : "ghost"}
+              >
+                <HugeiconsIcon
+                  className={updateTask.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
+                  icon={updateTask.isPending ? Loading03Icon : Tick02Icon}
+                  strokeWidth={1.8}
+                />
+              </Button>
+              <Button
+                aria-label="Close task details"
+                className="text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
+                disabled={isSaving}
+                onClick={() => clearSelection(interactionTransitionRef.current)}
+                size="icon-sm"
+                title="Close task details"
+                type="button"
+                variant="ghost"
+              >
+                <HugeiconsIcon aria-hidden="true" icon={Cancel01Icon} strokeWidth={1.8} />
+              </Button>
+            </div>
+          </div>
+
+          {validationError ? (
+            <p
+              className="m-0 border-t border-destructive/30 bg-destructive/10 px-4 py-2 text-xs leading-4 text-destructive"
+              id="task-detail-validation"
+              role="alert"
             >
-              <HugeiconsIcon aria-hidden="true" icon={BookmarkCheck01Icon} strokeWidth={1.7} />
-            </Button>
+              {validationError === "title"
+                ? "Task title cannot be empty."
+                : "Enter a whole number of minutes, or leave the estimate blank."}
+            </p>
           ) : null}
 
-          <Button
-            aria-label={deleteArmed ? (deleteTask.isPending ? "Deleting task" : "Confirm delete task") : "Delete task"}
-            aria-pressed={deleteArmed}
-            className={deleteArmed ? undefined : "text-[var(--task-detail-muted)] hover:bg-destructive/10 hover:text-destructive"}
-            disabled={isSaving}
-            onClick={handleDelete}
-            size="icon-sm"
-            title={deleteArmed ? (deleteTask.isPending ? "Deleting task" : "Confirm delete task") : "Delete task"}
-            type="button"
-            variant={deleteArmed ? "destructive" : "ghost"}
-          >
-            <HugeiconsIcon
-              className={deleteTask.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
-              icon={deleteTask.isPending ? Loading03Icon : Delete02Icon}
-              strokeWidth={1.7}
-            />
-          </Button>
-          {deleteArmed ? (
-            <Button
-              aria-label="Keep task"
-              className="text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
-              disabled={isSaving}
-              onClick={() => setDeleteArmed(false)}
-              ref={keepTaskButtonRef}
-              size="icon-sm"
-              title="Keep task"
+          <div className="grid grid-cols-2 border-y border-[var(--task-detail-border)]">
+            <div className="min-w-0">
+              {editingField === "estimate" ? (
+                <div className="flex min-h-14 items-center gap-2 px-4">
+                  <HugeiconsIcon aria-hidden="true" className="shrink-0 text-[var(--task-detail-muted)]" icon={Clock01Icon} size={16} strokeWidth={1.7} />
+                  <div className="min-w-0 flex-1">
+                    <span className="block text-menu-label font-semibold capitalize text-[var(--task-detail-muted)]">Estimate</span>
+                    <Input
+                      aria-describedby={validationError === "estimate" ? "task-detail-validation" : undefined}
+                      aria-invalid={validationError === "estimate"}
+                      aria-label="Estimate in minutes"
+                      autoFocus
+                      className="h-6 border-transparent bg-transparent px-0 text-menu font-normal tabular-nums text-[var(--task-detail-foreground)] shadow-none placeholder:text-[var(--task-detail-muted)] focus-visible:border-ring focus-visible:ring-0"
+                      disabled={controlsDisabled}
+                      inputMode="numeric"
+                      min="1"
+                      onBlur={() => setEditingField(null)}
+                      onChange={(event) => {
+                        setEstimate(event.target.value);
+                        if (validationError === "estimate") setValidationError(null);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          setEditingField(null);
+                        }
+                      }}
+                      placeholder="Minutes"
+                      type="number"
+                      value={estimate}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <button
+                  aria-describedby={validationError === "estimate" ? "task-detail-validation" : undefined}
+                  aria-invalid={validationError === "estimate"}
+                  aria-label="Edit estimate"
+                  className="flex min-h-14 w-full min-w-0 items-center gap-2 px-4 text-left outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 motion-reduce:transition-none"
+                  disabled={controlsDisabled}
+                  onClick={() => setEditingField("estimate")}
+                  type="button"
+                >
+                  <HugeiconsIcon aria-hidden="true" className="shrink-0 text-[var(--task-detail-muted)]" icon={Clock01Icon} size={16} strokeWidth={1.7} />
+                  <span className="min-w-0">
+                    <span className="block text-menu-label font-semibold capitalize text-[var(--task-detail-muted)]">Estimate</span>
+                    <span className="block truncate text-menu font-normal tabular-nums">
+                      {estimate.trim() ? `${estimate.trim()}m` : "Set time"}
+                    </span>
+                  </span>
+                </button>
+              )}
+            </div>
+
+            <Popover>
+              <PopoverTrigger
+                render={
+                  <button
+                    aria-label="Edit due date"
+                    className="flex min-h-14 w-full min-w-0 items-center gap-2 border-l border-[var(--task-detail-border)] px-4 text-left outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 motion-reduce:transition-none"
+                    disabled={controlsDisabled}
+                    title="Edit due date"
+                    type="button"
+                  />
+                }
+              >
+                <HugeiconsIcon aria-hidden="true" className="shrink-0 text-[var(--task-detail-muted)]" icon={Calendar01Icon} size={16} strokeWidth={1.7} />
+                <span className="min-w-0">
+                  <span className="block text-menu-label font-semibold capitalize text-[var(--task-detail-muted)]">Date</span>
+                  <span className="block truncate text-menu font-normal">{formatDueDate(scheduledDate)}</span>
+                </span>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-auto p-0" data-task-calendar side="top" sideOffset={8}>
+                <Calendar
+                  mode="single"
+                  onSelect={(date) => {
+                    if (date) {
+                      setScheduledDate(localDateFromDate(date));
+                    }
+                  }}
+                  selected={scheduledDate ? dateFromLocalDate(scheduledDate) : undefined}
+                />
+                {scheduledDate !== null ? (
+                  <div className="border-t border-border p-2">
+                    <Button
+                      className="w-full justify-center text-menu"
+                      onClick={() => setScheduledDate(null)}
+                      type="button"
+                      variant="ghost"
+                    >
+                      Return to Backlog
+                    </Button>
+                  </div>
+                ) : null}
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {activeTask.completedAt === null && activeTask.estimateMinutes !== null && activeTask.scheduledDate === planner.data?.today ? (
+            <button
+              aria-label={anchorDate === planner.data.today ? "Remove Anchor for today" : "Anchor task for today"}
+              aria-pressed={anchorDate === planner.data.today}
+              className="flex min-h-10 w-full items-center gap-2 border-b border-[var(--task-detail-border)] px-4 text-left text-menu outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 motion-reduce:transition-none"
+              disabled={controlsDisabled}
+              onClick={() => setAnchorDate(anchorDate === planner.data?.today ? null : planner.data?.today ?? null)}
               type="button"
-              variant="ghost"
             >
-              <HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.7} />
-            </Button>
-          ) : (
-            <Button
-              aria-label={updateTask.isPending ? "Saving changes" : "Save changes"}
-              className={isDirty ? undefined : "text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-muted)]"}
-              disabled={!isDirty || isSaving}
-              size="icon-sm"
-              title={updateTask.isPending ? "Saving changes" : "Save changes"}
-              type="submit"
-              variant={isDirty ? "default" : "ghost"}
-            >
-              <HugeiconsIcon
-                className={updateTask.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
-                icon={updateTask.isPending ? Loading03Icon : Tick02Icon}
-                strokeWidth={1.7}
-              />
-            </Button>
-          )}
-        </div>
-      </motion.div>
-      {movementAction ? (
-        <div className="border-t border-[var(--task-detail-border)] px-4 py-1.5 sm:px-6">
-          <Button
-            aria-busy={setTaskScheduledDate.isPending}
-            aria-label={movementAction === "today" ? "Commit task to Today" : "Return task to Backlog"}
-            className="w-full justify-between"
-            disabled={controlsDisabled || isDirty}
-            onClick={handleMovement}
-            size="sm"
-            title={isDirty ? "Save changes before moving this task" : undefined}
-            type="button"
-            variant={movementAction === "today" ? "default" : "outline"}
+              <HugeiconsIcon aria-hidden="true" className="text-[var(--task-detail-muted)]" icon={BookmarkCheck01Icon} size={16} strokeWidth={1.7} />
+              <span className="font-normal">Anchor for today</span>
+              <span className="ml-auto text-menu-label font-semibold text-[var(--task-detail-muted)]">
+                {anchorDate === planner.data.today ? "Anchored" : "Not anchored"}
+              </span>
+            </button>
+          ) : null}
+
+          <div className="flex min-h-12 items-center gap-2 px-4 py-2">
+            {deleteArmed ? (
+              <>
+                <span className="min-w-0 flex-1 text-xs leading-4 text-[var(--task-detail-muted)]">Delete this task?</span>
+                <Button
+                  className="text-menu font-normal text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
+                  disabled={isSaving}
+                  onClick={() => setDeleteArmed(false)}
+                  ref={keepTaskButtonRef}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  Keep
+                </Button>
+                <Button
+                  aria-label={deleteTask.isPending ? "Deleting task" : "Confirm delete task"}
+                  aria-pressed="true"
+                  className="text-menu font-medium"
+                  disabled={isSaving}
+                  onClick={handleDelete}
+                  size="sm"
+                  type="button"
+                  variant="destructive"
+                >
+                  {deleteTask.isPending ? (
+                    <HugeiconsIcon className="animate-spin motion-reduce:animate-none" icon={Loading03Icon} strokeWidth={1.7} />
+                  ) : null}
+                  Delete
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  className="px-2 text-menu font-normal text-[var(--task-detail-muted)] hover:bg-destructive/10 hover:text-destructive"
+                  disabled={isSaving}
+                  onClick={handleDelete}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  Delete
+                </Button>
+                {movementAction ? (
+                  <Button
+                    aria-busy={setTaskScheduledDate.isPending}
+                    aria-label={movementAction === "today" ? "Commit task to Today" : "Return task to Backlog"}
+                    className="ml-auto min-w-0 flex-1 justify-between px-3 text-menu font-medium"
+                    disabled={controlsDisabled || isDirty}
+                    onClick={handleMovement}
+                    title={isDirty ? "Save changes before moving this task" : undefined}
+                    type="button"
+                    variant={movementAction === "today" ? "default" : "outline"}
+                  >
+                    <span className="truncate">
+                      {setTaskScheduledDate.isPending
+                        ? "Moving task…"
+                        : movementAction === "today"
+                          ? "Commit to Today"
+                          : "Return to Backlog"}
+                    </span>
+                    <HugeiconsIcon
+                      aria-hidden="true"
+                      className={setTaskScheduledDate.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
+                      icon={
+                        setTaskScheduledDate.isPending
+                          ? Loading03Icon
+                          : movementAction === "today"
+                            ? ArrowDown01Icon
+                            : ArrowUp01Icon
+                      }
+                      strokeWidth={1.7}
+                    />
+                  </Button>
+                ) : null}
+              </>
+            )}
+          </div>
+        </motion.div>
+      ) : (
+        <>
+          <motion.div
+            animate="visible"
+            className="flex w-full min-w-0 flex-wrap items-center gap-1 px-3 py-3"
+            initial={transition === "animate" ? "hidden" : false}
+            variants={panelContentVariants}
           >
-            <span>
-              {setTaskScheduledDate.isPending
-                ? "Moving task…"
-                : movementAction === "today"
-                  ? "Commit to Today"
-                  : "Return to Backlog"}
-            </span>
-            <HugeiconsIcon
-              aria-hidden="true"
-              className={setTaskScheduledDate.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
-              icon={
-                setTaskScheduledDate.isPending
-                  ? Loading03Icon
-                  : movementAction === "today"
-                    ? ArrowDown01Icon
-                    : ArrowUp01Icon
-              }
-              strokeWidth={1.7}
-            />
-          </Button>
-        </div>
-      ) : null}
+            <div className="min-w-0 basis-full">
+              {editingField === "title" ? (
+                <Input
+                  aria-label="Task title"
+                  autoFocus
+                  className="h-8 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] capitalize placeholder:normal-case placeholder:text-[var(--task-detail-muted)] focus-visible:border-ring"
+                  disabled={controlsDisabled}
+                  onBlur={() => setEditingField(null)}
+                  onChange={(event) => setTitle(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      setEditingField(null);
+                    }
+                  }}
+                  value={title}
+                />
+              ) : (
+                <button
+                  aria-label="Edit task title"
+                  className="flex h-8 w-full items-center truncate rounded-md px-2 text-left text-menu font-medium capitalize outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none"
+                  disabled={controlsDisabled}
+                  onClick={() => setEditingField("title")}
+                  type="button"
+                >
+                  {title || "Untitled task"}
+                </button>
+              )}
+            </div>
+
+            <div className="mt-1 flex w-full flex-wrap items-center gap-1">
+              {editingField === "estimate" ? (
+                <Input
+                  aria-label="Estimate in minutes"
+                  autoFocus
+                  className="h-8 w-20 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] placeholder:text-[var(--task-detail-muted)] focus-visible:border-ring"
+                  disabled={controlsDisabled}
+                  inputMode="numeric"
+                  min="1"
+                  onBlur={() => setEditingField(null)}
+                  onChange={(event) => setEstimate(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      setEditingField(null);
+                    }
+                  }}
+                  placeholder="Minutes"
+                  type="number"
+                  value={estimate}
+                />
+              ) : (
+                <button
+                  aria-label="Edit estimate"
+                  className="flex h-8 shrink-0 items-center gap-1 rounded-md px-2 text-menu tabular-nums outline-none transition-colors duration-150 hover:bg-[var(--task-detail-field)] focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none"
+                  disabled={controlsDisabled}
+                  onClick={() => setEditingField("estimate")}
+                  type="button"
+                >
+                  <HugeiconsIcon aria-hidden="true" icon={Clock01Icon} size={15} strokeWidth={1.7} />
+                  <span>{estimate.trim() ? `${estimate.trim()}m` : "Set time"}</span>
+                </button>
+              )}
+
+              <Popover>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      aria-label="Edit due date"
+                      className="h-8 min-w-0 justify-start px-2 text-[var(--task-detail-foreground)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
+                      disabled={controlsDisabled}
+                      title="Edit due date"
+                      type="button"
+                      variant="ghost"
+                    />
+                  }
+                >
+                  <HugeiconsIcon data-icon="inline-start" icon={Calendar01Icon} strokeWidth={1.7} />
+                  <span className="truncate text-menu">{formatDueDate(scheduledDate)}</span>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-auto p-0" data-task-calendar side="top" sideOffset={8}>
+                  <Calendar
+                    mode="single"
+                    onSelect={(date) => {
+                      if (date) {
+                        setScheduledDate(localDateFromDate(date));
+                      }
+                    }}
+                    selected={scheduledDate ? dateFromLocalDate(scheduledDate) : undefined}
+                  />
+                  {scheduledDate !== null ? (
+                    <div className="border-t border-border p-2">
+                      <Button
+                        className="w-full justify-center text-menu"
+                        onClick={() => setScheduledDate(null)}
+                        type="button"
+                        variant="ghost"
+                      >
+                        Return to Backlog
+                      </Button>
+                    </div>
+                  ) : null}
+                </PopoverContent>
+              </Popover>
+
+              {activeTask.completedAt === null && activeTask.estimateMinutes !== null && activeTask.scheduledDate === planner.data?.today ? (
+                <Button
+                  aria-label={anchorDate === planner.data.today ? "Remove Anchor for today" : "Anchor task for today"}
+                  aria-pressed={anchorDate === planner.data.today}
+                  className={anchorDate === planner.data.today ? "text-primary" : "text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"}
+                  disabled={controlsDisabled}
+                  onClick={() => setAnchorDate(anchorDate === planner.data?.today ? null : planner.data?.today ?? null)}
+                  size="icon-sm"
+                  title={anchorDate === planner.data.today ? "Remove Anchor for today" : "Anchor for today"}
+                  type="button"
+                  variant="ghost"
+                >
+                  <HugeiconsIcon aria-hidden="true" icon={BookmarkCheck01Icon} strokeWidth={1.7} />
+                </Button>
+              ) : null}
+
+              <Button
+                aria-label={deleteArmed ? (deleteTask.isPending ? "Deleting task" : "Confirm delete task") : "Delete task"}
+                aria-pressed={deleteArmed}
+                className={deleteArmed ? undefined : "text-[var(--task-detail-muted)] hover:bg-destructive/10 hover:text-destructive"}
+                disabled={isSaving}
+                onClick={handleDelete}
+                size="icon-sm"
+                title={deleteArmed ? (deleteTask.isPending ? "Deleting task" : "Confirm delete task") : "Delete task"}
+                type="button"
+                variant={deleteArmed ? "destructive" : "ghost"}
+              >
+                <HugeiconsIcon
+                  className={deleteTask.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
+                  icon={deleteTask.isPending ? Loading03Icon : Delete02Icon}
+                  strokeWidth={1.7}
+                />
+              </Button>
+              {deleteArmed ? (
+                <Button
+                  aria-label="Keep task"
+                  className="text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-foreground)]"
+                  disabled={isSaving}
+                  onClick={() => setDeleteArmed(false)}
+                  ref={keepTaskButtonRef}
+                  size="icon-sm"
+                  title="Keep task"
+                  type="button"
+                  variant="ghost"
+                >
+                  <HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.7} />
+                </Button>
+              ) : (
+                <Button
+                  aria-label={updateTask.isPending ? "Saving changes" : "Save changes"}
+                  className={isDirty ? undefined : "text-[var(--task-detail-muted)] hover:bg-[var(--task-detail-field)] hover:text-[var(--task-detail-muted)]"}
+                  disabled={!isDirty || isSaving}
+                  size="icon-sm"
+                  title={updateTask.isPending ? "Saving changes" : "Save changes"}
+                  type="submit"
+                  variant={isDirty ? "default" : "ghost"}
+                >
+                  <HugeiconsIcon
+                    className={updateTask.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
+                    icon={updateTask.isPending ? Loading03Icon : Tick02Icon}
+                    strokeWidth={1.7}
+                  />
+                </Button>
+              )}
+            </div>
+          </motion.div>
+          {movementAction ? (
+            <div className="border-t border-[var(--task-detail-border)] px-4 py-2 sm:px-6">
+              <Button
+                aria-busy={setTaskScheduledDate.isPending}
+                aria-label={movementAction === "today" ? "Commit task to Today" : "Return task to Backlog"}
+                className="w-full justify-between text-menu"
+                disabled={controlsDisabled || isDirty}
+                onClick={handleMovement}
+                title={isDirty ? "Save changes before moving this task" : undefined}
+                type="button"
+                variant={movementAction === "today" ? "default" : "outline"}
+              >
+                <span>
+                  {setTaskScheduledDate.isPending
+                    ? "Moving task…"
+                    : movementAction === "today"
+                      ? "Commit to Today"
+                      : "Return to Backlog"}
+                </span>
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  className={setTaskScheduledDate.isPending ? "animate-spin motion-reduce:animate-none" : undefined}
+                  icon={
+                    setTaskScheduledDate.isPending
+                      ? Loading03Icon
+                      : movementAction === "today"
+                        ? ArrowDown01Icon
+                        : ArrowUp01Icon
+                  }
+                  strokeWidth={1.7}
+                />
+              </Button>
+            </div>
+          ) : null}
+        </>
+      )}
       <span aria-live="polite" className="sr-only">
         {deleteArmed ? "Delete confirmation. Choose Keep task or Confirm delete task." : ""}
       </span>

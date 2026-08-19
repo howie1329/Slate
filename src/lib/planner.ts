@@ -36,7 +36,22 @@ export type Task = {
   anchorDate: LocalDate | null;
 };
 
+export type TaskEventState = Omit<Task, "createdAt">;
+
+export type TaskHistoryEntry = {
+  id: string;
+  localDate: LocalDate;
+  occurredAt: string;
+  kind: string;
+  source: string;
+  operationId: string;
+  before: TaskEventState | { task: TaskEventState; scope: string; position: number } | null;
+  after: TaskEventState | { task: TaskEventState; scope: string; position: number } | null;
+};
+
 export type WorkspaceBadge = "needs-estimate" | "unscheduled" | "overdue" | "upcoming";
+export const PLANNING_LANES = ["capture", "ready", "today", "done"] as const;
+export type PlanningLaneId = (typeof PLANNING_LANES)[number];
 
 export type PlanningTask = Task & {
   badges: WorkspaceBadge[];
@@ -52,6 +67,21 @@ export type PlanningSection = {
   reorder: ReorderGuard | null;
 };
 
+export type PlanningLaneCounts = {
+  capture: number;
+  ready: number;
+  today: number;
+  done: number;
+};
+
+export type PlanningLanes = {
+  capture: PlanningSection;
+  ready: PlanningSection;
+  today: PlanningSection;
+  done: PlanningSection;
+  counts: PlanningLaneCounts;
+};
+
 export type CapacityView = {
   limitMinutes: number;
   committedMinutes: number;
@@ -62,19 +92,8 @@ export type CapacityView = {
 };
 
 export type PlanningView = {
-  today: {
-    active: PlanningSection;
-    completed: PlanningSection;
-    capacity: CapacityView;
-    totalTaskCount: number;
-    unsizedTaskCount: number;
-  };
-  backlog: {
-    active: PlanningSection;
-    completed: PlanningSection;
-    totalTaskCount: number;
-    activeTaskCount: number;
-  };
+  lanes: PlanningLanes;
+  capacity: CapacityView;
 };
 
 export type Settings = {
@@ -181,12 +200,15 @@ export type ReorderTasksInput = {
 };
 
 export function planningTasks(planner: PlannerSnapshot) {
-  return [
-    ...planner.planning.today.active.tasks,
-    ...planner.planning.today.completed.tasks,
-    ...planner.planning.backlog.active.tasks,
-    ...planner.planning.backlog.completed.tasks,
-  ];
+  return PLANNING_LANES.flatMap((lane) => planner.planning.lanes[lane].tasks);
+}
+
+export function planningTaskEntry(planner: PlannerSnapshot, taskId: string) {
+  for (const lane of PLANNING_LANES) {
+    const task = planner.planning.lanes[lane].tasks.find((candidate) => candidate.id === taskId);
+    if (task) return { lane, task };
+  }
+  return undefined;
 }
 
 export function isTauriWindow() {
@@ -203,6 +225,10 @@ function plannerInvoke<T>(command: string, payload?: Record<string, unknown>) {
 
 export function getPlannerSnapshot() {
   return plannerInvoke<PlannerSnapshot>("get_planner_snapshot");
+}
+
+export function getTaskHistory(taskId: string) {
+  return plannerInvoke<TaskHistoryEntry[]>("get_task_history", { taskId });
 }
 
 export function retryPersistence() {

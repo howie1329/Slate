@@ -13,12 +13,15 @@ The repository contains a working local planning foundation:
 - Pointer and keyboard task ordering within the active Today list.
 - Today capacity and over-capacity state.
 - Configurable global quick capture with a dedicated compact capture window and revision-safe Undo.
+- Canonical `Capture`, `Ready`, `Today`, and `Done` planning lanes shared by the Daily and full-window surfaces.
+- Full-window Planning Board and List views with shared ordering, filters, sorting, task search, task creation, and revision-safe task actions.
+- A full-window task inspector with read-only per-task activity history.
 - macOS Keychain storage for provider API keys.
 - Settings-based provider and fixed model selection for AI features.
 - Shared local state between the popover and full window through native change events and TanStack Query invalidation.
 - Light and dark themes and compact task-detail editing above the persistent footer.
 
-Slate 1.1.0 is the current release candidate. New users get a short, skippable onboarding flow that explains capacity, Backlog, Today, and the task-detail workflow. Global quick capture opens a dedicated compact window from a configurable macOS shortcut and creates title-only Backlog tasks with bounded, revision-safe Undo. AI Assist and Plan My Day are reviewable production flows: provider requests cross the native Keychain boundary through the packaged Node sidecar, Assist creates tasks only after review, and Plan My Day moves selected Backlog tasks to Today only after atomic native acceptance. The planned release is distributed directly as an ad-hoc-signed Apple Silicon DMG for macOS 13.5 or later. Because it is not notarized, users must explicitly approve its first launch in macOS Privacy & Security.
+Slate 1.1.0 is the current release candidate, and the current branch is in Stage 3 / 2.0 full-window workspace development. New users get a short, skippable onboarding flow that explains capacity, Backlog, Today, and the task-detail workflow. Global quick capture opens a dedicated compact window from a configurable macOS shortcut and creates title-only Backlog tasks with bounded, revision-safe Undo. AI Assist and Plan My Day are reviewable production flows: provider requests cross the native Keychain boundary through the packaged Node sidecar, Assist creates tasks only after review, and Plan My Day moves selected Backlog tasks to Today only after atomic native acceptance. The planned release is distributed directly as an ad-hoc-signed Apple Silicon DMG for macOS 13.5 or later. Because it is not notarized, users must explicitly approve its first launch in macOS Privacy & Security.
 
 The product direction and staged expansion plan live in [the product brief](docs/product-brief.md) and [the roadmap](docs/roadmap.md).
 
@@ -31,7 +34,7 @@ Slate is designed around a compact menu-bar popover that can perform the essenti
 - **Settings:** daily capacity, AI provider/model configuration, provider-specific Keychain credentials, and planning instruction through one explicit Save action.
 - **Persistent footer:** compact Settings access and, in the popover, Open Full App. Capture and AI actions live in the Daily command row.
 
-The full window provides more room for the same workflow. It is not an unlock gate for essential planning behavior.
+The full window currently provides the Planning Board/List workspace, Task finder, task inspector, and a context-sensitive AI action beside the Task finder. AI Assist opens in the review inspector; Plan My Day opens an editable inspector builder where generated additions can be removed, other eligible Ready tasks can be added, a safer mix can preserve capacity, and the final selection is accepted atomically. The popover remains the complete fast path for the ordinary daily loop; reversible planning movement and final desktop acceptance remain part of the 2.0 completion gate.
 
 ## Development
 

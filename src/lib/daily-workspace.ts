@@ -39,13 +39,20 @@ export type DailyWorkspaceModel = {
 
 export function filterDailyWorkspace(
   planning: PlanningView,
+  today: string,
   query = "",
 ): DailyWorkspaceModel {
   const normalizedQuery = query.trim().toLocaleLowerCase();
-  const todayActive = filterSection(planning.today.active, normalizedQuery);
-  const todayCompleted = filterSection(planning.today.completed, normalizedQuery);
-  const backlogActive = filterSection(planning.backlog.active, normalizedQuery);
-  const backlogCompleted = filterSection(planning.backlog.completed, normalizedQuery);
+  const todayDoneTasks = planning.lanes.done.tasks.filter((task) => task.scheduledDate === today);
+  const backlogDoneTasks = planning.lanes.done.tasks.filter((task) => task.scheduledDate !== today);
+  const backlogTasks = [
+    ...planning.lanes.capture.tasks,
+    ...planning.lanes.ready.tasks,
+  ];
+  const todayActive = filterSection(planning.lanes.today, normalizedQuery);
+  const todayCompleted = filterSection({ tasks: todayDoneTasks, reorder: null }, normalizedQuery);
+  const backlogActive = filterSection({ tasks: backlogTasks, reorder: null }, normalizedQuery);
+  const backlogCompleted = filterSection({ tasks: backlogDoneTasks, reorder: null }, normalizedQuery);
 
   return {
     query: query.trim(),
@@ -59,15 +66,15 @@ export function filterDailyWorkspace(
     today: {
       active: todayActive,
       completed: todayCompleted,
-      capacity: planning.today.capacity,
-      totalTaskCount: planning.today.totalTaskCount,
-      unsizedTaskCount: planning.today.unsizedTaskCount,
+      capacity: planning.capacity,
+      totalTaskCount: planning.lanes.today.tasks.length + todayDoneTasks.length,
+      unsizedTaskCount: planning.lanes.today.tasks.filter((task) => task.estimateMinutes === null).length,
     },
     backlog: {
       active: backlogActive,
       completed: backlogCompleted,
-      totalTaskCount: planning.backlog.totalTaskCount,
-      activeTaskCount: planning.backlog.activeTaskCount,
+      totalTaskCount: backlogTasks.length + backlogDoneTasks.length,
+      activeTaskCount: backlogTasks.length,
     },
   };
 }

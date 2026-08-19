@@ -25,7 +25,7 @@ import type { WindowMode } from "@/lib/window-mode";
 type AiReviewTrayProps = {
   onAcceptPlan: (proposal: AiPlanProposal) => void;
   onDismiss: () => void;
-  onOpenSettings: () => void;
+  onOpenSettings?: () => void;
   onRedo: () => void;
   state: AiReviewState;
   windowMode: WindowMode;
@@ -43,13 +43,17 @@ export function AiReviewTray({ onAcceptPlan, onDismiss, onOpenSettings, onRedo, 
       aria-label="AI review"
       aria-live={state.kind !== "assist" && state.kind !== "plan" ? "polite" : undefined}
       aria-busy={state.kind === "assist-loading" || state.kind === "plan-loading" || state.kind === "plan-accepting"}
-      className="absolute inset-x-4 bottom-full z-20 max-h-[min(25rem,calc(100dvh-7rem))] overflow-y-auto rounded-t-xl border-x border-t border-[var(--task-detail-border)] bg-[var(--task-detail)] text-[var(--task-detail-foreground)]"
+      className={
+        windowMode === "full"
+          ? "relative h-full w-full overflow-y-auto bg-[var(--task-detail)] text-[var(--task-detail-foreground)]"
+          : "absolute inset-x-4 bottom-full z-20 max-h-[min(25rem,calc(100dvh-7rem))] overflow-y-auto rounded-t-xl border-x border-t border-[var(--task-detail-border)] bg-[var(--task-detail)] text-[var(--task-detail-foreground)]"
+      }
       data-ai-review
-      initial={{ opacity: 0, transform: "translateY(10px)" }}
-      animate={{ opacity: 1, transform: "translateY(0)" }}
+      initial={{ opacity: 0, transform: windowMode === "full" ? "translateX(8px)" : "translateY(10px)" }}
+      animate={{ opacity: 1, transform: windowMode === "full" ? "translateX(0)" : "translateY(0)" }}
       transition={{ duration: 0.22, ease: panelEnterEase }}
     >
-      <div className={`mx-auto w-full max-w-xl px-4 py-3 sm:px-6 ${windowMode === "full" ? "max-w-3xl px-8" : ""}`}>
+      <div className={windowMode === "full" ? "w-full px-3 py-3" : "mx-auto w-full max-w-xl px-4 py-3 sm:px-6"}>
         {state.kind === "assist-loading" ? <LoadingState /> : null}
         {state.kind === "assist" ? <AssistResult key={state.requestId} onDismiss={onDismiss} onRedo={onRedo} proposal={state.proposal} /> : null}
         {state.kind === "assist-error" ? <ErrorState category={state.category} onDismiss={onDismiss} onRedo={onRedo} /> : null}
@@ -247,7 +251,7 @@ function AssistResult({ onDismiss, onRedo, proposal }: { onDismiss: () => void; 
       </label>
       <Input
         autoFocus
-        className="mt-2 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] placeholder:text-[var(--task-detail-muted)]"
+        className="mt-2 border-[var(--task-detail-border)] bg-[var(--task-detail-field)] text-[var(--task-detail-foreground)] capitalize placeholder:normal-case placeholder:text-[var(--task-detail-muted)]"
         disabled={disabled}
         id="ai-assist-title"
         onChange={(event) => setTitle(event.target.value)}
@@ -336,7 +340,7 @@ function ErrorState({ category, heading = "AI Assist needs another try", onDismi
   );
 }
 
-function UnavailableState({ mode, onDismiss, onOpenSettings }: { mode: "assist" | "plan"; onDismiss: () => void; onOpenSettings: () => void }) {
+function UnavailableState({ mode, onDismiss, onOpenSettings }: { mode: "assist" | "plan"; onDismiss: () => void; onOpenSettings?: () => void }) {
   const isPlanUnavailable = mode === "plan";
   return (
     <div className="py-1">
@@ -346,7 +350,9 @@ function UnavailableState({ mode, onDismiss, onOpenSettings }: { mode: "assist" 
       </p>
       <div className="mt-3 flex justify-end gap-1.5">
         <Button onClick={onDismiss} size="sm" type="button" variant="ghost">Dismiss</Button>
-        <Button onClick={onOpenSettings} size="sm" type="button" variant="outline">Open Settings</Button>
+        {onOpenSettings ? (
+          <Button onClick={onOpenSettings} size="sm" type="button" variant="outline">Open Settings</Button>
+        ) : null}
       </div>
     </div>
   );

@@ -50,7 +50,7 @@ Today and the flat Backlog list are the highest-value use of Motion.
 - Record pointer intent before a local mutation so the renderer can prepare the transition, but animate the changed list only after the mutation succeeds and the planner snapshot updates. Failed writes do not produce a list transition. SQLite remains the source of truth.
 - Empty states may fade in after a mutation leaves a list empty; they should not animate on initial page render.
 
-This applies to `src/components/daily-workspace.tsx`, `src/components/task-group.tsx`, and `src/components/task-row.tsx`. A later flat-Backlog drag-and-drop implementation should reuse the same layout animation and add keyboard-operable reorder controls; drag motion must not be the only way to reorder.
+This applies to `src/components/daily-workspace.tsx`, `src/components/task-group.tsx`, and `src/components/task-row.tsx`. The current full-window Board and List use the shared Planning interaction seam with keyboard-capable drag handles; future explicit menu movement and reversible operation feedback should preserve the same reduced-motion and immediate-keyboard rules. Drag motion must not become the only way to reorder.
 
 ### Capacity summary
 

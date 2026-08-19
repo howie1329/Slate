@@ -26,6 +26,9 @@ colors:
   chart-4: "oklch(0.9200 0 0)"
   chart-5: "oklch(0.5600 0 0)"
   capacity-caution: "color-mix(in oklch, var(--chart-1) 70%, var(--foreground))"
+  window-control-close: "oklch(0.6600 0.2100 27)"
+  window-control-minimize: "oklch(0.8200 0.1700 83)"
+  window-control-fullscreen: "oklch(0.6900 0.1700 148)"
   dark-background: "oklch(0 0 0)"
   dark-foreground: "oklch(1 0 0)"
   dark-card: "oklch(0.1400 0 0)"
@@ -143,6 +146,7 @@ Slate’s application mark is a rounded warm-ivory tile over a charcoal underlay
 - `src-tauri/assets/slate-icon-transparent.png` preserves the mark while making only the outer corners transparent for non-bundle uses.
 - Generated macOS bundle outputs live in `src-tauri/icons/slate/` and are the files referenced by `src-tauri/tauri.conf.json`.
 - The menu-bar icon is a separate 18×18 monochrome template glyph in `src-tauri/src/window_controller.rs`. Do not reuse the full-color app icon in the menu bar; macOS tints the template glyph for light and dark menu bars.
+- The full app's windowed custom toolbar uses the named close, minimize, and full-screen control colors from `src/styles.css`. These colors reproduce the familiar macOS traffic-light vocabulary and are hidden in native full-screen.
 
 ## Colors
 
@@ -191,7 +195,7 @@ The palette is a neutral monochrome desktop canvas with black-and-white primary 
 - **Label** (600, `0.6875rem`, `0.875rem`): Section labels, capacity metadata, and small status text. Use uppercase only when it improves recognition, never as repeated scaffolding.
 - **Supporting** (400, `0.75rem`, `1rem`): Secondary descriptions and recoverable messages.
 - **Estimate** (400, `0.625rem`, `0.75rem`): Quiet right-aligned duration text in task rows.
-- **Metadata** (400, `0.5rem`, `0.625rem`): Compact task state, counts, and utility labels that support scanning without competing with the task title.
+- **Metadata** (400, `0.625rem`, `0.75rem`): Compact task state, counts, and utility labels that support scanning without competing with the task title.
 - **Daily section** (500, `0.8125rem`, `0.875rem`): Quiet Today label that establishes structure without competing with task content.
 - **Daily subsection** (500, `0.75rem`, `0.875rem`): Smaller Backlog label that keeps the secondary list subordinate to Today.
 - **Task** (400, `0.75rem`, `0.875rem`): Regular-weight task titles sized for the compact popover.
@@ -250,9 +254,16 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 - **Command row:** A slim search-and-capture entry sits above the scrollable task surface. It is the primary way to add work and the visual entry point for search and reviewable AI actions.
 - **Today:** The dominant section shows the remaining-minute value, a thin progress rail, active tasks, and completed Today tasks at the bottom.
 - **Backlog:** A single flat list appears beneath Today by default. Needs estimate, Overdue, Upcoming, and Unscheduled remain row metadata rather than category headings. The section can collapse locally when the user wants to protect the Today view.
-- **Persistent footer:** A slim muted tray anchors labeled utilities to the bottom edge. The popover shows Open full app on the left and Settings on the right; the full app shows Settings on the right.
+- **Persistent footer:** A slim muted tray anchors icon-only utilities to the bottom edge, with accessible names and tooltips preserving clarity. The popover shows Open full app on the left and Theme plus Settings on the right; the full app shows Theme plus Settings on the right.
 - **Transient panels:** Task details and AI review panels attach above the persistent footer only while active.
 - **Density:** Preserve the normal daily loop at `360 × 520`. Prefer compact hierarchy and metadata over extra panels or route-level navigation.
+
+### Full-app Planning workspace
+
+- **Planning toolbar:** Keep date, view, Task finder, Filter, Sort, overflow, and window controls together. The Task finder stays compact while idle and expands responsively when focused or populated.
+- **Board:** Capture, Ready, Today, and Done remain the authoritative Lane order. Finding a task must not filter, dim, reorder, or otherwise disturb these Lanes.
+- **Task finder:** The desktop-only Planning toolbar centers a compact **Find or create a task…** field. Focus opens a bounded instructional popup below the header; `Command-F` focuses the field when another editable control is not active. Visible Lane and attention filters narrow finder results without changing the Board. Existing tasks remain first, with a separate contextual action strip for valid Open, Today, completion, Capture, and reopen decisions. The final Create task option accepts an optional estimate, date, or explicit Today commitment; `Command-Enter` creates the current query directly. Creation and task actions reuse Slate's authoritative Planning mutations and recorded task activity.
+- **Scope:** The menu-bar popover retains its Daily search-and-capture command row, and Settings omits the Task finder.
 
 ### Task Rows
 
@@ -271,7 +282,7 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 
 - **Structure:** A slim top command row holds the search-and-capture field and reviewable AI action. Enter submits a captured title; there is no separate save button. The row remains visible while the task list scrolls.
 - **Hierarchy:** The command row is visually quiet; the task list and Today capacity carry the main emphasis. Enter-to-save stays implicit and keyboard-first.
-- **Persistent footer:** The 28px tray uses a slight muted tint and hairline divider. Labels and icons stay quiet at `8px`, with the popover split between Open full app and Settings and the full app keeping Settings on the right.
+- **Persistent footer:** The 28px tray uses a slight muted tint and hairline divider. Icon-only utilities stay quiet, with the popover split between Open full app on the left and Theme plus Settings on the right, while the full app keeps Theme plus Settings on the right; accessible names and tooltips carry the text labels.
 - **Transient panels:** Task details and AI review panels attach above the footer when active and disappear with the selection or review state.
 
 ### Quick Capture Window
@@ -286,6 +297,16 @@ Slate is flat by default. Static surfaces use tonal separation and one-pixel bou
 - **Placement:** A utility-strip-adjacent transient panel using `12px` top corners and a bounded compact height.
 - **Surface:** A tinted task-detail surface with quiet boundary and no decorative shadow.
 - **Interaction:** Editing stays close to the task list, dismisses with Escape or outside click, and respects reduced motion.
+- **Full-window activity:** The desktop inspector adds a compact newest-first activity trace beneath Planning. It uses the existing event ledger, shows human-readable action/source/time metadata, and remains absent from the menu-bar popover.
+
+### Full-window Plan My Day Inspector
+
+- **Placement:** Plan My Day is an editable mode of the right Workspace inspector. The Board or List remains visible; below 960px of Planning canvas width, the inspector overlays from the right and leaves a 40px context edge.
+- **Hierarchy:** Lead with **Build your day**, a concise reviewable-AI explanation, and one capacity line showing committed, proposed, and remaining or over-capacity minutes. Keep the proposal visually secondary until acceptance.
+- **Proposal editing:** Generated additions begin included. Each row exposes title, source-date context, estimate, order, and an explicit remove action. **Add from Backlog** opens an inline searchable view of estimated Ready tasks that are currently eligible for Today.
+- **Safer mix:** Offer the deterministic safer-mix action only when eligible work can preserve at least 40 minutes of open capacity. Never present it as a score or autonomous optimization.
+- **Actions:** Keep Dismiss, Generate again, and Accept plan pinned to the inspector footer. Disable acceptance when the selection is empty, over capacity, or being accepted.
+- **Trust:** Existing Today commitments remain fixed Board/List context. No task changes until explicit acceptance; native stale and capacity validation remains authoritative and atomic.
 
 ## Do's and Don'ts
 

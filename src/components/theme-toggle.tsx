@@ -1,23 +1,30 @@
-import { HugeiconsIcon } from "@hugeicons/react";
 import { Moon02Icon, Sun01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 
-import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
+import { Button } from "@/components/ui/button";
 
-export function ThemeToggle() {
+type ThemeToggleProps = {
+  className?: string;
+  size?: "icon-xs" | "icon-sm";
+};
+
+export function ThemeToggle({ className, size = "icon-sm" }: ThemeToggleProps) {
   const { theme, setTheme } = useTheme();
   const nextTheme = theme === "dark" ? "light" : "dark";
+  const label = `Switch to ${nextTheme} mode`;
 
   return (
     <Button
-      aria-label={`Switch to ${nextTheme} mode`}
+      aria-label={label}
+      className={className}
       onClick={() => setTheme(nextTheme)}
-      size="icon-sm"
+      size={size}
+      title={label}
       type="button"
       variant="ghost"
     >
-      <HugeiconsIcon icon={theme === "dark" ? Sun01Icon : Moon02Icon} strokeWidth={2} />
-      <span className="sr-only">Switch to {nextTheme} mode</span>
+      <HugeiconsIcon aria-hidden="true" icon={theme === "dark" ? Sun01Icon : Moon02Icon} strokeWidth={2} />
     </Button>
   );
 }

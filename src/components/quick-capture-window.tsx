@@ -199,7 +199,7 @@ export function QuickCaptureWindow() {
             ref={inputRef}
             aria-describedby="quick-capture-status"
             aria-invalid={Boolean(error)}
-            className="h-6 min-w-0 flex-1 rounded-md border-0 bg-transparent px-2.5 py-1 text-composer shadow-none focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
+            className="h-6 min-w-0 flex-1 rounded-md border-0 bg-transparent px-2.5 py-1 text-composer capitalize shadow-none placeholder:normal-case focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
             disabled={createTask.isPending || undoQuickCapture.isPending}
             id="quick-capture-title"
             onChange={(event) => handleTitleChange(event.target.value)}

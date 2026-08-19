@@ -84,9 +84,9 @@ export function DailyCommandBar({ onValueChange, value, windowMode }: DailyComma
   }
 
   return (
-    <header className={`sticky top-0 z-10 shrink-0 border-b border-border/70 bg-background pb-1.5 pt-2 ${windowMode === "full" ? "px-8" : "px-4 sm:px-6"}`}>
+    <header className={`sticky top-0 z-10 shrink-0 border-b border-border bg-background py-2 ${windowMode === "full" ? "px-8" : "px-4 sm:px-6"}`}>
       <form
-        className={`mx-auto flex h-7 w-full items-center gap-1 ${windowMode === "full" ? "max-w-3xl" : "max-w-xl"}`}
+        className={`mx-auto flex h-8 w-full items-center gap-1 ${windowMode === "full" ? "max-w-3xl" : "max-w-xl"}`}
         onKeyDownCapture={() => {
           createTransitionRef.current = "instant";
         }}
@@ -98,9 +98,9 @@ export function DailyCommandBar({ onValueChange, value, windowMode }: DailyComma
         <div className="relative min-w-0 flex-1">
           <HugeiconsIcon
             aria-hidden="true"
-            className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute left-1 top-1/2 -translate-y-1/2 text-muted-foreground"
             icon={Search01Icon}
-            size={14}
+            size={16}
             strokeWidth={1.8}
           />
           <label className="sr-only" htmlFor={taskComposerInputId}>
@@ -108,7 +108,7 @@ export function DailyCommandBar({ onValueChange, value, windowMode }: DailyComma
           </label>
           <Input
             aria-label="Search or add a task"
-            className="h-7 rounded-md pl-7 pr-2 text-composer"
+            className="h-8 rounded-md border-transparent bg-transparent pl-7 pr-2 text-composer capitalize shadow-none placeholder:normal-case hover:border-input focus-visible:border-ring focus-visible:ring-2 dark:bg-transparent"
             disabled={createTask.isPending}
             id={taskComposerInputId}
             onChange={(event) => onValueChange(event.target.value)}
@@ -126,7 +126,7 @@ export function DailyCommandBar({ onValueChange, value, windowMode }: DailyComma
                   ? "Use AI Assist"
                   : "Plan my day with AI"
           }
-          className="size-7 rounded-md"
+          className="size-8 rounded-md text-muted-foreground"
           disabled={aiBusy}
           onClick={handleAiAction}
           size="icon"
@@ -140,7 +140,7 @@ export function DailyCommandBar({ onValueChange, value, windowMode }: DailyComma
                   : "Plan My Day"
           }
           type="button"
-          variant="outline"
+          variant="ghost"
         >
           <HugeiconsIcon
             className={aiBusy ? "animate-pulse motion-reduce:animate-none" : undefined}

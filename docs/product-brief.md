@@ -1,6 +1,6 @@
 # Slate Product Brief
 
-> **Status:** Current product contract and 1.1 release candidate
+> **Status:** Current product contract; 1.1 release candidate and Stage 3 / 2.0 implementation in progress
 >
 > This brief describes the Slate 1.0.x product contract, the 1.0.1 onboarding release, the 1.1.0 quick-capture release candidate, and the boundaries future work must preserve. The staged expansion plan lives in [the roadmap](roadmap.md).
 
@@ -25,13 +25,18 @@ Slate 1.1.0 is the current local planning release candidate. It provides:
 - Pointer and keyboard ordering within the active Today list, persisted through SQLite.
 - Visible Today capacity, remaining minutes, and over-capacity state.
 - A task-detail panel above the compact Settings utility strip.
+- A read-only per-task activity trace in the full-window task inspector, backed by the local event ledger.
 - macOS Keychain storage for provider API keys.
 - Reviewable AI Assist and Plan My Day flows through the packaged Node sidecar.
 - A short, skippable first-run onboarding flow that explains capacity, Backlog, Today, and task details.
 - Configurable global quick capture with a dedicated compact capture window, title-only Backlog creation, draft preservation, and revision-safe Undo.
+- A canonical full-window Planning projection with `Capture`, `Ready`, `Today`, and `Done` lanes.
+- Full-window Board and List views, a desktop Task finder with creation and bounded task actions, a task inspector with read-only activity history, and an editable Plan My Day inspector.
 - Cross-window refresh through native planner-change events and TanStack Query invalidation.
 
 AI Assist and Plan My Day ship as reviewable Keychain-backed sidecar flows. The manual workflow remains the product’s source of truth, and AI never commits a task or plan without explicit acceptance.
+
+The current branch is in the Stage 3 / 2.0 workspace slice. The full-window route composes the Planning Board or List, Planning toolbar, Task finder, task inspector, and a context-sensitive AI action beside the finder over the canonical native projection. Plan My Day opens an editable right-inspector builder where generated additions may be removed, other eligible Ready tasks may be added, and capacity updates before atomic acceptance. AI Assist continues to use the review inspector. The compact Daily command row remains the popover’s search-and-capture surface; adding reversible planning movement and completing desktop acceptance remain open 2.0 work. This is one task model with two appropriately sized entry surfaces.
 
 End-of-day review, changed-day recovery, Spaces, integrations, sync, mobile, and MCP remain outside the shipped 1.1 baseline and follow the evidence-gated roadmap. The unfinished-day and changed-day review candidates are now conditional full-window 2.3 work.
 
@@ -48,9 +53,9 @@ The returned task revision bounds a five-second Undo action. Undo succeeds only 
 - **Daily workspace** is the default workspace. It shows Today as the dominant section and a flat, collapsible Backlog beneath it. Today includes dated work for today, active committed minutes, remaining capacity, unsized commitments that need estimates, over-capacity state, and completed work at the bottom. There is no separate Done section.
 - **Backlog** is the current task record for work that is not committed to Today. Its metadata can identify Needs estimate, Unscheduled, Overdue / needs reschedule, and Upcoming work without making each state a top-level route or section.
 - **Settings** contains daily capacity, AI provider/model/key configuration, and the persistent planning instruction.
-- **Daily command row** is always available at the top of the workspace. It supports search, Enter-to-save quick capture, and the context-sensitive AI action. Text invokes AI Assist; empty input invokes the Plan My Day review flow. A thin Settings utility strip remains available at the bottom, with Open full app alongside it in the popover.
+- **Daily command row** is always available at the top of the Daily workspace. It supports search, Enter-to-save quick capture, and the context-sensitive AI action. Text invokes AI Assist; empty input invokes the Plan My Day review flow. A thin Settings utility strip remains available at the bottom, with Open full app alongside it in the popover.
 - **Menu-bar popover** is the primary surface. It dismisses when focus leaves it and must support the essential daily loop within the compact window.
-- **Full window** provides more room for the same workflow. It may later support configuration, comparison, history, and review surfaces, but it must not be required for ordinary daily planning.
+- **Full window** provides four-Lane Planning Board and List views plus a Task inspector with recorded task activity. Its desktop-only Planning-toolbar Task finder expands while active, searches current task titles across every Lane, and can narrow results with visible Lane, Overdue, and Needs estimate filters. The finder supports optional estimate/date details, an explicit Today commitment, `Command-Enter` creation, bounded revision-safe task actions, and an adjacent context-sensitive AI action. Plan My Day uses the right inspector as an editable builder: the generated proposal is the starting point, eligible Ready work can be added or removed, a safer mix can preserve open capacity, and the final selection is accepted atomically. Finder and review state remain temporary; opening, creating, acting on a task, or starting an AI review does not change Board Filter, Sort, or card placement. The menu-bar popover keeps its separate Daily search-and-capture workflow.
 
 The term **Log** may become a future product label if it makes the broader task record clearer. The current route and user-facing surface remain Backlog until that change is earned through testing.
 
@@ -91,7 +96,7 @@ The Daily command row has one context-sensitive AI action:
 - With composer text, it becomes **AI Assist** and proposes a cleaner title, a positive whole-minute estimate, and an optional date only when the user has not already supplied one.
 - With an empty composer, it becomes **Plan My Day** and proposes eligible Backlog tasks that fit the remaining capacity.
 
-Both actions use a compact review tray above the footer. The user can edit or dismiss an AI Assist proposal, or review and accept/dismiss a Plan My Day proposal. The native layer owns provider requests, structured-result validation, and credential access. The renderer receives only safe, non-secret proposal data.
+In the popover, both actions use a compact review tray above the footer. In the Full app, AI Assist uses the review inspector and Plan My Day uses the editable right-inspector builder. The user can remove generated additions, add other eligible Ready tasks, choose a safer mix, and review live capacity before acceptance. The native layer owns provider requests, structured-result validation, atomic stale-safe acceptance, and credential access. The renderer receives only safe, non-secret proposal data.
 
 The detailed request and result contract lives in [the AI actions brief](ai-actions-brief.md).
 

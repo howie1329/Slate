@@ -8,6 +8,7 @@ import { useRouteMotion } from "@/components/route-motion";
 import { TaskDetailPanel } from "@/components/task-detail-panel";
 import { useTaskMotion } from "@/components/task-motion";
 import { useTaskSelection } from "@/components/task-selection";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { openFullApp, type WindowMode } from "@/lib/window-mode";
 
@@ -36,28 +37,31 @@ export function WorkspaceFooter({ windowMode }: WorkspaceFooterProps) {
         {windowMode === "popover" ? (
           <Button
             aria-label="Open full app"
-            className="h-6 gap-1 rounded-md px-1.5 text-footer font-normal text-muted-foreground"
+            className="size-6 rounded-md text-muted-foreground"
             onClick={() => void openFullApp()}
+            size="icon-xs"
             title="Open full app"
             type="button"
             variant="ghost"
           >
-            <HugeiconsIcon aria-hidden="true" icon={ArrowUpRight01Icon} size={8} strokeWidth={1.8} />
-            <span>Open full app</span>
+            <HugeiconsIcon aria-hidden="true" icon={ArrowUpRight01Icon} size={12} strokeWidth={1.8} />
           </Button>
         ) : null}
 
-        <Button
-          aria-label="Open settings"
-          className="h-6 gap-1 rounded-md px-1.5 text-footer font-normal text-muted-foreground"
-          onClick={handleOpenSettings}
-          title="Open settings"
-          type="button"
-          variant="ghost"
-        >
-          <HugeiconsIcon aria-hidden="true" icon={Settings01Icon} size={8} strokeWidth={1.8} />
-          <span>Settings</span>
-        </Button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle className="size-6 rounded-md text-muted-foreground" size="icon-xs" />
+          <Button
+            aria-label="Open settings"
+            className="size-6 rounded-md text-muted-foreground"
+            onClick={handleOpenSettings}
+            size="icon-xs"
+            title="Open settings"
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon aria-hidden="true" icon={Settings01Icon} size={12} strokeWidth={1.8} />
+          </Button>
+        </div>
       </div>
 
       <AnimatePresence

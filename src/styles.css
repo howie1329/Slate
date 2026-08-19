@@ -15,20 +15,20 @@
   --text-menu--line-height: 1.125rem;
   --text-menu-label: 0.6875rem;
   --text-menu-label--line-height: 0.875rem;
-  --text-composer: 0.75rem;
-  --text-composer--line-height: 0.875rem;
+  --text-composer: 0.8125rem;
+  --text-composer--line-height: 1rem;
   --text-capacity: 0.6875rem;
   --text-capacity--line-height: 0.875rem;
   --text-estimate: 0.625rem;
   --text-estimate--line-height: 0.75rem;
-  --text-footer: 0.5rem;
-  --text-footer--line-height: 0.625rem;
-  --text-metadata: 0.5rem;
-  --text-metadata--line-height: 0.625rem;
+  --text-footer: 0.625rem;
+  --text-footer--line-height: 0.75rem;
+  --text-metadata: 0.625rem;
+  --text-metadata--line-height: 0.75rem;
 }
 
 @theme inline {
-  --font-heading: var(--font-serif);
+  --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
   --font-serif: var(--font-serif);
   --font-mono: var(--font-mono);
@@ -115,8 +115,8 @@
   --sidebar-accent-foreground: oklch(0 0 0);
   --sidebar-border: oklch(0.9400 0 0);
   --sidebar-ring: oklch(0 0 0);
-  --font-sans: Inter, ui-sans-serif, sans-serif, system-ui;
-  --font-serif: Inter, ui-sans-serif, sans-serif, system-ui;
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Inter, ui-sans-serif, system-ui, sans-serif;
   --font-mono: Intel One Mono, ui-monospace, monospace;
   --radius: 0.5rem;
   --shadow-x: 0px;
@@ -136,6 +136,9 @@
   --tracking-normal: 0em;
   --spacing: 0.25rem;
   --capacity-caution: color-mix(in oklch, var(--chart-1) 70%, var(--foreground));
+  --window-control-close: oklch(0.6600 0.2100 27);
+  --window-control-minimize: oklch(0.8200 0.1700 83);
+  --window-control-fullscreen: oklch(0.6900 0.1700 148);
   --task-detail: var(--secondary);
   --task-detail-foreground: var(--foreground);
   --task-detail-border: var(--border);
@@ -176,8 +179,8 @@
   --sidebar-accent-foreground: oklch(1 0 0);
   --sidebar-border: oklch(0.3200 0 0);
   --sidebar-ring: oklch(0.7200 0 0);
-  --font-sans: Inter, ui-sans-serif, sans-serif, system-ui;
-  --font-serif: Inter, ui-sans-serif, sans-serif, system-ui;
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Inter, ui-sans-serif, system-ui, sans-serif;
   --font-mono: Intel One Mono, ui-monospace, monospace;
   --radius: 0.5rem;
   --shadow-x: 0px;
@@ -205,6 +208,13 @@
 }
 
 @layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
@@ -213,6 +223,7 @@
   }
   html {
     @apply font-sans;
+    font-kerning: normal;
   }
 
   html:has([data-window-mode="popover"]),
@@ -224,6 +235,10 @@
 }
 
 @layer components {
+  .settings-error-text {
+    color: color-mix(in oklch, var(--destructive) 72%, var(--foreground));
+  }
+
   .toaster[data-sonner-toaster] .cn-toast {
     left: 50%;
     right: auto;
@@ -315,6 +330,113 @@
   @media (prefers-reduced-motion: reduce) {
     .toaster[data-sonner-toaster] .cn-toast {
       transition: none;
+    }
+  }
+
+  .planning-workspace-toolbar {
+    height: var(--planning-toolbar-height);
+  }
+
+  .planning-workspace-canvas {
+    container-name: planning-workspace;
+    container-type: inline-size;
+  }
+
+  .planning-workspace-content {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .planning-workspace-content-daily {
+    width: min(var(--planning-content-max-width), calc(100% - 48px));
+    margin-inline: auto;
+  }
+
+  .planning-workspace-content-route {
+    width: 100%;
+  }
+
+  .planning-workspace-future-cue {
+    position: absolute;
+    top: 50%;
+    left: max(24px, calc((100% - var(--planning-content-max-width)) / 4));
+    z-index: 1;
+    display: none;
+    transform: translate(-50%, -50%);
+  }
+
+  .planning-workspace-inspector {
+    position: relative;
+    width: var(--planning-inspector-width);
+    flex: 0 0 var(--planning-inspector-width);
+    overflow: hidden;
+    border-left: 1px solid var(--border);
+    background: var(--background);
+  }
+
+  .planning-workspace-inspector:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+
+  @container planning-workspace (max-width: 959px) {
+    .planning-workspace-inspector {
+      position: absolute;
+      inset-block: 0;
+      right: 0;
+      z-index: 20;
+      width: min(var(--planning-inspector-width), calc(100% - 40px));
+      box-shadow: -4px 0 8px color-mix(in oklch, var(--foreground) 8%, transparent);
+    }
+  }
+
+  .planning-workspace-status {
+    height: var(--planning-status-height);
+  }
+
+  .planning-window-control {
+    display: inline-flex;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    padding: 0;
+    outline: none;
+  }
+
+  .planning-window-control > span {
+    width: 10px;
+    height: 10px;
+    border: 1px solid color-mix(in oklch, var(--foreground) 18%, transparent);
+    border-radius: 999px;
+  }
+
+  .planning-window-control[data-tone="close"] > span {
+    background: var(--window-control-close);
+  }
+
+  .planning-window-control[data-tone="minimize"] > span {
+    background: var(--window-control-minimize);
+  }
+
+  .planning-window-control[data-tone="fullscreen"] > span {
+    background: var(--window-control-fullscreen);
+  }
+
+  .planning-window-control:hover {
+    background: var(--muted);
+  }
+
+  .planning-window-control:focus-visible {
+    box-shadow: 0 0 0 2px var(--ring);
+  }
+
+  @container planning-workspace (min-width: 1200px) {
+    .planning-workspace-future-cue {
+      display: block;
     }
   }
 

@@ -15,9 +15,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use uuid::Uuid;
 
 use crate::credentials;
-use crate::planning_workspace::{
-    self, PlanningCommand, PlanningView, PlanningWorkspace, ReorderGuard,
-};
+use crate::planning_workspace::{self, PlanningView, PlanningWorkspace, ReorderGuard};
 use crate::shortcut_controller;
 
 const DATABASE_FILE_NAME: &str = "slate.sqlite";
@@ -158,14 +156,27 @@ pub(crate) struct Task {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct TaskEventState {
+pub(crate) struct TaskEventState {
+    pub(crate) id: String,
+    pub(crate) title: String,
+    pub(crate) estimate_minutes: Option<i64>,
+    pub(crate) scheduled_date: Option<String>,
+    pub(crate) completed_at: Option<String>,
+    pub(crate) revision: i64,
+    pub(crate) anchor_date: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskHistoryEntry {
     id: String,
-    title: String,
-    estimate_minutes: Option<i64>,
-    scheduled_date: Option<String>,
-    completed_at: Option<String>,
-    revision: i64,
-    anchor_date: Option<String>,
+    local_date: String,
+    occurred_at: String,
+    kind: String,
+    source: String,
+    operation_id: String,
+    before: Option<serde_json::Value>,
+    after: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize)]
@@ -276,7 +287,7 @@ impl Repository {
         connection
             .execute_batch("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;")
             .map_err(database_error)?;
-        apply_migrations(&connection)?;
+        apply_migrations(&mut connection)?;
         backfill_history_boundaries(&mut connection)?;
         Ok(Self { connection })
     }
@@ -285,13 +296,21 @@ impl Repository {
         &self,
         ai_availability_by_provider: HashMap<String, String>,
     ) -> Result<PlannerSnapshot, String> {
+        let today = local_today();
+        self.snapshot_at(&today, ai_availability_by_provider)
+    }
+
+    fn snapshot_at(
+        &self,
+        today: &str,
+        ai_availability_by_provider: HashMap<String, String>,
+    ) -> Result<PlannerSnapshot, String> {
         let settings = self.settings()?;
         let tasks = self.tasks()?;
         let order_by_scope = self.orders()?;
-        let today = local_today();
-        let effective_capacity = effective_capacity_minutes(&settings, &today)?;
+        let effective_capacity = effective_capacity_minutes(&settings, today)?;
         let planning =
-            PlanningWorkspace::new(&tasks, &order_by_scope, &today, effective_capacity).view();
+            PlanningWorkspace::new(&tasks, &order_by_scope, today, effective_capacity).view();
         let ai_availability = ai_availability_by_provider
             .get(&settings.ai_provider)
             .cloned()
@@ -302,7 +321,7 @@ impl Repository {
             settings,
             ai_availability,
             ai_availability_by_provider,
-            today,
+            today: today.to_string(),
             #[cfg(test)]
             tasks,
             #[cfg(test)]
@@ -403,6 +422,63 @@ impl Repository {
         Ok(tasks)
     }
 
+    fn task_history(&self, task_id: &str) -> Result<Vec<TaskHistoryEntry>, String> {
+        if task_id.trim().is_empty() {
+            return Err("Task ID is required.".into());
+        }
+
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT id, local_date, occurred_at, kind, source, operation_id,
+                        before_json, after_json
+                 FROM planner_events
+                 WHERE task_id = ?1
+                 ORDER BY occurred_at DESC, rowid DESC",
+            )
+            .map_err(database_error)?;
+        let rows = statement
+            .query_map([task_id], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, String>(5)?,
+                    row.get::<_, Option<String>>(6)?,
+                    row.get::<_, Option<String>>(7)?,
+                ))
+            })
+            .map_err(database_error)?;
+
+        rows.map(|row| {
+            let (id, local_date, occurred_at, kind, source, operation_id, before_json, after_json) =
+                row.map_err(database_error)?;
+            let before = before_json
+                .as_deref()
+                .map(serde_json::from_str)
+                .transpose()
+                .map_err(json_error)?;
+            let after = after_json
+                .as_deref()
+                .map(serde_json::from_str)
+                .transpose()
+                .map_err(json_error)?;
+            Ok(TaskHistoryEntry {
+                id,
+                local_date,
+                occurred_at,
+                kind,
+                source,
+                operation_id,
+                before,
+                after,
+            })
+        })
+        .collect()
+    }
+
     fn orders(&self) -> Result<HashMap<String, Vec<String>>, String> {
         let mut statement = self
             .connection
@@ -496,18 +572,13 @@ impl Repository {
                 ],
             )
             .map_err(database_error)?;
-        PlanningWorkspace::apply(&transaction, PlanningCommand::CreateTask)?;
         let after = task_state(&transaction, &id)?;
         let revision = after.revision;
-        let after_json = serde_json::to_value(after).map_err(json_error)?;
-        insert_event(
+        PlanningWorkspace::record_created_task(
             &transaction,
-            Some(&id),
-            "task-created",
+            &after,
             &input.source,
             &Uuid::new_v4().to_string(),
-            None,
-            Some(&after_json),
         )?;
         transaction.commit().map_err(database_error)?;
         Ok(CreatedTask { id, revision })
@@ -544,16 +615,6 @@ impl Repository {
                 return Err("anchor-limit".into());
             }
         }
-        let previous_scope = planning_workspace::active_scope(
-            before.estimate_minutes,
-            before.scheduled_date.as_deref(),
-            &today,
-        );
-        let destination_scope = planning_workspace::active_scope(
-            input.estimate_minutes,
-            input.scheduled_date.as_deref(),
-            &today,
-        );
         transaction
             .execute(
                 "UPDATE tasks
@@ -570,43 +631,15 @@ impl Repository {
                 ],
             )
             .map_err(database_error)?;
-        PlanningWorkspace::apply(
-            &transaction,
-            PlanningCommand::ReconcileTask {
-                task_id: &input.id,
-                previous_scope: &previous_scope,
-                destination_scope: &destination_scope,
-                active_before: before.completed_at.is_none(),
-                active_after: before.completed_at.is_none(),
-            },
-        )?;
         let after = task_state(&transaction, &input.id)?;
-        let kind = if before.scheduled_date != after.scheduled_date
-            && after.scheduled_date.as_deref() == Some(today.as_str())
-        {
-            "task-committed"
-        } else if before.scheduled_date.is_some() && after.scheduled_date.is_none() {
-            "task-returned-to-backlog"
-        } else if before.anchor_date != after.anchor_date {
-            if after.anchor_date.is_some() {
-                "task-anchored"
-            } else {
-                "task-unanchored"
-            }
-        } else {
-            "task-updated"
-        };
         let operation_id = Uuid::new_v4().to_string();
-        let before_json = serde_json::to_value(before).map_err(json_error)?;
-        let after_json = serde_json::to_value(after).map_err(json_error)?;
-        insert_event(
+        PlanningWorkspace::reconcile_task(
             &transaction,
-            Some(&input.id),
-            kind,
+            &before,
+            &after,
+            &today,
             "manual",
             &operation_id,
-            Some(&before_json),
-            Some(&after_json),
         )?;
         transaction.commit().map_err(database_error)
     }
@@ -615,11 +648,7 @@ impl Repository {
         let transaction = self.connection.transaction().map_err(database_error)?;
         let before = task_state(&transaction, &input.id)?;
         ensure_expected_revision(&before, input.expected_revision)?;
-        let scope = planning_workspace::active_scope(
-            before.estimate_minutes,
-            before.scheduled_date.as_deref(),
-            &local_today(),
-        );
+        let today = local_today();
         transaction
             .execute(
                 "UPDATE tasks SET completed_at = ?1, anchor_date = NULL, revision = revision + 1
@@ -635,31 +664,14 @@ impl Repository {
                 ],
             )
             .map_err(database_error)?;
-        PlanningWorkspace::apply(
-            &transaction,
-            PlanningCommand::ReconcileTask {
-                task_id: &input.id,
-                previous_scope: &scope,
-                destination_scope: &scope,
-                active_before: before.completed_at.is_none(),
-                active_after: !input.completed,
-            },
-        )?;
         let after = task_state(&transaction, &input.id)?;
-        let before_json = serde_json::to_value(before).map_err(json_error)?;
-        let after_json = serde_json::to_value(after).map_err(json_error)?;
-        insert_event(
+        PlanningWorkspace::reconcile_task(
             &transaction,
-            Some(&input.id),
-            if input.completed {
-                "task-completed"
-            } else {
-                "task-reopened"
-            },
+            &before,
+            &after,
+            &today,
             "manual",
             &Uuid::new_v4().to_string(),
-            Some(&before_json),
-            Some(&after_json),
         )?;
         transaction.commit().map_err(database_error)
     }
@@ -670,16 +682,6 @@ impl Repository {
         let before = task_state(&transaction, &input.id)?;
         ensure_expected_revision(&before, input.expected_revision)?;
         let today = local_today();
-        let previous_scope = planning_workspace::active_scope(
-            before.estimate_minutes,
-            before.scheduled_date.as_deref(),
-            &today,
-        );
-        let destination_scope = planning_workspace::active_scope(
-            before.estimate_minutes,
-            input.scheduled_date.as_deref(),
-            &today,
-        );
         transaction
             .execute(
                 "UPDATE tasks SET scheduled_date = ?1, anchor_date = NULL, revision = revision + 1
@@ -687,34 +689,14 @@ impl Repository {
                 params![input.scheduled_date, input.id, input.expected_revision],
             )
             .map_err(database_error)?;
-        PlanningWorkspace::apply(
-            &transaction,
-            PlanningCommand::ReconcileTask {
-                task_id: &input.id,
-                previous_scope: &previous_scope,
-                destination_scope: &destination_scope,
-                active_before: before.completed_at.is_none(),
-                active_after: before.completed_at.is_none(),
-            },
-        )?;
         let after = task_state(&transaction, &input.id)?;
-        let kind = if after.scheduled_date.is_none() {
-            "task-returned-to-backlog"
-        } else if after.scheduled_date.as_deref() == Some(today.as_str()) {
-            "task-committed"
-        } else {
-            "task-updated"
-        };
-        let before_json = serde_json::to_value(before).map_err(json_error)?;
-        let after_json = serde_json::to_value(after).map_err(json_error)?;
-        insert_event(
+        PlanningWorkspace::reconcile_task(
             &transaction,
-            Some(&input.id),
-            kind,
+            &before,
+            &after,
+            &today,
             "manual",
             &Uuid::new_v4().to_string(),
-            Some(&before_json),
-            Some(&after_json),
         )?;
         transaction.commit().map_err(database_error)
     }
@@ -723,19 +705,11 @@ impl Repository {
         let transaction = self.connection.transaction().map_err(database_error)?;
         let before = task_state(&transaction, &input.id)?;
         ensure_expected_revision(&before, input.expected_revision)?;
-        let before_json = serde_json::to_value(before).map_err(json_error)?;
-        insert_event(
+        PlanningWorkspace::record_deleted_task(
             &transaction,
-            Some(&input.id),
-            "task-deleted",
+            &before,
             "manual",
             &Uuid::new_v4().to_string(),
-            Some(&before_json),
-            None,
-        )?;
-        PlanningWorkspace::apply(
-            &transaction,
-            PlanningCommand::DeleteTask { task_id: &input.id },
         )?;
         transaction
             .execute(
@@ -778,19 +752,11 @@ impl Repository {
         if created_by_quick_capture.as_deref() != Some("manual-quick-capture") {
             return Err("quick-capture-not-undoable".into());
         }
-        let before_json = serde_json::to_value(&task).map_err(json_error)?;
-        insert_event(
+        PlanningWorkspace::record_deleted_task(
             &transaction,
-            Some(&input.id),
-            "task-deleted",
+            &task,
             "manual-quick-capture-undo",
             &Uuid::new_v4().to_string(),
-            Some(&before_json),
-            None,
-        )?;
-        PlanningWorkspace::apply(
-            &transaction,
-            PlanningCommand::DeleteTask { task_id: &input.id },
         )?;
         transaction
             .execute(
@@ -802,72 +768,15 @@ impl Repository {
     }
 
     fn reorder_tasks(&mut self, input: ReorderTasksInput) -> Result<(), String> {
-        validate_scope(&input.guard.scope)?;
-        ensure_unique_ids(&input.task_ids)?;
         let transaction = self.connection.transaction().map_err(database_error)?;
-        let current_ids = planning_workspace::validate_reorder_guard(
+        PlanningWorkspace::replace_order(
             &transaction,
             &input.guard,
             &input.task_ids,
             &local_today(),
+            "manual",
+            &Uuid::new_v4().to_string(),
         )?;
-        let expected = input
-            .guard
-            .expected_revisions
-            .iter()
-            .map(|item| (item.id.as_str(), item.revision))
-            .collect::<HashMap<_, _>>();
-        let mut before_states = Vec::with_capacity(input.task_ids.len());
-        for task_id in &input.task_ids {
-            let before = task_state(&transaction, task_id)?;
-            ensure_expected_revision(
-                &before,
-                *expected
-                    .get(task_id.as_str())
-                    .ok_or_else(|| "stale-task-order".to_string())?,
-            )?;
-            before_states.push(before);
-        }
-        PlanningWorkspace::apply(
-            &transaction,
-            PlanningCommand::ReplaceOrder {
-                scope: &input.guard.scope,
-                task_ids: &input.task_ids,
-            },
-        )?;
-        let operation_id = Uuid::new_v4().to_string();
-        for (position, before) in before_states.into_iter().enumerate() {
-            transaction
-                .execute(
-                    "UPDATE tasks SET revision = revision + 1 WHERE id = ?1 AND revision = ?2",
-                    params![before.id, before.revision],
-                )
-                .map_err(database_error)?;
-            let after = task_state(&transaction, &before.id)?;
-            let before_position = current_ids
-                .iter()
-                .position(|task_id| task_id == &before.id)
-                .unwrap_or(position);
-            let before_json = serde_json::json!({
-                "task": serde_json::to_value(&before).map_err(json_error)?,
-                "scope": input.guard.scope.as_str(),
-                "position": before_position,
-            });
-            let after_json = serde_json::json!({
-                "task": serde_json::to_value(&after).map_err(json_error)?,
-                "scope": input.guard.scope.as_str(),
-                "position": position,
-            });
-            insert_event(
-                &transaction,
-                Some(&before.id),
-                "task-reordered",
-                "manual",
-                &operation_id,
-                Some(&before_json),
-                Some(&after_json),
-            )?;
-        }
         transaction.commit().map_err(database_error)
     }
 
@@ -958,33 +867,14 @@ impl Repository {
         )?;
 
         let today = local_today();
-        let today_scope = format!("today:{today}");
         let settings = self.settings()?;
         let current_capacity = effective_capacity_minutes(&settings, &today)?;
         let transaction = self.connection.transaction().map_err(database_error)?;
-        let current_today_ids =
-            planning_workspace::scope_task_ids(&transaction, &today_scope, &today)?;
-        let current_today_revisions = current_today_ids
-            .iter()
-            .map(|id| {
-                task_state(&transaction, id).map(|task| TaskRevision {
-                    id: id.clone(),
-                    revision: task.revision,
-                })
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        let committed_minutes = transaction
-            .query_row(
-                "SELECT COALESCE(SUM(estimate_minutes), 0)
-                 FROM tasks
-                 WHERE completed_at IS NULL
-                   AND estimate_minutes IS NOT NULL
-                   AND scheduled_date = ?1",
-                [&today],
-                |row| row.get::<_, i64>(0),
-            )
-            .map_err(database_error)?;
-        let current_remaining = current_capacity.saturating_sub(committed_minutes).max(0);
+        let current_today = PlanningWorkspace::today_state(&transaction, &today, current_capacity)?;
+        let current_today_ids = current_today.task_ids;
+        let current_today_revisions = current_today.task_revisions;
+        let committed_minutes = current_today.committed_minutes;
+        let current_remaining = current_today.remaining_minutes;
         let proposed_total_minutes = input
             .items
             .iter()
@@ -1062,11 +952,6 @@ impl Repository {
         for operation in &change_set.operations {
             let before =
                 task_state(&transaction, &operation.id).map_err(|_| "stale-plan".to_string())?;
-            let previous_scope = planning_workspace::active_scope(
-                before.estimate_minutes,
-                before.scheduled_date.as_deref(),
-                &today,
-            );
             transaction
                 .execute(
                     "UPDATE tasks SET scheduled_date = ?1, anchor_date = NULL, revision = revision + 1
@@ -1074,28 +959,15 @@ impl Repository {
                     params![today, operation.id, operation.revision],
                 )
                 .map_err(database_error)?;
-            PlanningWorkspace::apply(
-                &transaction,
-                PlanningCommand::ReconcileTask {
-                    task_id: &operation.id,
-                    previous_scope: &previous_scope,
-                    destination_scope: &today_scope,
-                    active_before: true,
-                    active_after: true,
-                },
-            )?;
             let after =
                 task_state(&transaction, &operation.id).map_err(|_| "stale-plan".to_string())?;
-            let before_json = serde_json::to_value(before).map_err(json_error)?;
-            let after_json = serde_json::to_value(after).map_err(json_error)?;
-            insert_event(
+            PlanningWorkspace::reconcile_task(
                 &transaction,
-                Some(&operation.id),
-                "task-committed",
+                &before,
+                &after,
+                &today,
                 &change_set.source,
                 &operation_id,
-                Some(&before_json),
-                Some(&after_json),
             )?;
         }
         let next_today_ids = current_today_ids
@@ -1103,13 +975,7 @@ impl Repository {
             .chain(change_set.operations.iter().map(|operation| &operation.id))
             .cloned()
             .collect::<Vec<_>>();
-        PlanningWorkspace::apply(
-            &transaction,
-            PlanningCommand::ReplaceOrder {
-                scope: &today_scope,
-                task_ids: &next_today_ids,
-            },
-        )?;
+        PlanningWorkspace::replace_today_order(&transaction, &today, &next_today_ids)?;
         transaction.commit().map_err(database_error)
     }
 }
@@ -1271,6 +1137,14 @@ struct ReviewedChangeSet {
 #[tauri::command]
 pub fn get_planner_snapshot(state: State<PersistenceState>) -> Result<PlannerSnapshot, String> {
     planner_snapshot(&state)
+}
+
+#[tauri::command]
+pub fn get_task_history(
+    state: State<PersistenceState>,
+    task_id: String,
+) -> Result<Vec<TaskHistoryEntry>, String> {
+    with_repository(&state, |repository| repository.task_history(&task_id))
 }
 
 pub(crate) fn read_ai_assist_context(state: &PersistenceState) -> Result<AiAssistContext, String> {
@@ -1482,7 +1356,7 @@ fn credential_availability_by_provider() -> HashMap<String, String> {
         .collect()
 }
 
-fn apply_migrations(connection: &Connection) -> Result<(), String> {
+fn apply_migrations(connection: &mut Connection) -> Result<(), String> {
     let version: i64 = connection
         .query_row("PRAGMA user_version", [], |row| row.get(0))
         .map_err(database_error)?;
@@ -1523,6 +1397,101 @@ fn apply_migrations(connection: &Connection) -> Result<(), String> {
             .map_err(database_error)?;
     }
 
+    if version < 5 {
+        migrate_lane_orders(connection)?;
+    }
+
+    Ok(())
+}
+
+fn migrate_lane_orders(connection: &mut Connection) -> Result<(), String> {
+    let transaction = connection.transaction().map_err(database_error)?;
+    let mut existing_capture = ordered_task_ids(&transaction, planning_workspace::CAPTURE_SCOPE)?
+        .into_iter()
+        .collect::<std::collections::HashSet<_>>();
+    let mut existing_ready = ordered_task_ids(&transaction, planning_workspace::READY_SCOPE)?
+        .into_iter()
+        .collect::<std::collections::HashSet<_>>();
+
+    append_legacy_order(
+        &transaction,
+        planning_workspace::CAPTURE_SCOPE,
+        &[planning_workspace::NEEDS_ESTIMATE_SCOPE],
+        &mut existing_capture,
+    )?;
+    append_legacy_order(
+        &transaction,
+        planning_workspace::READY_SCOPE,
+        &[
+            planning_workspace::OVERDUE_SCOPE,
+            planning_workspace::UPCOMING_SCOPE,
+            planning_workspace::UNSCHEDULED_SCOPE,
+        ],
+        &mut existing_ready,
+    )?;
+
+    for scope in [
+        planning_workspace::NEEDS_ESTIMATE_SCOPE,
+        planning_workspace::OVERDUE_SCOPE,
+        planning_workspace::UPCOMING_SCOPE,
+        planning_workspace::UNSCHEDULED_SCOPE,
+    ] {
+        transaction
+            .execute("DELETE FROM task_orders WHERE scope = ?1", [scope])
+            .map_err(database_error)?;
+    }
+    transaction
+        .execute_batch("PRAGMA user_version = 5;")
+        .map_err(database_error)?;
+    transaction.commit().map_err(database_error)
+}
+
+fn ordered_task_ids(
+    transaction: &rusqlite::Transaction<'_>,
+    scope: &str,
+) -> Result<Vec<String>, String> {
+    let mut statement = transaction
+        .prepare(
+            "SELECT task_id FROM task_orders
+             WHERE scope = ?1 ORDER BY position ASC, task_id ASC",
+        )
+        .map_err(database_error)?;
+    let ids = statement
+        .query_map([scope], |row| row.get::<_, String>(0))
+        .map_err(database_error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(database_error)?;
+    Ok(ids)
+}
+
+fn append_legacy_order(
+    transaction: &rusqlite::Transaction<'_>,
+    destination_scope: &str,
+    source_scopes: &[&str],
+    existing_ids: &mut std::collections::HashSet<String>,
+) -> Result<(), String> {
+    let next_position = transaction
+        .query_row(
+            "SELECT COALESCE(MAX(position) + 1, 0) FROM task_orders WHERE scope = ?1",
+            [destination_scope],
+            |row| row.get::<_, i64>(0),
+        )
+        .map_err(database_error)?;
+    let mut position = next_position;
+    for source_scope in source_scopes {
+        for task_id in ordered_task_ids(transaction, source_scope)? {
+            if !existing_ids.insert(task_id.clone()) {
+                continue;
+            }
+            transaction
+                .execute(
+                    "INSERT INTO task_orders (scope, task_id, position) VALUES (?1, ?2, ?3)",
+                    params![destination_scope, task_id, position],
+                )
+                .map_err(database_error)?;
+            position += 1;
+        }
+    }
     Ok(())
 }
 
@@ -1624,7 +1593,7 @@ impl From<&Task> for TaskEventState {
     }
 }
 
-fn insert_event(
+pub(crate) fn insert_event(
     transaction: &rusqlite::Transaction<'_>,
     task_id: Option<&str>,
     kind: &str,
@@ -1764,21 +1733,6 @@ fn validate_scheduled_date(date: Option<&str>) -> Result<(), String> {
     match NaiveDate::parse_from_str(date, "%Y-%m-%d") {
         Ok(parsed) if parsed.format("%Y-%m-%d").to_string() == date => Ok(()),
         _ => Err("Scheduled date must use YYYY-MM-DD.".into()),
-    }
-}
-
-fn validate_scope(scope: &str) -> Result<(), String> {
-    if scope == "log:needs-estimate"
-        || scope == "log:unscheduled"
-        || scope == "log:upcoming"
-        || scope == "log:overdue"
-        || scope
-            .strip_prefix("today:")
-            .is_some_and(|date| validate_scheduled_date(Some(date)).is_ok())
-    {
-        Ok(())
-    } else {
-        Err("Task ordering scope is invalid.".into())
     }
 }
 
@@ -2163,6 +2117,45 @@ mod tests {
     }
 
     #[test]
+    fn task_history_returns_newest_first_with_typed_before_and_after_state() {
+        let mut database = TestDatabase::new();
+        let task = create_task(&mut database.repository, "Trace this task");
+        database
+            .repository
+            .update_task(UpdateTaskInput {
+                id: task.id.clone(),
+                title: "Trace the task history".into(),
+                estimate_minutes: Some(45),
+                scheduled_date: None,
+                anchor_date: None,
+                expected_revision: task.revision,
+            })
+            .expect("update task");
+
+        let history = database
+            .repository
+            .task_history(&task.id)
+            .expect("load task history");
+
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].kind, "task-updated");
+        assert_eq!(
+            history[0].before.as_ref().expect("before state")["title"],
+            "Trace this task"
+        );
+        assert_eq!(
+            history[0].after.as_ref().expect("after state")["estimateMinutes"],
+            45
+        );
+        assert_eq!(history[1].kind, "task-created");
+        assert!(history[1].before.is_none());
+        assert_eq!(
+            history[1].after.as_ref().expect("created state")["revision"],
+            1
+        );
+    }
+
+    #[test]
     fn migrates_v1_settings_to_default_onboarding_status() {
         let directory =
             std::env::temp_dir().join(format!("slate-persistence-test-{}", Uuid::new_v4()));
@@ -2180,6 +2173,140 @@ mod tests {
         assert_eq!(settings.daily_capacity_minutes, 240);
         assert_eq!(settings.onboarding_status, "not-started");
         drop(repository);
+        fs::remove_dir_all(directory).expect("remove temporary test directory");
+    }
+
+    #[test]
+    fn migrates_legacy_backlog_orders_into_canonical_lanes_without_events() {
+        let directory =
+            std::env::temp_dir().join(format!("slate-persistence-test-{}", Uuid::new_v4()));
+        fs::create_dir_all(&directory).expect("create temporary test directory");
+        let path = directory.join(DATABASE_FILE_NAME);
+        let mut connection = Connection::open(&path).expect("open v4 database");
+        connection
+            .execute_batch(&format!(
+                "{}{}{}{} PRAGMA user_version = 4;",
+                migration_1(),
+                migration_2(),
+                migration_3(),
+                migration_4(),
+            ))
+            .expect("create v4 database");
+
+        let tasks = [
+            ("capture-a", None, None),
+            ("capture-b", None, Some("2026-08-08")),
+            ("overdue-a", Some(30), Some("2026-08-08")),
+            ("overdue-b", Some(30), Some("2026-08-07")),
+            ("upcoming", Some(30), Some("2026-08-10")),
+            ("unscheduled", Some(30), None),
+        ];
+        for (position, (id, estimate, scheduled_date)) in tasks.into_iter().enumerate() {
+            connection
+                .execute(
+                    "INSERT INTO tasks
+                     (id, title, estimate_minutes, scheduled_date, created_at, completed_at, revision, anchor_date)
+                     VALUES (?1, ?2, ?3, ?4, ?5, NULL, 1, NULL)",
+                    rusqlite::params![
+                        id,
+                        id,
+                        estimate,
+                        scheduled_date,
+                        format!("2026-08-09T00:00:0{position}Z"),
+                    ],
+                )
+                .expect("insert legacy task");
+        }
+        let insert_order = |scope: &str, task_ids: &[&str]| {
+            for (position, task_id) in task_ids.iter().enumerate() {
+                connection
+                    .execute(
+                        "INSERT INTO task_orders (scope, task_id, position) VALUES (?1, ?2, ?3)",
+                        rusqlite::params![scope, task_id, position as i64],
+                    )
+                    .expect("insert legacy order");
+            }
+        };
+        insert_order(
+            planning_workspace::NEEDS_ESTIMATE_SCOPE,
+            &["capture-b", "capture-a"],
+        );
+        insert_order(
+            planning_workspace::OVERDUE_SCOPE,
+            &["overdue-b", "overdue-a"],
+        );
+        insert_order(planning_workspace::UPCOMING_SCOPE, &["upcoming"]);
+        insert_order(planning_workspace::UNSCHEDULED_SCOPE, &["unscheduled"]);
+
+        migrate_lane_orders(&mut connection).expect("migrate lane orders");
+        assert_eq!(
+            connection
+                .query_row("PRAGMA user_version", [], |row| row.get::<_, i64>(0))
+                .expect("schema version"),
+            5
+        );
+        assert_eq!(
+            connection
+                .query_row("SELECT COUNT(*) FROM planner_events", [], |row| {
+                    row.get::<_, i64>(0)
+                })
+                .expect("event count"),
+            0
+        );
+        assert_eq!(
+            connection
+                .query_row(
+                    "SELECT COUNT(*) FROM task_orders WHERE scope IN (?1, ?2, ?3, ?4)",
+                    rusqlite::params![
+                        planning_workspace::NEEDS_ESTIMATE_SCOPE,
+                        planning_workspace::OVERDUE_SCOPE,
+                        planning_workspace::UPCOMING_SCOPE,
+                        planning_workspace::UNSCHEDULED_SCOPE,
+                    ],
+                    |row| row.get::<_, i64>(0),
+                )
+                .expect("legacy order count"),
+            0
+        );
+
+        migrate_lane_orders(&mut connection).expect("rerun lane order migration");
+        let read_order = |scope: &str| {
+            let mut statement = connection
+                .prepare(
+                    "SELECT task_id FROM task_orders
+                     WHERE scope = ?1 ORDER BY position ASC, task_id ASC",
+                )
+                .expect("prepare migrated order");
+            statement
+                .query_map([scope], |row| row.get::<_, String>(0))
+                .expect("query migrated order")
+                .collect::<Result<Vec<_>, _>>()
+                .expect("collect migrated order")
+        };
+        assert_eq!(
+            read_order(planning_workspace::CAPTURE_SCOPE),
+            vec!["capture-b", "capture-a"]
+        );
+        assert_eq!(
+            read_order(planning_workspace::READY_SCOPE),
+            vec!["overdue-b", "overdue-a", "upcoming", "unscheduled"]
+        );
+        drop(connection);
+
+        let reopened = Repository::open(path.clone()).expect("reopen migrated database");
+        assert_eq!(
+            reopened
+                .orders()
+                .expect("reopened orders")
+                .get(planning_workspace::READY_SCOPE),
+            Some(&vec![
+                "overdue-b".into(),
+                "overdue-a".into(),
+                "upcoming".into(),
+                "unscheduled".into(),
+            ])
+        );
+        drop(reopened);
         fs::remove_dir_all(directory).expect("remove temporary test directory");
     }
 
@@ -2576,7 +2703,7 @@ mod tests {
             .repository
             .reorder_tasks(ReorderTasksInput {
                 guard: ReorderGuard {
-                    scope: "log:unscheduled".into(),
+                    scope: planning_workspace::READY_SCOPE.into(),
                     expected_revisions: expected_revisions(&[&second]),
                 },
                 task_ids: vec![second.id.clone()],
@@ -2592,7 +2719,7 @@ mod tests {
             .completed_at
             .is_some());
         assert_eq!(
-            snapshot.order_by_scope.get("log:unscheduled"),
+            snapshot.order_by_scope.get(planning_workspace::READY_SCOPE),
             Some(&vec![second.id]),
         );
     }
@@ -2623,7 +2750,7 @@ mod tests {
             .repository
             .reorder_tasks(ReorderTasksInput {
                 guard: ReorderGuard {
-                    scope: "log:unscheduled".into(),
+                    scope: planning_workspace::READY_SCOPE.into(),
                     expected_revisions: expected_revisions(&[&first, &second]),
                 },
                 task_ids: vec![first.id.clone(), second.id.clone()],
@@ -2643,7 +2770,7 @@ mod tests {
 
         let snapshot = test_snapshot(&database.repository);
         assert_eq!(
-            snapshot.order_by_scope.get("log:unscheduled"),
+            snapshot.order_by_scope.get(planning_workspace::READY_SCOPE),
             Some(&vec![moved.id, first.id, second.id]),
         );
     }
@@ -2698,7 +2825,7 @@ mod tests {
         assert_eq!(stored_task.scheduled_date, None);
         let snapshot = test_snapshot(&database.repository);
         assert_eq!(
-            snapshot.order_by_scope.get("log:unscheduled"),
+            snapshot.order_by_scope.get(planning_workspace::READY_SCOPE),
             Some(&vec![task.id]),
         );
         assert!(!snapshot
@@ -2836,7 +2963,9 @@ mod tests {
 
         let returned = test_snapshot(&database.repository);
         assert_eq!(
-            returned.order_by_scope.get("log:needs-estimate"),
+            returned
+                .order_by_scope
+                .get(planning_workspace::CAPTURE_SCOPE),
             Some(&vec![created.id.clone()]),
         );
         assert!(!returned
@@ -2871,7 +3000,9 @@ mod tests {
         assert_eq!(reopened_task.estimate_minutes, None);
         assert_eq!(reopened_task.scheduled_date, None);
         assert_eq!(
-            reopened_snapshot.order_by_scope.get("log:needs-estimate"),
+            reopened_snapshot
+                .order_by_scope
+                .get(planning_workspace::CAPTURE_SCOPE),
             Some(&vec![created.id]),
         );
     }
@@ -2978,11 +3109,13 @@ mod tests {
         assert_eq!(returned_unsized.estimate_minutes, None);
         assert_eq!(returned_unsized.scheduled_date, None);
         assert_eq!(
-            returned.order_by_scope.get("log:unscheduled"),
+            returned.order_by_scope.get(planning_workspace::READY_SCOPE),
             Some(&vec![sized.id.clone()]),
         );
         assert_eq!(
-            returned.order_by_scope.get("log:needs-estimate"),
+            returned
+                .order_by_scope
+                .get(planning_workspace::CAPTURE_SCOPE),
             Some(&vec![unsized_task.id.clone()]),
         );
 
@@ -3037,7 +3170,7 @@ mod tests {
             .repository
             .reorder_tasks(ReorderTasksInput {
                 guard: ReorderGuard {
-                    scope: "log:unscheduled".into(),
+                    scope: planning_workspace::READY_SCOPE.into(),
                     expected_revisions: expected_revisions(&[&first, &restored]),
                 },
                 task_ids: vec![first.id.clone(), restored.id.clone()],
@@ -3062,7 +3195,7 @@ mod tests {
 
         let snapshot = test_snapshot(&database.repository);
         assert_eq!(
-            snapshot.order_by_scope.get("log:unscheduled"),
+            snapshot.order_by_scope.get(planning_workspace::READY_SCOPE),
             Some(&vec![restored.id, first.id]),
         );
     }
@@ -3075,7 +3208,7 @@ mod tests {
             .repository
             .reorder_tasks(ReorderTasksInput {
                 guard: ReorderGuard {
-                    scope: "log:unscheduled".into(),
+                    scope: planning_workspace::READY_SCOPE.into(),
                     expected_revisions: expected_revisions(&[&task]),
                 },
                 task_ids: vec![task.id.clone()],
@@ -3492,7 +3625,7 @@ mod tests {
             .repository
             .reorder_tasks(ReorderTasksInput {
                 guard: ReorderGuard {
-                    scope: "log:unscheduled".into(),
+                    scope: planning_workspace::READY_SCOPE.into(),
                     expected_revisions: expected_revisions(&[&first, &second]),
                 },
                 task_ids: vec![second.id.clone(), first.id.clone()],
