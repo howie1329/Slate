@@ -3,7 +3,6 @@ import {
   ArrowDown01Icon,
   ArrowUp01Icon,
   Calendar01Icon,
-  Clock01Icon,
   DragDropVerticalIcon,
   InboxIcon,
   Sun01Icon,
@@ -365,7 +364,29 @@ function PlanningListRow({
 }
 
 function ListDragPreview({ lane, task }: { lane: PlanningLaneId; task: PlanningTask }) {
-  return <div className="grid min-h-12 min-w-[min(32rem,calc(100vw-2rem))] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md bg-card px-2 shadow-md ring-1 ring-foreground/15"><HugeiconsIcon aria-hidden="true" className="text-muted-foreground" icon={lane === "done" ? Tick02Icon : Clock01Icon} size={15} strokeWidth={1.7} /><span className="truncate text-menu">{task.title}</span><span className="text-estimate tabular-nums text-muted-foreground">{task.estimateMinutes === null ? "—" : formatMinutes(task.estimateMinutes)}</span></div>;
+  const metadata = taskMetadata(task, lane);
+
+  return (
+    <div className="grid min-h-12 w-full origin-center scale-[1.01] cursor-grabbing grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-md bg-card px-2 shadow-md ring-1 ring-foreground/20 motion-reduce:scale-100">
+      <span aria-hidden="true" className="flex size-7 items-center justify-center text-muted-foreground">
+        <span className="size-4 rounded-full border border-muted-foreground/60" />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-menu leading-5">{task.title}</span>
+        {metadata.length ? (
+          <span className="mt-0.5 block truncate text-metadata text-muted-foreground">
+            {metadata.join(" · ")}
+          </span>
+        ) : null}
+      </span>
+      <span className="shrink-0 text-estimate tabular-nums text-muted-foreground">
+        {task.estimateMinutes === null ? "—" : formatMinutes(task.estimateMinutes)}
+      </span>
+      <span aria-hidden="true" className="flex size-7 items-center justify-center text-muted-foreground">
+        <HugeiconsIcon icon={DragDropVerticalIcon} size={15} strokeWidth={1.7} />
+      </span>
+    </div>
+  );
 }
 
 function taskMetadata(task: PlanningTask, lane: PlanningLaneId) {

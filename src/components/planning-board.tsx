@@ -216,7 +216,7 @@ export function PlanningBoard({ filter, snapshot, sort }: PlanningBoardProps) {
         </div>
         <DragOverlay dropAnimation={{ duration: 150, easing: "cubic-bezier(0.23, 1, 0.32, 1)" }}>
           {activeTask && activeLane ? (
-            <div className="w-[min(280px,24vw)] min-w-48 rotate-[0.35deg] rounded-md bg-card shadow-md ring-1 ring-foreground/15">
+            <div className="w-full origin-center scale-[1.01] cursor-grabbing rounded-md bg-card px-2.5 py-2 text-left shadow-md ring-1 ring-foreground/20 motion-reduce:scale-100">
               <PlanningBoardCardContent lane={activeLane} task={activeTask} />
             </div>
           ) : null}
