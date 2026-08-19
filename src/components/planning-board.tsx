@@ -282,28 +282,15 @@ function PlanningLane({
       data-planning-lane={id}
       ref={setNodeRef}
     >
-      <header className="flex min-h-[72px] shrink-0 flex-col justify-center gap-2 border-b border-border px-3 py-2">
-        <div className="flex items-center gap-2">
-          <HugeiconsIcon aria-hidden="true" className={cn(id !== "today" && "text-muted-foreground")} icon={Icon} size={14} strokeWidth={1.7} />
-          <h2 className={cn("m-0 text-section-secondary", id === "today" ? "font-semibold" : "font-medium")} id={`planning-lane-${id}`}>{label}</h2>
-          <span className="rounded bg-muted px-1.5 py-0.5 text-estimate tabular-nums text-muted-foreground">
-            {tasks.length}
-          </span>
-          {id === "done" && tasks.length > 6 ? (
-            <button
-              aria-expanded={!doneCollapsed}
-              aria-label={`${doneCollapsed ? "Show" : "Hide"} completed tasks`}
-              className="ml-auto rounded p-0.5 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              onClick={() => setDoneCollapsed((collapsed) => !collapsed)}
-              type="button"
-            >
-              <HugeiconsIcon aria-hidden="true" icon={doneCollapsed ? ArrowDown01Icon : ArrowUp01Icon} size={12} strokeWidth={1.8} />
-            </button>
-          ) : null}
-        </div>
+      <header className="relative flex h-12 shrink-0 items-center gap-2 border-b border-border px-3">
+        <HugeiconsIcon aria-hidden="true" className={cn("shrink-0", id !== "today" && "text-muted-foreground")} icon={Icon} size={14} strokeWidth={1.7} />
+        <h2 className={cn("m-0 shrink-0 text-section-secondary", id === "today" ? "font-semibold" : "font-medium")} id={`planning-lane-${id}`}>{label}</h2>
+        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-estimate tabular-nums text-muted-foreground">
+          {tasks.length}
+        </span>
         {capacity ? (
-          <div className="space-y-1">
-            <div className={cn("text-capacity tabular-nums", previewIsOverCapacity ? "text-destructive" : "text-muted-foreground")}>
+          <>
+            <div className={cn("ml-auto min-w-0 truncate text-right text-capacity tabular-nums", previewIsOverCapacity ? "text-destructive" : "text-muted-foreground")}>
               {capacityPreview ? capacityPreview.message : capacityLabel(capacity.remainingMinutes, capacity.overageMinutes, capacity.isOverCapacity)}
             </div>
             <div
@@ -311,7 +298,7 @@ function PlanningLane({
               aria-valuemax={100}
               aria-valuemin={0}
               aria-valuenow={capacityPercent}
-              className="h-0.5 w-full overflow-hidden rounded-full bg-secondary"
+              className="absolute inset-x-3 bottom-1.5 h-0.5 overflow-hidden rounded-full bg-secondary"
               role="progressbar"
             >
               <span
@@ -322,10 +309,21 @@ function PlanningLane({
                 style={{ width: `${capacityPercent}%` }}
               />
             </div>
-          </div>
+          </>
         ) : (
-          <p className="m-0 text-[10px] leading-3 text-muted-foreground">{laneDescription(id)}</p>
+          <p className="m-0 ml-auto min-w-0 truncate text-[10px] leading-3 text-muted-foreground">{laneDescription(id)}</p>
         )}
+        {id === "done" && tasks.length > 6 ? (
+          <button
+            aria-expanded={!doneCollapsed}
+            aria-label={`${doneCollapsed ? "Show" : "Hide"} completed tasks`}
+            className="shrink-0 rounded p-0.5 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={() => setDoneCollapsed((collapsed) => !collapsed)}
+            type="button"
+          >
+            <HugeiconsIcon aria-hidden="true" icon={doneCollapsed ? ArrowDown01Icon : ArrowUp01Icon} size={12} strokeWidth={1.8} />
+          </button>
+        ) : null}
       </header>
 
       {feedback ? (

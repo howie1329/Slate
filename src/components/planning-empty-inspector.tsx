@@ -15,21 +15,18 @@ const futureActions = [
 
 export function PlanningEmptyInspector({ onClose }: { onClose: () => void }) {
   return (
-    <section className="flex h-full min-h-0 flex-col bg-background" data-empty-inspector>
-      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
-        <h2 className="m-0 text-section-secondary font-medium">Inspector</h2>
-        <Button
-          aria-label="Close inspector"
-          className="ml-auto"
-          onClick={onClose}
-          size="icon-sm"
-          title="Close inspector"
-          type="button"
-          variant="ghost"
-        >
-          <HugeiconsIcon aria-hidden="true" icon={Cancel01Icon} strokeWidth={1.8} />
-        </Button>
-      </header>
+    <section className="relative flex h-full min-h-0 flex-col bg-background" data-empty-inspector>
+      <Button
+        aria-label="Close inspector"
+        className="absolute right-2 top-2 z-10"
+        onClick={onClose}
+        size="icon-sm"
+        title="Close inspector"
+        type="button"
+        variant="ghost"
+      >
+        <HugeiconsIcon aria-hidden="true" icon={Cancel01Icon} strokeWidth={1.8} />
+      </Button>
 
       <div className="flex min-h-0 flex-1 flex-col justify-center px-6 py-8">
         <div className="mx-auto w-full max-w-72">
